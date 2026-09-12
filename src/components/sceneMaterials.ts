@@ -4,7 +4,9 @@ import {
   MeshStandardMaterial,
   RepeatWrapping,
   SRGBColorSpace,
+  type PlaneGeometry,
 } from "three";
+import type { RoomFloorFinish } from "../domain/roomDetails";
 
 export type SurfaceFinish = "ivory" | "brick" | "sand";
 export const UNIT_BOX = new BoxGeometry(1, 1, 1);
@@ -12,6 +14,7 @@ export const UNIT_BOX = new BoxGeometry(1, 1, 1);
 // for the scene module's lifetime rather than being recreated for every room edit.
 const solids = new Map<string, MeshStandardMaterial>();
 const surfaces = new Map<SurfaceFinish, MeshStandardMaterial>();
+const floors = new Map<RoomFloorFinish, MeshStandardMaterial>();
 export function solidMaterial(color: string, roughness = 0.8) {
   const key = `${color}:${roughness}`;
   let material = solids.get(key);
@@ -113,5 +116,68 @@ export function setMetreUvs(
       (positions.getY(i) + verticalOrigin) / 0.4,
     );
   }
+  uv.needsUpdate = true;
+}
+
+export function floorSurfaceMaterial(finish: RoomFloorFinish) {
+  const cached = floors.get(finish);
+  if (cached) return cached;
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext("2d")!;
+  const data = context.createImageData(size, size);
+  const base =
+    finish === "wood"
+      ? [192, 164, 126]
+      : finish === "tile"
+        ? [212, 222, 216]
+        : [219, 215, 204];
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const row = Math.floor(y / 64);
+      const grain = Math.sin(x * 0.095 + Math.sin(y * 0.35) * 1.3) * 2.2;
+      const noise = ((x * 31 + y * 71 + x * y * 7) % 31) / 31 - 0.5;
+      const joint =
+        finish === "wood"
+          ? y % 64 < 2 || (x + row * 71) % 256 < 2
+          : x < 2 || y < 2;
+      const variation =
+        finish === "wood" ? row * 3 - 4 + grain + noise * 3 : noise * 3;
+      const offset = (y * size + x) * 4;
+      for (let c = 0; c < 3; c++)
+        data.data[offset + c] = base[c] + (joint ? -21 : variation);
+      data.data[offset + 3] = 255;
+    }
+  context.putImageData(data, 0, 0);
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = texture.wrapT = RepeatWrapping;
+  texture.anisotropy = 4;
+  const material = new MeshStandardMaterial({
+    map: texture,
+    roughness: finish === "wood" ? 0.72 : 0.57,
+    metalness: 0,
+  });
+  floors.set(finish, material);
+  return material;
+}
+
+export function setFloorMetreUvs(
+  geometry: PlaneGeometry,
+  finish: RoomFloorFinish,
+  x: number,
+  z: number,
+) {
+  const positions = geometry.getAttribute("position"),
+    uv = geometry.getAttribute("uv");
+  const width = finish === "wood" ? 1.8 : finish === "tile" ? 0.6 : 0.8;
+  const depth = finish === "wood" ? 0.72 : width;
+  for (let i = 0; i < positions.count; i++)
+    uv.setXY(
+      i,
+      (positions.getX(i) + x) / width,
+      (-positions.getY(i) + z) / depth,
+    );
   uv.needsUpdate = true;
 }

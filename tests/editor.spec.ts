@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 import { createPreset, migrateV1 } from "../src/domain/model";
 import type { Project } from "../src/domain/types";
+import { RESIZE_HANDLES, resizeBounds } from "../src/domain/resize";
 
 const KEY = "dream-home.project.v2";
 const mobile = { width: 390, height: 844 };
@@ -375,7 +376,7 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
   fixture.floors[0].rooms[0].bounds.w = 350;
   await seed(page, fixture, "m");
   await page.getByRole("button", { name: "Floor plan", exact: true }).click();
-  const rect = page.locator(".plan-room").first().locator("rect");
+  const rect = page.locator(".plan-room").first().locator("rect").first();
   await rect.click();
   await expect(
     page.getByRole("spinbutton", { name: "Room width", exact: true }),
@@ -726,7 +727,7 @@ test("resize handle grows a room and rejects footprint overflow, retaining a usa
   await seed(page, sparseHome(), "m");
   await builderTool(page, "Resize").click();
   await page.locator(".plan-room").first().locator("rect").first().click();
-  const handle = page.locator(".plan-resize-handle");
+  const handle = page.locator(".plan-resize-handle[data-resize-handle=se]");
   await expect(handle).toBeVisible();
   for (const zoom of [false, true]) {
     if (zoom)
@@ -734,8 +735,9 @@ test("resize handle grows a room and rejects footprint overflow, retaining a usa
         .getByRole("button", { name: "Zoom in on plan", exact: true })
         .click();
     const box = (await handle.boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    // SVG transforms introduce subpixel rounding (for example 43.99997px).
+    expect(box.width).toBeGreaterThan(43.9);
+    expect(box.height).toBeGreaterThan(43.9);
   }
   await page.getByRole("button", { name: "Fit plan", exact: true }).click();
   const box = (await handle.boundingBox())!;
@@ -1080,3 +1082,230 @@ for (const scenario of [
     expect(await stored(page)).toEqual(result);
   });
 }
+
+test("all room edges and corners have keyboard resizing with fixed opposite anchors", async ({
+  page,
+}) => {
+  await page.setViewportSize(mobile);
+  const fixture = sparseHome();
+  await seed(page, fixture, "m");
+  await builderTool(page, "Resize").click();
+  await page.locator(".plan-room").first().locator("rect").first().click();
+  await expect(page.locator(".plan-resize-handle")).toHaveCount(8);
+  const original = fixture.floors[0].rooms[0].bounds;
+  for (const handleName of RESIZE_HANDLES) {
+    const handle = page.locator(`[data-resize-handle="${handleName}"]`);
+    await handle.focus();
+    const dx = handleName.includes("w")
+      ? 10
+      : handleName.includes("e")
+        ? -10
+        : 0;
+    const dz = handleName.includes("n")
+      ? 10
+      : handleName.includes("s")
+        ? -10
+        : 0;
+    if (dx) await handle.press(dx > 0 ? "ArrowRight" : "ArrowLeft");
+    if (dz) await handle.press(dz > 0 ? "ArrowDown" : "ArrowUp");
+    await expect
+      .poll(async () => (await stored(page)).floors[0].rooms[0].bounds)
+      .toEqual(resizeBounds(original, handleName, dx, dz));
+    if (dz) await builderTool(page, "Undo last change").click();
+    if (dx) await builderTool(page, "Undo last change").click();
+    await expect
+      .poll(async () => (await stored(page)).floors[0].rooms[0].bounds)
+      .toEqual(original);
+  }
+  await page.getByRole("button", { name: "Fit plan", exact: true }).click();
+  await expect(page.locator(".plan-resize-handle")).toHaveCount(8);
+});
+
+test("tray drags survive an unrelated pointer cancellation and cancel safely without replay", async ({
+  page,
+}) => {
+  await page.setViewportSize(mobile);
+  const fixture = sparseHome();
+  const room = fixture.floors[0].rooms.shift()!;
+  fixture.stagedRooms = [{ room, sourceFloorId: fixture.floors[0].id }];
+  await seed(page, fixture, "m");
+  await page
+    .getByRole("button", { name: "Room tray, 1 pieces", exact: true })
+    .click();
+  const grip = page.getByRole("button", {
+    name: `Place ${room.name} from tray`,
+    exact: true,
+  });
+  const position = async () =>
+    page.locator(".plan-svg").evaluate((element, bounds) => {
+      const point = new DOMPoint(
+        bounds.x + bounds.w / 2,
+        bounds.z + bounds.d / 2,
+      ).matrixTransform((element as SVGSVGElement).getScreenCTM()!);
+      return { x: point.x, y: point.y };
+    }, room.bounds);
+  async function beginDrag() {
+    const box = (await grip.boundingBox())!,
+      target = await position();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(target.x, target.y, { steps: 8 });
+    await expect(page.locator(".direct-plan.has-preview")).toBeVisible();
+  }
+  await beginDrag();
+  await grip.dispatchEvent("pointercancel", {
+    pointerId: 2,
+    pointerType: "touch",
+    isPrimary: false,
+  });
+  await expect(page.locator(".direct-plan.has-preview")).toBeVisible();
+  await grip.dispatchEvent("pointercancel", {
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true,
+  });
+  await page.mouse.up();
+  await expect(page.locator(".direct-plan.has-preview")).toHaveCount(0);
+  expect(await stored(page)).toEqual(fixture);
+
+  await beginDrag();
+  await grip.dispatchEvent("lostpointercapture", {
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true,
+  });
+  await page.mouse.up();
+  await expect(page.locator(".direct-plan.has-preview")).toHaveCount(0);
+  expect(await stored(page)).toEqual(fixture);
+
+  await beginDrag();
+  const occupied = await page
+    .locator(".plan-svg")
+    .evaluate((element, bounds) => {
+      const point = new DOMPoint(
+        bounds.x + bounds.w / 2,
+        bounds.z + bounds.d / 2,
+      ).matrixTransform((element as SVGSVGElement).getScreenCTM()!);
+      return { x: point.x, y: point.y };
+    }, fixture.floors[0].rooms[0].bounds);
+  await page.mouse.move(occupied.x, occupied.y, { steps: 6 });
+  await page.mouse.up();
+  expect(await stored(page)).toEqual(fixture);
+  await page
+    .getByRole("button", { name: "Close room tray", exact: true })
+    .click();
+  await page.getByRole("button", { name: "3D home", exact: true }).click();
+  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Room tray, 1 pieces", exact: true })
+    .click();
+  expect(await stored(page)).toEqual(fixture);
+  await page
+    .getByRole("button", { name: `Find space for ${room.name}`, exact: true })
+    .click();
+  await expect.poll(async () => (await stored(page)).stagedRooms).toEqual([]);
+  expect(
+    (await stored(page)).floors[0].rooms.find((item) => item.id === room.id),
+  ).toEqual(room);
+});
+
+test("native phone touch restores a tray piece and resizes its top left corner", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: mobile,
+    hasTouch: true,
+    isMobile: true,
+    baseURL: "http://localhost:5173",
+  });
+  const page = await context.newPage();
+  try {
+    const fixture = sparseHome(),
+      room = fixture.floors[0].rooms.shift()!;
+    fixture.stagedRooms = [{ room, sourceFloorId: fixture.floors[0].id }];
+    await seed(page, fixture, "m");
+    await page
+      .getByRole("button", { name: "Room tray, 1 pieces", exact: true })
+      .tap();
+    const grip = (await page
+      .getByRole("button", {
+        name: `Place ${room.name} from tray`,
+        exact: true,
+      })
+      .boundingBox())!;
+    const destination = await page
+      .locator(".plan-svg")
+      .evaluate((element, bounds) => {
+        const point = new DOMPoint(
+          bounds.x + bounds.w / 2,
+          bounds.z + bounds.d / 2,
+        ).matrixTransform((element as SVGSVGElement).getScreenCTM()!);
+        return { x: point.x, y: point.y };
+      }, room.bounds);
+    const session = await context.newCDPSession(page);
+    async function touchDrag(
+      from: { x: number; y: number },
+      to: { x: number; y: number },
+    ) {
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ ...from, id: 1 }],
+      });
+      for (let i = 1; i <= 6; i++)
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [
+            {
+              x: from.x + ((to.x - from.x) * i) / 6,
+              y: from.y + ((to.y - from.y) * i) / 6,
+              id: 1,
+            },
+          ],
+        });
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+    }
+    await touchDrag(
+      { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 },
+      destination,
+    );
+    await expect.poll(async () => (await stored(page)).stagedRooms).toEqual([]);
+    expect(
+      (await stored(page)).floors[0].rooms.find((item) => item.id === room.id),
+    ).toEqual(room);
+    await builderTool(page, "Resize").tap();
+    const corner = page.locator('[data-resize-handle="nw"]');
+    await expect(corner).toBeVisible();
+    const target = (await corner.boundingBox())!,
+      scale = await page
+        .locator(".plan-svg")
+        .evaluate((element) => (element as SVGSVGElement).getScreenCTM()!.a);
+    const from = {
+      x: target.x + target.width / 2,
+      y: target.y + target.height / 2,
+    };
+    await touchDrag(from, { x: from.x + 50 * scale, y: from.y + 50 * scale });
+    await expect
+      .poll(
+        async () =>
+          (await stored(page)).floors[0].rooms.find(
+            (item) => item.id === room.id,
+          )?.bounds,
+      )
+      .toEqual({
+        x: room.bounds.x + 50,
+        z: room.bounds.z + 50,
+        w: room.bounds.w - 50,
+        d: room.bounds.d - 50,
+      });
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+    await noOverflow(page);
+    await page.screenshot({
+      path: "test-results/native-touch-tray-resize.png",
+    });
+  } finally {
+    await context.close();
+  }
+});

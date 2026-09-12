@@ -157,7 +157,14 @@ describe("copy, rotation and smart movement", () => {
   it("duplicates custom room names and dimensions with a new ID at a free position", () => {
     const project = empty();
     project.floors[0].rooms = [
-      { ...room("custom", sourceBounds), name: "Quiet study", kind: "utility" },
+      {
+        ...room("custom", sourceBounds),
+        name: "Quiet study",
+        kind: "utility",
+        floorFinish: "wood",
+        furnishingRotation: 90,
+        furnishing: "none",
+      },
     ];
     const before = JSON.stringify(project);
     const copied = duplicateRoom(project, "floor-0", "custom");
@@ -167,6 +174,9 @@ describe("copy, rotation and smart movement", () => {
       name: "Quiet study copy",
       kind: "utility",
       bounds: { w: 300, d: 300 },
+      floorFinish: "wood",
+      furnishingRotation: 90,
+      furnishing: "none",
     });
     expect(copied.project.floors[0].rooms[1].id).not.toBe("custom");
     expect(validateProject(copied.project)).toEqual([]);

@@ -112,6 +112,19 @@
 .direct-plan .plan-resize-handle {
   cursor: nwse-resize;
   outline: none;
+  touch-action: none;
+}
+.direct-plan .plan-resize-handle.handle-ne,
+.direct-plan .plan-resize-handle.handle-sw {
+  cursor: nesw-resize;
+}
+.direct-plan .plan-resize-handle.handle-n,
+.direct-plan .plan-resize-handle.handle-s {
+  cursor: ns-resize;
+}
+.direct-plan .plan-resize-handle.handle-e,
+.direct-plan .plan-resize-handle.handle-w {
+  cursor: ew-resize;
 }
 .direct-plan .plan-resize-handle:focus-visible circle {
   stroke: #edb948;

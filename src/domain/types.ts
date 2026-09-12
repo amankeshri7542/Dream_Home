@@ -8,7 +8,11 @@ export type Room = {
   kind: RoomKind;
   bounds: Rect;
   unitId: string | null;
+  furnishingRotation?: 0 | 90 | 180 | 270;
+  floorFinish?: "auto" | "wood" | "tile" | "stone";
+  furnishing?: "auto" | "none";
 };
+export type StagedRoom = { room: Room; sourceFloorId: string };
 export type Void = { id: string; kind: "courtyard" | "stairs"; bounds: Rect };
 export type Balcony = {
   id: string;
@@ -51,6 +55,7 @@ export type Project = {
   floors: Floor[];
   units: Unit[];
   verticalSpaces: VerticalSpace[];
+  stagedRooms?: StagedRoom[];
   garden: boolean;
   parking: boolean;
   finish?: "ivory" | "brick" | "sand";
@@ -80,6 +85,7 @@ export type ViewSettings = {
   openings: boolean;
   landscape: boolean;
   labels: boolean;
+  furnishings?: boolean;
   roof: boolean;
   resetKey: number;
 };

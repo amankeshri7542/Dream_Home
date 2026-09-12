@@ -12,6 +12,14 @@ import { ROOM_META } from "../domain/types";
 import { balconyBounds, deriveWalls, floorForGeometry } from "../domain/model";
 import { transformComponent as editPlanItem } from "../domain/model";
 import { planItems, type PlanItem } from "../domain/selection";
+import { restoreStagedRoom, setAsideRoom } from "../domain/tray";
+import {
+  RESIZE_HANDLES,
+  resizeBounds,
+  resizeHandlePosition,
+  resizeHandlesForBalcony,
+  type ResizeHandle,
+} from "../domain/resize";
 import {
   floorName,
   length,
@@ -20,6 +28,7 @@ import {
   type Unit,
 } from "../domain/display";
 import "./Plan.css";
+import { RoomDetailsPlan } from "./RoomDetailsPlan";
 
 type Tool = "select" | "move" | "resize";
 type Feedback = { valid: boolean; message: string };
@@ -35,6 +44,18 @@ type Props = {
   editable?: boolean;
   tool?: Tool;
   onInteraction?: (feedback: Feedback) => void;
+  stagedRoomId?: string | null;
+  stagedUnitId?: string | null;
+  onPlaceStaged?: (id: string, bounds: Rect) => void;
+  onSetAside?: (id: string) => void;
+  trayDrag?: { id: string; clientX: number; clientY: number } | null;
+  trayDrop?: {
+    id: string;
+    clientX: number;
+    clientY: number;
+    key: number;
+  } | null;
+  onTrayDropHandled?: () => void;
 };
 type Gesture = {
   pointerId: number;
@@ -44,6 +65,7 @@ type Gesture = {
   start: { x: number; z: number };
   kind: Tool | "pan";
   room?: PlanItem;
+  handle?: ResizeHandle;
   pan: { x: number; z: number };
 };
 type Preview = {
@@ -55,6 +77,7 @@ type Preview = {
   message: string;
 };
 const snap = (value: number) => Math.round(value / 10) * 10;
+const MAX_ZOOM = 24;
 
 export default function Plan({
   project,
@@ -67,12 +90,21 @@ export default function Plan({
   editable = false,
   tool,
   onInteraction,
+  stagedRoomId,
+  stagedUnitId,
+  onPlaceStaged,
+  onSetAside,
+  trayDrag,
+  trayDrop,
+  onTrayDropHandled,
 }: Props) {
   const activeTool = tool ?? (editable ? "move" : "select");
   const svg = useRef<SVGSVGElement>(null);
   const gesture = useRef<Gesture | null>(null);
   const lastFeedback = useRef("");
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [gesturePreview, setPreview] = useState<Preview | null>(null);
+  const lastDropKey = useRef<number | null>(null);
+  const framedSelection = useRef("");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, z: 0 });
@@ -83,6 +115,9 @@ export default function Plan({
   const scale =
     Math.min(viewport.width / viewWidth, viewport.height / viewHeight) || 0.2;
   const pixel = 1 / scale;
+  const preview = trayDrag
+    ? stagedCandidate(trayDrag.id, trayDrag.clientX, trayDrag.clientY)
+    : gesturePreview;
   const displayProject = preview?.project ?? project;
   const displayFloor = preview?.floor ?? floorForGeometry(project, floor.id);
   const highlighted = preview?.id ?? selected;
@@ -90,6 +125,69 @@ export default function Plan({
     (room) => room.id === highlighted,
   );
   const road = project.plot.road;
+  const walls = deriveWalls(displayFloor, road);
+
+  function stagedCandidate(
+    id: string,
+    clientX: number,
+    clientY: number,
+  ): Preview | null {
+    const element = svg.current;
+    const matrix = element?.getScreenCTM();
+    const box = element?.getBoundingClientRect();
+    const room = project.stagedRooms?.find(
+      (entry) => entry.room.id === id,
+    )?.room;
+    if (
+      !element ||
+      !matrix ||
+      !box ||
+      !room ||
+      clientX < box.left ||
+      clientX > box.right ||
+      clientY < box.top ||
+      clientY > box.bottom
+    )
+      return null;
+    const point = new DOMPoint(clientX, clientY).matrixTransform(
+      matrix.inverse(),
+    );
+    const bounds = {
+      ...room.bounds,
+      x: snap(point.x - room.bounds.w / 2),
+      z: snap(point.y - room.bounds.d / 2),
+    };
+    const result = restoreStagedRoom(project, id, floor.id, {
+      position: bounds,
+      unitId: stagedUnitId,
+    });
+    return {
+      id,
+      bounds,
+      project: result.ok ? result.project : project,
+      floor: floorForGeometry(result.ok ? result.project : project, floor.id),
+      valid: result.ok,
+      message: result.ok ? "Fits here · release to place" : result.error,
+    };
+  }
+
+  // The tray owns its pointer. Resolve a released pointer once using this plan's
+  // current SVG transform, which also works after zooming or changing floors.
+  useEffect(() => {
+    if (!trayDrop || trayDrop.key === lastDropKey.current) return;
+    lastDropKey.current = trayDrop.key;
+    const next = stagedCandidate(
+      trayDrop.id,
+      trayDrop.clientX,
+      trayDrop.clientY,
+    );
+    onTrayDropHandled?.();
+    if (!next) return;
+    if (next.valid) onPlaceStaged?.(next.id, next.bounds);
+    report(
+      next.valid ? { valid: true, message: "Room placed from tray" } : next,
+    );
+  });
 
   useEffect(() => {
     const element = svg.current;
@@ -113,6 +211,39 @@ export default function Plan({
     setPreview(null);
     setFeedback(null);
   }, [floor.id, view.resetKey]);
+  useEffect(() => {
+    const key = `${floor.id}:${selected ?? ""}:${activeTool}`;
+    if (framedSelection.current === key || !viewport.width || !viewport.height)
+      return;
+    framedSelection.current = key;
+    if (activeTool !== "resize" || !selectedRoom) return;
+    const b = selectedRoom.bounds;
+    const baseScale = Math.min(
+      viewport.width / (width + 360),
+      viewport.height / (depth + 360),
+    );
+    // Eight targets need room around them. Reframe only on selection/tool change,
+    // so neither dragging nor an explicit Fit action causes a camera jump.
+    const desired = 110 / (Math.min(b.w, b.d) * baseScale);
+    const fitting = Math.min(
+      (viewport.width - 70) / (b.w * baseScale),
+      (viewport.height - 110) / (b.d * baseScale),
+    );
+    const nextZoom = Math.max(1, Math.min(MAX_ZOOM, desired, fitting));
+    if (nextZoom > 1) {
+      setZoom(nextZoom);
+      setPan({ x: b.x + b.w / 2 - width / 2, z: b.z + b.d / 2 - depth / 2 });
+    }
+  }, [
+    activeTool,
+    selected,
+    floor.id,
+    selectedRoom,
+    viewport.width,
+    viewport.height,
+    width,
+    depth,
+  ]);
 
   function report(next: Feedback) {
     const feedback = { valid: next.valid, message: next.message };
@@ -133,6 +264,7 @@ export default function Plan({
     event: ReactPointerEvent,
     kind: Gesture["kind"],
     room?: PlanItem,
+    handle?: ResizeHandle,
   ) {
     if (!event.isPrimary || event.button !== 0 || gesture.current) return;
     const matrix = svg.current?.getScreenCTM();
@@ -148,23 +280,29 @@ export default function Plan({
       start: coordinates(event, inverse),
       kind,
       room,
+      handle,
       pan,
     };
     setFeedback(null);
   }
-  function resizeItemBounds(item: PlanItem, dx: number, dz: number): Rect {
+  function resizeItemBounds(
+    item: PlanItem,
+    handle: ResizeHandle,
+    dx: number,
+    dz: number,
+  ): Rect {
     const edge = floor.balconies.find(
       (balcony) => balcony.id === item.id,
     )?.edge;
-    const b = item.bounds;
-    const w = Math.max(90, snap(b.w + (edge === "west" ? -dx : dx)));
-    const d = Math.max(90, snap(b.d + (edge === "north" ? -dz : dz)));
-    return {
-      x: edge === "west" ? b.x + b.w - w : b.x,
-      z: edge === "north" ? b.z + b.d - d : b.z,
-      w,
-      d,
-    };
+    const horizontal = edge === "north" || edge === "south";
+    return resizeBounds(
+      item.bounds,
+      handle,
+      dx,
+      dz,
+      edge ? (horizontal ? 150 : 90) : 120,
+      edge ? (horizontal ? 90 : 150) : 120,
+    );
   }
   function candidate(event: ReactPointerEvent, start: Gesture): Preview | null {
     if (!start.room) return null;
@@ -174,7 +312,7 @@ export default function Plan({
     const original = start.room.bounds;
     const bounds =
       start.kind === "resize"
-        ? resizeItemBounds(start.room, dx, dz)
+        ? resizeItemBounds(start.room, start.handle ?? "se", dx, dz)
         : { ...original, x: snap(original.x + dx), z: snap(original.z + dz) };
     const result = editPlanItem(
       project,
@@ -242,6 +380,23 @@ export default function Plan({
       return;
     }
     if (start.kind === "select") return;
+    if (
+      start.kind === "move" &&
+      start.room?.kind === "room" &&
+      onSetAside &&
+      document
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.closest("[data-room-tray-drop]")
+    ) {
+      const result = setAsideRoom(project, floor.id, start.room.id);
+      setPreview(null);
+      report(
+        result.ok
+          ? { valid: true, message: "Release to keep this room in the tray" }
+          : { valid: false, message: result.error },
+      );
+      return;
+    }
     const next = candidate(event, start);
     if (next) {
       setPreview(next);
@@ -263,6 +418,36 @@ export default function Plan({
         event.clientX - start.client.x,
         event.clientY - start.client.y,
       ) > 5;
+    const trayTarget = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest("[data-room-tray-drop]");
+    if (
+      moved &&
+      start.kind === "move" &&
+      start.room?.kind === "room" &&
+      trayTarget &&
+      onSetAside
+    ) {
+      clearGesture();
+      const result = setAsideRoom(project, floor.id, start.room.id);
+      if (result.ok) onSetAside(start.room.id);
+      report(
+        result.ok
+          ? { valid: true, message: "Room kept safely in the tray" }
+          : { valid: false, message: result.error },
+      );
+      return;
+    }
+    if (!moved && stagedRoomId && onPlaceStaged) {
+      const next = stagedCandidate(stagedRoomId, event.clientX, event.clientY);
+      clearGesture();
+      if (next?.valid) onPlaceStaged(next.id, next.bounds);
+      if (next)
+        report(
+          next.valid ? { valid: true, message: "Room placed from tray" } : next,
+        );
+      return;
+    }
     const next =
       moved && (start.kind === "move" || start.kind === "resize")
         ? candidate(event, start)
@@ -285,9 +470,9 @@ export default function Plan({
     setZoom(next);
     if (next === 1) setPan({ x: 0, z: 0 });
   }
-  function keyboardResize(dx: number, dz: number) {
+  function keyboardResize(handle: ResizeHandle, dx: number, dz: number) {
     if (!selectedRoom) return;
-    const bounds = resizeItemBounds(selectedRoom, dx, dz);
+    const bounds = resizeItemBounds(selectedRoom, handle, dx, dz);
     const result = editPlanItem(
       project,
       floor.id,
@@ -300,11 +485,12 @@ export default function Plan({
       report({ valid: true, message: "Room resized" });
     } else report({ valid: false, message: result.error });
   }
-  const hint =
-    activeTool === "move"
+  const hint = stagedRoomId
+    ? "Tap a clear spot to place your room"
+    : activeTool === "move"
       ? "Drag a space · drop on a room to swap uses"
       : activeTool === "resize"
-        ? "Select a space · drag its corner to resize"
+        ? "Drag any corner or edge · opposite side stays in place"
         : "Tap a room, balcony or courtyard";
   return (
     <div
@@ -432,35 +618,40 @@ export default function Plan({
                 stroke={outline}
                 strokeWidth={active ? 3 * pixel : pixel}
               />
-              <foreignObject
-                x={b.x + 10}
-                y={b.z + 10}
-                width={Math.max(1, b.w - 20)}
-                height={Math.max(1, b.d - 20)}
-                pointerEvents="none"
-              >
-                <div
-                  className="plan-room-caption"
-                  style={{ fontSize: 12 * pixel }}
+              {view.furnishings !== false && (
+                <RoomDetailsPlan room={room} walls={walls} />
+              )}
+              {view.labels && (
+                <foreignObject
+                  x={b.x + 10}
+                  y={b.z + 10}
+                  width={Math.max(1, b.w - 20)}
+                  height={Math.max(1, b.d - 20)}
+                  pointerEvents="none"
                 >
-                  <strong>{room.name}</strong>
-                  {active && room.unitId && (
-                    <span>
-                      {
-                        displayProject.units.find(
-                          (owner) => owner.id === room.unitId,
-                        )?.name
-                      }
-                    </span>
-                  )}
-                  {active && (
-                    <span>
-                      {length(b.w, unit)} × {length(b.d, unit)}{" "}
-                      {unitLabel(unit)}
-                    </span>
-                  )}
-                </div>
-              </foreignObject>
+                  <div
+                    className="plan-room-caption"
+                    style={{ fontSize: 12 * pixel }}
+                  >
+                    <strong>{room.name}</strong>
+                    {active && room.unitId && (
+                      <span>
+                        {
+                          displayProject.units.find(
+                            (owner) => owner.id === room.unitId,
+                          )?.name
+                        }
+                      </span>
+                    )}
+                    {active && (
+                      <span>
+                        {length(b.w, unit)} × {length(b.d, unit)}{" "}
+                        {unitLabel(unit)}
+                      </span>
+                    )}
+                  </div>
+                </foreignObject>
+              )}
             </g>
           );
         })}
@@ -498,19 +689,21 @@ export default function Plan({
                   strokeWidth="4"
                 />
               ))}
-            <text
-              x={space.bounds.x + space.bounds.w / 2}
-              y={space.bounds.z + space.bounds.d / 2}
-              textAnchor="middle"
-              fontSize={11 * pixel}
-              fill="#45634f"
-            >
-              {space.kind === "stairs" ? "Stairs ↑" : "Courtyard"}
-            </text>
+            {view.labels && (
+              <text
+                x={space.bounds.x + space.bounds.w / 2}
+                y={space.bounds.z + space.bounds.d / 2}
+                textAnchor="middle"
+                fontSize={11 * pixel}
+                fill="#45634f"
+              >
+                {space.kind === "stairs" ? "Stairs ↑" : "Courtyard"}
+              </text>
+            )}
           </g>
         ))}
         {view.walls &&
-          deriveWalls(displayFloor, road).map((wall) => (
+          walls.map((wall) => (
             <g key={wall.id} pointerEvents="none">
               <line
                 x1={wall.x}
@@ -580,17 +773,19 @@ export default function Plan({
                 stroke={balcony.id === highlighted ? "#285f4b" : "#73847c"}
                 strokeWidth={balcony.id === highlighted ? 3 * pixel : 7}
               />
-              <text
-                x={b.x + b.w / 2}
-                y={b.z + b.d / 2}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={10 * pixel}
-                fill="#40584a"
-                pointerEvents="none"
-              >
-                {floor.elevation > 0 ? "Balcony" : "Veranda"}
-              </text>
+              {view.labels && (
+                <text
+                  x={b.x + b.w / 2}
+                  y={b.z + b.d / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={10 * pixel}
+                  fill="#40584a"
+                  pointerEvents="none"
+                >
+                  {floor.elevation > 0 ? "Balcony" : "Veranda"}
+                </text>
+              )}
             </g>
           );
         })}
@@ -637,65 +832,85 @@ export default function Plan({
         >
           ROAD
         </text>
-        {activeTool === "resize" && selectedRoom && (
-          <g
-            className="plan-resize-handle"
-            role="button"
-            tabIndex={0}
-            aria-label={`Resize ${selectedRoom.name}; drag the corner or use arrow keys`}
-            transform={`translate(${selectedRoom.bounds.x + (displayFloor.balconies.find((b) => b.id === selectedRoom.id)?.edge === "west" ? 0 : selectedRoom.bounds.w)} ${selectedRoom.bounds.z + (displayFloor.balconies.find((b) => b.id === selectedRoom.id)?.edge === "north" ? 0 : selectedRoom.bounds.d)})`}
-            onPointerDown={(event) =>
-              begin(
-                event,
-                "resize",
-                planItems(project, floor).find(
-                  (room) => room.id === selectedRoom.id,
-                ),
-              )
-            }
-            onKeyDown={(event) => {
-              const delta: Record<string, [number, number]> = {
-                ArrowLeft: [-10, 0],
-                ArrowRight: [10, 0],
-                ArrowUp: [0, -10],
-                ArrowDown: [0, 10],
-              };
-              if (delta[event.key]) {
-                event.preventDefault();
-                keyboardResize(...delta[event.key]);
-              }
-            }}
-          >
-            <rect
-              x={-25 * pixel}
-              y={-25 * pixel}
-              width={50 * pixel}
-              height={50 * pixel}
-              fill="transparent"
-            />
-            <circle
-              r={22 * pixel}
-              fill={preview && !preview.valid ? "#cb4942" : "#285f4b"}
-              stroke="#fffdf6"
-              strokeWidth={3 * pixel}
-            />
-            <path
-              d={`M ${-7 * pixel} ${7 * pixel} L ${7 * pixel} ${-7 * pixel} M ${-7 * pixel} 0 V ${7 * pixel} H 0 M 0 ${-7 * pixel} H ${7 * pixel} V 0`}
-              fill="none"
-              stroke="white"
-              strokeWidth={2 * pixel}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-        )}
+        {activeTool === "resize" &&
+          selectedRoom &&
+          (() => {
+            const edge = displayFloor.balconies.find(
+              (item) => item.id === selectedRoom.id,
+            )?.edge;
+            const handles = edge
+              ? resizeHandlesForBalcony(edge)
+              : RESIZE_HANDLES;
+            const names: Record<ResizeHandle, string> = {
+              nw: "top left corner",
+              n: "top edge",
+              ne: "top right corner",
+              e: "right edge",
+              se: "bottom right corner",
+              s: "bottom edge",
+              sw: "bottom left corner",
+              w: "left edge",
+            };
+            return handles.map((handle) => {
+              const point = resizeHandlePosition(selectedRoom.bounds, handle);
+              const corner = handle.length === 2;
+              return (
+                <g
+                  key={handle}
+                  className={`plan-resize-handle handle-${handle}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Resize ${selectedRoom.name} ${names[handle]}; drag or use arrow keys`}
+                  data-resize-handle={handle}
+                  transform={`translate(${point.x} ${point.z})`}
+                  onPointerDown={(event) =>
+                    begin(
+                      event,
+                      "resize",
+                      planItems(project, floor).find(
+                        (item) => item.id === selectedRoom.id,
+                      ),
+                      handle,
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    const delta: Record<string, [number, number]> = {
+                      ArrowLeft: [-10, 0],
+                      ArrowRight: [10, 0],
+                      ArrowUp: [0, -10],
+                      ArrowDown: [0, 10],
+                    };
+                    if (delta[event.key]) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      keyboardResize(handle, ...delta[event.key]);
+                    }
+                  }}
+                >
+                  <rect
+                    x={-22 * pixel}
+                    y={-22 * pixel}
+                    width={44 * pixel}
+                    height={44 * pixel}
+                    fill="transparent"
+                  />
+                  <circle
+                    r={(corner ? 9 : 7) * pixel}
+                    fill={preview && !preview.valid ? "#cb4942" : "#285f4b"}
+                    stroke="#fffdf6"
+                    strokeWidth={2 * pixel}
+                  />
+                </g>
+              );
+            });
+          })()}
       </svg>
       <div className="plan-tools" role="group" aria-label="Floor plan zoom">
         <button
           type="button"
           aria-label="Zoom in on plan"
-          disabled={zoom >= 4}
-          onClick={() => changeZoom(Math.min(4, zoom * 1.3))}
+          disabled={zoom >= MAX_ZOOM}
+          onClick={() => changeZoom(Math.min(MAX_ZOOM, zoom * 1.3))}
         >
           <Plus size={20} />
         </button>
@@ -720,7 +935,7 @@ export default function Plan({
         className={`plan-hint${feedback ? (feedback.valid ? " is-valid" : " is-invalid") : ""}`}
         role="status"
       >
-        {feedback?.message ??
+        {(trayDrag ? preview?.message : feedback?.message) ??
           `${hint}${zoom > 1 ? " · drag empty space to pan" : ""}`}
       </div>
     </div>

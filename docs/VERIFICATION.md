@@ -1,3 +1,21 @@
+# Rooms-as-pieces release verification — 12 September 2026
+
+- Typecheck, ESLint and production build: passed.
+- Vitest: **208 tests passed** across 9 files.
+- Playwright: **41 tests passed** in Chrome, including a real CDP touch stream in a phone context for tray placement and top-left resizing.
+- Production preview on port 4176: furnished top view, set aside/automatic restore, return to 3D, Focus and desktop Plan + 3D all passed. No page errors or horizontal overflow. Tested 360×740 touch context and 1440×1000 desktop; broader browser suite covers 390 and 430 px widths too.
+- Actual screenshots inspected: furnished mobile orbit/top, compact room tray, full-screen Focus, linked desktop views, all room kinds and an eight-floor building.
+- Final phone Focus canvas measured 548 px tall at 360×740. Default 390 px house footprint projects within x=23.4–366.6 px; outer road/plot can be cropped by Fit home. Fit plot is explicit.
+- Render measurements from an isolated development browser: compact furnished top view **36 draw calls / 3,824 triangles**; eight-floor exterior **96 calls / 27,018 triangles**, with no furnishings rendered behind closed floors/roof. These are scene-complexity measurements, not guarantees of frame rate on physical phones.
+- Rendered-bed picking opened the correct bedroom inspector. Shared detail tests cover all seven room kinds, bounds, minimum room sizes, doorway clearances, four orientations and finishes.
+- Tray/resize regressions cover 48-piece capacity, invalid occupied placement, source-floor removal, group restoration, JSON/reload/undo, optional-v2 backward compatibility, all eight anchored handles, balcony attachment, touch cancellation and no stale-drop replay.
+- Release diff/whitespace and sensitive-file review: passed. No dependencies, credentials, server endpoints or runtime AI calls were added.
+- Final build assets: main JS approximately **344.50 kB / 109.01 kB gzip**, lazy 3D chunk **931.24 kB / 253.72 kB gzip**, main CSS **60.62 kB / 12.30 kB gzip**.
+
+Remaining limits: physical Android/iOS device testing and observed sessions with older users are still needed. This is an interactive conceptual model, not an offline photoreal render or arbitrary-shape CAD editor. Rooms remain rectangular; furniture is illustrative and not individually draggable. AI remains an optional proposal in `OPTIONAL-AI.md`.
+
+---
+
 # Verification
 
 Blueprint expansion, 12 September 2026.

@@ -1,24 +1,21 @@
 .scene-room-label {
   white-space: nowrap;
   color: #34443b;
-  background: rgb(255 255 251 / 92%);
-  border: 1px solid rgb(71 88 76 / 16%);
-  border-radius: 6px;
-  padding: 5px 8px;
+  background: rgb(255 255 251 / 78%);
+  border: 1px solid rgb(71 88 76 / 12%);
+  border-radius: 4px;
+  padding: 2px 5px;
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: center;
   font-size: 10px;
   line-height: 1.35;
-  box-shadow: 0 2px 8px rgb(41 58 46 / 10%);
+  box-shadow: 0 1px 3px rgb(41 58 46 / 6%);
 }
 .scene-room-label.selected {
   border-color: #b98137;
   background: #fff5dc;
-}
-.scene-room-label > span {
-  display: block;
-  font-size: 9px;
-  margin-top: 2px;
-  color: #647165;
 }
 .scene-fallback {
   height: 100%;

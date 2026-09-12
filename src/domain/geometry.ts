@@ -34,6 +34,7 @@ export const componentIds = (p: Project) =>
   new Set([
     ...p.units.map((u) => u.id),
     ...p.verticalSpaces.map((v) => v.id),
+    ...(p.stagedRooms ?? []).map((item) => item.room.id),
     ...p.floors.flatMap((f) => [
       f.id,
       ...f.rooms.map((r) => r.id),

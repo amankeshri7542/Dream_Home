@@ -206,7 +206,7 @@ test("balcony and courtyard support direct movement, tap controls, undo and relo
         )?.bounds.x,
     )
     .toBe(courtyard.bounds.x + 100);
-  await page.getByRole("button", { name: /Courtyard Edit details/ }).click();
+  await page.locator(".selected-chip").click();
   await expect(
     page.getByText(
       /Moving or resizing it updates every affected floor together/,
@@ -371,7 +371,7 @@ test("the open-space catalog adds a courtyard and exposes its resize and remove 
         ).length,
     )
     .toBe(1);
-  await page.getByRole("button", { name: /Courtyard Edit details/ }).click();
+  await page.locator(".selected-chip").click();
   await expect(
     page.getByLabel("Courtyard width", { exact: true }),
   ).toBeVisible();
@@ -397,7 +397,7 @@ test("a back balcony resizes outward from its visible corner", async ({
   await page.getByLabel("Editing floor").selectOption(floor.id);
   await page.getByRole("button", { name: /Balcony 1/ }).click();
   await page.getByRole("button", { name: "Resize space", exact: true }).click();
-  const handle = page.locator(".plan-resize-handle");
+  const handle = page.locator(".plan-resize-handle[data-resize-handle=ne]");
   await expect(handle).toBeVisible();
   const box = (await handle.boundingBox())!;
   const scale = await page

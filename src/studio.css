@@ -1,0 +1,478 @@
+/* The building owns the workspace; controls sit at its edges. */
+.home-app.hero-workspace .scene-area {
+  --canvas-top: 112px;
+  --canvas-bottom: 132px;
+}
+.home-app.hero-workspace .scene-area .model-canvas.model-canvas.model-canvas {
+  inset: var(--canvas-top) 0 var(--canvas-bottom);
+}
+.home-app.hero-workspace .scene-area .scene-heading {
+  display: block;
+  top: 12px;
+  left: 18px;
+  right: 18px;
+}
+.home-app.hero-workspace .scene-heading .section-kicker {
+  display: none;
+}
+.home-app.hero-workspace .scene-heading h1 {
+  font-size: 24px;
+  line-height: 1.1;
+  margin: 0;
+}
+.home-app.hero-workspace .scene-heading p {
+  display: flex;
+  margin-top: 5px;
+  font-size: 11px;
+}
+.home-app.hero-workspace .scene-area .view-switch {
+  display: flex;
+  top: 64px;
+  left: 12px;
+  right: auto;
+}
+.home-app.hero-workspace .view-switch button {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.home-app.hero-workspace .scene-area .floating-floors {
+  top: 65px;
+  bottom: auto;
+  right: 12px;
+}
+.home-app.hero-workspace .floating-floors select {
+  max-width: 116px;
+  min-height: 44px;
+  padding-left: 12px;
+  font-size: 12px;
+}
+.home-app.hero-workspace .scene-area .selected-chip {
+  top: 65px;
+  bottom: auto;
+  left: 12px;
+  right: 140px;
+  transform: none;
+  min-height: 44px;
+  font-size: 12px;
+  padding: 0 10px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.home-app.hero-workspace .selected-chip span {
+  display: none;
+}
+.home-app.hero-workspace .scene-area:has(.selected-chip) .view-switch {
+  visibility: hidden;
+}
+.home-app.hero-workspace .scene-area .camera-actions {
+  display: flex;
+  bottom: 84px;
+  right: 12px;
+  gap: 4px;
+}
+.home-app.hero-workspace
+  .scene-area:has(.mode-2d)
+  .camera-actions
+  > .fit-home-button {
+  display: none;
+}
+.home-app.hero-workspace .camera-actions button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 9px;
+  font-size: 12px;
+  box-shadow: 0 2px 12px #26473609;
+  border: 1px solid #bfcfc687;
+}
+.home-app.hero-workspace .build-toolbar {
+  bottom: 8px;
+}
+.home-app.hero-workspace .next-step {
+  display: none;
+}
+.home-app.hero-workspace .scene-area.with-welcome {
+  --canvas-bottom: 238px;
+}
+.home-app.hero-workspace .with-welcome .camera-actions {
+  bottom: 194px;
+}
+.home-app.hero-workspace .welcome-card {
+  display: grid;
+  bottom: 6px;
+  padding: 13px 17px;
+}
+.home-app.hero-workspace .welcome-card h2 {
+  font-size: 18px;
+}
+.home-app.hero-workspace .welcome-card p {
+  font-size: 12px;
+  margin: 4px 0;
+}
+.home-app.hero-workspace .welcome-card .text-link {
+  min-height: 36px;
+}
+.home-app.hero-workspace .welcome-symbol {
+  display: none;
+}
+.room-piece-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.room-piece-actions button {
+  padding: 12px 8px;
+}
+.room-appearance {
+  margin: 16px 0;
+}
+.room-tray {
+  position: absolute;
+  bottom: 84px;
+  left: 12px;
+  right: 12px;
+  z-index: 8;
+  background: #fffefa;
+  border: 1px solid #b5c7b5;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px #1f412327;
+  padding: 12px;
+  max-height: min(46%, 310px);
+  overflow: auto;
+}
+.tray-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tray-heading strong {
+  font-family: Georgia, serif;
+  font-size: 19px;
+  font-weight: 400;
+}
+.tray-heading strong span {
+  font:
+    12px Avenir,
+    sans-serif;
+  background: #e9eedf;
+  border-radius: 30px;
+  padding: 3px 7px;
+  margin-left: 4px;
+}
+.tray-heading p {
+  font-size: 12px;
+  color: #657061;
+  margin: 4px 0 0;
+}
+.tray-heading button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+.tray-empty {
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 10px;
+  border: 1px dashed #a1b7a5;
+  border-radius: 12px;
+}
+.tray-pieces {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 1px 8px;
+}
+.tray-piece {
+  flex: 0 0 170px;
+  padding: 5px;
+  border: 1px solid #d9dfd0;
+  background: #f6f5ec;
+  border-radius: 13px;
+}
+.tray-piece.selected {
+  border-color: #416c4c;
+  box-shadow: 0 0 0 2px #416c4c;
+}
+.tray-piece-grip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 6px;
+  touch-action: none;
+  cursor: grab;
+}
+.tray-piece-grip svg {
+  width: 90px;
+  height: 58px;
+  margin-bottom: 5px;
+}
+.tray-piece-grip strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.tray-piece-grip small {
+  font-size: 10px;
+  margin-top: 4px;
+  color: #5f7060;
+}
+.tray-piece-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.tray-piece-actions button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 8px;
+  background: #fffefa;
+  font-size: 12px;
+}
+.tray-options {
+  font-size: 12px;
+  padding: 4px;
+}
+.tray-options summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.tray-options .field-pair {
+  margin-bottom: 8px;
+}
+.placement-prompt {
+  position: absolute;
+  top: 112px;
+  left: 12px;
+  right: 12px;
+  z-index: 9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #365f4bf2;
+  color: white;
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.placement-prompt button {
+  min-height: 44px;
+  padding: 0 8px;
+  text-decoration: underline;
+  color: white;
+}
+.home-app.hero-workspace.tray-open .camera-actions {
+  display: none;
+}
+.home-app.hero-workspace.tray-open .scene-area {
+  --canvas-bottom: 340px;
+}
+.home-app.hero-workspace.tray-open .scene-area:has(.tray-empty) {
+  --canvas-bottom: 238px;
+}
+.home-app.hero-workspace.focus-mode .topbar,
+.home-app.hero-workspace.focus-mode .bottom-nav {
+  display: none;
+}
+.home-app.hero-workspace.focus-mode {
+  grid-template-rows: minmax(0, 1fr);
+}
+.home-app.hero-workspace.focus-mode .studio {
+  grid-row: 1;
+}
+.home-app.hero-workspace.focus-mode .scene-area {
+  --canvas-top: 60px;
+}
+.home-app.hero-workspace.focus-mode .scene-heading {
+  display: none;
+}
+.home-app.hero-workspace.focus-mode .scene-area .view-switch,
+.home-app.hero-workspace.focus-mode .scene-area .floating-floors,
+.home-app.hero-workspace.focus-mode .scene-area .selected-chip {
+  top: 8px;
+}
+.home-app.hero-workspace.focus-mode .placement-prompt {
+  top: 57px;
+}
+@media (min-width: 1050px) {
+  .home-app.hero-workspace .controls-panel.overview {
+    display: none !important;
+  }
+  .home-app.hero-workspace .scene-area {
+    --canvas-top: 102px;
+    --canvas-bottom: 100px;
+  }
+  .home-app.hero-workspace .scene-area .scene-heading {
+    top: 18px;
+    left: 28px;
+  }
+  .home-app.hero-workspace .scene-heading h1 {
+    font-size: 29px;
+  }
+  .home-app.hero-workspace .scene-heading p {
+    font-size: 12px;
+  }
+  .home-app.hero-workspace .scene-area .view-switch {
+    top: 24px;
+    left: auto;
+    right: 180px;
+  }
+  .home-app.hero-workspace .scene-area .floating-floors {
+    top: 26px;
+    right: 28px;
+  }
+  .home-app.hero-workspace .floating-floors select {
+    max-width: 140px;
+  }
+  .home-app.hero-workspace .scene-area .selected-chip {
+    top: 72px;
+    left: 28px;
+    right: auto;
+  }
+  .home-app.hero-workspace .scene-area:has(.selected-chip) .view-switch {
+    visibility: visible;
+  }
+  .home-app.hero-workspace .build-toolbar {
+    bottom: 16px;
+  }
+  .home-app.hero-workspace .scene-area .camera-actions {
+    right: 28px;
+    bottom: 26px;
+  }
+  .home-app.hero-workspace .welcome-card {
+    width: 390px;
+    left: 28px;
+    bottom: 24px;
+    right: auto;
+    background: #fffefaf0;
+  }
+  .home-app.hero-workspace .scene-area.with-welcome {
+    --canvas-bottom: 80px;
+  }
+  .home-app.hero-workspace .with-welcome .camera-actions {
+    bottom: 24px;
+  }
+  .home-app.hero-workspace .room-tray {
+    width: 460px;
+    left: 24px;
+    right: auto;
+    bottom: 105px;
+    max-height: 360px;
+  }
+  .home-app.hero-workspace.tray-open .scene-area {
+    --canvas-bottom: 108px;
+  }
+  .home-app.hero-workspace.tray-open
+    .scene-area
+    .model-canvas.model-canvas.model-canvas {
+    left: 500px;
+  }
+  .home-app.hero-workspace.tray-open .scene-area:has(.tray-empty) {
+    --canvas-bottom: 108px;
+  }
+  .home-app.hero-workspace .placement-prompt {
+    top: 76px;
+    left: 50%;
+    right: 24px;
+  }
+  .home-app.hero-workspace.focus-mode .scene-area .view-switch {
+    left: 24px;
+    right: auto;
+  }
+  .home-app.hero-workspace.focus-mode .scene-area .selected-chip {
+    top: 62px;
+  }
+}
+@media (max-width: 389px) {
+  .home-app.hero-workspace .view-switch button {
+    padding: 0 9px;
+    font-size: 11px;
+  }
+  .home-app.hero-workspace .camera-actions button {
+    padding: 0 7px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-workspace * {
+    scroll-behavior: auto;
+  }
+}
+/* A short tray keeps the board usable; Place opens the full board for a tap. */
+.home-app.hero-workspace .camera-actions button {
+  min-height: 48px;
+  min-width: 48px;
+}
+@media (max-width: 1049px) {
+  .home-app.hero-workspace.is-editing .scene-area {
+    --canvas-top: 64px;
+  }
+  .home-app.hero-workspace.is-editing .scene-area .scene-heading {
+    display: none;
+  }
+  .home-app.hero-workspace.is-editing .scene-area .view-switch,
+  .home-app.hero-workspace.is-editing .scene-area .floating-floors,
+  .home-app.hero-workspace.is-editing .scene-area .selected-chip {
+    top: 12px;
+  }
+  .home-app.hero-workspace.is-editing .placement-prompt {
+    top: 64px;
+  }
+  .home-app.hero-workspace.tray-open .scene-area {
+    --canvas-bottom: 286px;
+  }
+  .home-app.hero-workspace .room-tray {
+    max-height: 198px;
+    padding: 8px 10px;
+  }
+  .tray-heading {
+    margin-bottom: 4px;
+  }
+  .tray-heading p {
+    display: none;
+  }
+  .tray-heading strong {
+    font-size: 17px;
+  }
+  .tray-heading button {
+    height: 36px;
+  }
+  .tray-piece {
+    flex-basis: 226px;
+    padding: 3px;
+  }
+  .tray-piece-grip {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    grid-template-rows: 26px 20px;
+    column-gap: 6px;
+    text-align: left;
+    padding: 4px;
+  }
+  .tray-piece-grip svg {
+    grid-row: 1 / 3;
+    width: 58px;
+    height: 46px;
+    margin: 0;
+  }
+  .tray-piece-grip strong,
+  .tray-piece-grip small {
+    margin: 0;
+  }
+  .tray-piece-actions {
+    grid-template-columns: 1.3fr 1.1fr 44px 44px;
+  }
+  .tray-options {
+    padding: 0 3px;
+  }
+  .tray-options summary {
+    padding: 8px 0;
+  }
+  .home-app.hero-workspace.tray-open .toast {
+    bottom: auto;
+    top: 126px;
+  }
+}

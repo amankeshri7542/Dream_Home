@@ -1,42 +1,28 @@
-import {
-  Component,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Html, Line, OrbitControls } from "@react-three/drei";
-import {
-  BoxGeometry,
-  OrthographicCamera,
-  Vector3,
-  type MeshStandardMaterial,
-} from "three";
+import { Html, Line } from "@react-three/drei";
+import { BoxGeometry, PlaneGeometry, type MeshStandardMaterial } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import {
   UNIT_BOX,
+  floorSurfaceMaterial,
+  setFloorMetreUvs,
   WINDOW_GLASS,
   setMetreUvs,
   solidMaterial,
   surfaceMaterial,
   type SurfaceFinish,
 } from "./sceneMaterials";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { CameraControls } from "./CameraControls";
+import { RoomDetails } from "./RoomDetails";
+import { roomFloorFinish } from "../domain/roomDetails";
 import {
   balconyBounds,
   deriveWalls,
   floorForGeometry,
   slabTiles,
 } from "../domain/model";
-import {
-  length,
-  roomName,
-  unitLabel,
-  type Language,
-  type Unit,
-} from "../domain/display";
+import { roomName, type Language, type Unit } from "../domain/display";
 import {
   type GeometryFloor,
   type Balcony as BalconyModel,
@@ -45,6 +31,7 @@ import {
   type Rect,
   type ViewSettings,
   type Wall,
+  type Room,
 } from "../domain/types";
 import "./Scene.css";
 
@@ -57,6 +44,8 @@ type Props = {
   unit?: Unit;
   cameraView?: "orbit" | "front" | "top";
   zoomStep?: number;
+  framing?: "home" | "plot";
+  focusRoomId?: string | null;
 };
 const FINISHES = {
   ivory: { wall: "#e6e0d2", trim: "#c8c1af", roof: "#c3bba7" },
@@ -64,15 +53,6 @@ const FINISHES = {
   sand: { wall: "#ceb48b", trim: "#aa9170", roof: "#c9bda5" },
 };
 type Finish = typeof FINISHES.ivory;
-const ROOM_FLOORS = {
-  living: "#dbd3bf",
-  kitchen: "#c1cac1",
-  bedroom: "#d8c4ac",
-  bathroom: "#bbc9ca",
-  dining: "#d6ceb9",
-  utility: "#c6c3ba",
-  shop: "#d1c2ce",
-};
 
 type BoxProps = {
   position: [number, number, number];
@@ -113,118 +93,6 @@ function Plate({
       position={[(rect.x + rect.w / 2) / 100, y, (rect.z + rect.d / 2) / 100]}
       size={[rect.w / 100, height, rect.d / 100]}
       color={color}
-    />
-  );
-}
-
-function CameraControls({
-  project,
-  resetKey,
-  cameraView = "orbit",
-  zoomStep = 0,
-}: {
-  project: Project;
-  resetKey: number;
-  cameraView?: Props["cameraView"];
-  zoomStep?: number;
-}) {
-  const controls = useRef<OrbitControlsImpl>(null);
-  const previousZoom = useRef(zoomStep);
-  const latestZoom = useRef(zoomStep);
-  latestZoom.current = zoomStep;
-  const { camera, size, invalidate } = useThree();
-  const extent = Math.max(project.plot.width, project.plot.depth) / 100;
-  const buildingHeight =
-    Math.max(...project.floors.map((floor) => floor.elevation + floor.height)) /
-    100;
-  const road = project.plot.road;
-  const frontage =
-    (road === "north" || road === "south"
-      ? project.plot.width
-      : project.plot.depth) / 100;
-  useEffect(() => {
-    if (!(camera instanceof OrthographicCamera)) return;
-    // A reframe already restores the fit; do not also apply old zoom-step deltas.
-    previousZoom.current = latestZoom.current;
-    const target = new Vector3(
-      0,
-      cameraView === "top" ? 0 : buildingHeight * 0.4,
-      0,
-    );
-    const distance = extent * 1.6;
-    if (cameraView === "top")
-      camera.position.set(0, distance + buildingHeight, 0.001);
-    else if (cameraView === "front") {
-      camera.position.set(
-        road === "east" ? distance : road === "west" ? -distance : 0,
-        buildingHeight * 0.7 + 1.8,
-        road === "south" ? distance : road === "north" ? -distance : 0,
-      );
-    } else
-      camera.position.set(
-        extent * 0.95,
-        extent * 0.82 + buildingHeight * 0.45,
-        extent * 1.2,
-      );
-    camera.zoom =
-      cameraView === "front"
-        ? Math.min(
-            size.width / ((frontage + 3) * 1.3),
-            size.height / ((buildingHeight + 3) * 1.5),
-          )
-        : Math.min(
-            size.width / (extent * 1.7),
-            size.height /
-              (cameraView === "top"
-                ? extent * 1.5
-                : extent * 0.95 + buildingHeight * 0.9),
-          );
-    if (size.width < 600 && cameraView === "orbit") camera.zoom *= 1.1;
-    camera.near = 0.1;
-    camera.far = extent * 15;
-    camera.lookAt(target);
-    camera.updateProjectionMatrix();
-    if (controls.current) {
-      controls.current.target.copy(target);
-      controls.current.update();
-    }
-    invalidate();
-  }, [
-    camera,
-    extent,
-    frontage,
-    buildingHeight,
-    road,
-    cameraView,
-    invalidate,
-    resetKey,
-    size.width,
-    size.height,
-  ]);
-  useEffect(() => {
-    const delta = zoomStep - previousZoom.current;
-    previousZoom.current = zoomStep;
-    if (!(camera instanceof OrthographicCamera) || !delta) return;
-    camera.zoom = Math.max(
-      0.8,
-      Math.min(110, camera.zoom * Math.pow(1.2, delta)),
-    );
-    camera.updateProjectionMatrix();
-    controls.current?.update();
-    invalidate();
-  }, [camera, invalidate, zoomStep]);
-  return (
-    <OrbitControls
-      ref={controls}
-      makeDefault
-      enableDamping
-      dampingFactor={0.09}
-      enableRotate={cameraView !== "top"}
-      minZoom={0.8}
-      maxZoom={110}
-      minPolarAngle={0.00001}
-      maxPolarAngle={Math.PI / 2.08}
-      maxDistance={extent * 5}
     />
   );
 }
@@ -993,6 +861,58 @@ function RoofEdge({
   );
 }
 
+function RoomSurface({
+  room,
+  base,
+  onSelect,
+}: {
+  room: Room;
+  base: number;
+  onSelect: Props["onSelect"];
+}) {
+  const finish = roomFloorFinish(room);
+  const geometry = useMemo(() => {
+    const geometry = new PlaneGeometry(
+      room.bounds.w / 100 - 0.015,
+      room.bounds.d / 100 - 0.015,
+    );
+    setFloorMetreUvs(
+      geometry,
+      finish,
+      (room.bounds.x + room.bounds.w / 2) / 100,
+      (room.bounds.z + room.bounds.d / 2) / 100,
+    );
+    return geometry;
+  }, [room.bounds, finish]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <mesh
+      name={`room-floor-${room.id}`}
+      position={[
+        (room.bounds.x + room.bounds.w / 2) / 100,
+        base + 0.025,
+        (room.bounds.z + room.bounds.d / 2) / 100,
+      ]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      geometry={geometry}
+      material={floorSurfaceMaterial(finish)}
+      dispose={null}
+      receiveShadow
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(room.id);
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = "";
+      }}
+    />
+  );
+}
+
 function FloorGeometry({
   floor,
   selected,
@@ -1002,7 +922,6 @@ function FloorGeometry({
   ground,
   hasAbove,
   road,
-  unit,
   finish,
   finishId,
   exteriorOnly,
@@ -1033,7 +952,7 @@ function FloorGeometry({
   const base = floor.elevation / 100 + 0.15;
   const cut =
     view.cutaway && top && !(view.roof && view.stage >= 5 && !hasAbove);
-  const height = cut ? 0.95 : floor.height / 100;
+  const height = cut ? 0.62 : floor.height / 100;
   return (
     <group>
       {view.stage >= 1 &&
@@ -1064,39 +983,7 @@ function FloorGeometry({
             !exteriorOnly &&
             floor.rooms.map((room) => (
               <group key={room.id}>
-                <mesh
-                  position={[
-                    (room.bounds.x + room.bounds.w / 2) / 100,
-                    base + 0.025,
-                    (room.bounds.z + room.bounds.d / 2) / 100,
-                  ]}
-                  rotation={[-Math.PI / 2, 0, 0]}
-                  receiveShadow
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onSelect(room.id);
-                  }}
-                  onPointerOver={(event) => {
-                    event.stopPropagation();
-                    document.body.style.cursor = "pointer";
-                  }}
-                  onPointerOut={() => {
-                    document.body.style.cursor = "";
-                  }}
-                >
-                  <planeGeometry
-                    args={[
-                      room.bounds.w / 100 - 0.015,
-                      room.bounds.d / 100 - 0.015,
-                    ]}
-                  />
-                  <meshStandardMaterial
-                    color={
-                      selected === room.id ? "#e7bb73" : ROOM_FLOORS[room.kind]
-                    }
-                    roughness={0.9}
-                  />
-                </mesh>
+                <RoomSurface room={room} base={base} onSelect={onSelect} />
                 {selected === room.id && (
                   <Line
                     points={[
@@ -1146,15 +1033,23 @@ function FloorGeometry({
                       className={`scene-room-label${selected === room.id ? " selected" : ""}`}
                     >
                       {roomName(room)}
-                      <span>
-                        {length(room.bounds.w, unit)} ×{" "}
-                        {length(room.bounds.d, unit)} {unitLabel(unit)}
-                      </span>
                     </div>
                   </Html>
                 )}
               </group>
             ))}
+          {view.stage >= 4 &&
+            !exteriorOnly &&
+            top &&
+            view.furnishings !== false &&
+            !(view.roof && view.stage >= 5 && !hasAbove) && (
+              <RoomDetails
+                rooms={floor.rooms}
+                walls={walls}
+                base={base}
+                onSelect={onSelect}
+              />
+            )}
           {view.walls && (
             <WallBatches
               walls={walls}
@@ -1263,6 +1158,8 @@ function House({
   unit = "ft",
   cameraView = "orbit",
   zoomStep = 0,
+  framing = "home",
+  focusRoomId = null,
 }: Props) {
   const finish = FINISHES[project.finish ?? "ivory"];
   const visible = useMemo(
@@ -1357,9 +1254,13 @@ function House({
       </group>
       <CameraControls
         project={project}
+        floorId={view.floor}
         resetKey={view.resetKey}
         cameraView={cameraView}
         zoomStep={zoomStep}
+        framing={framing}
+        focusRoomId={focusRoomId}
+        cutaway={view.cutaway && !(view.roof && view.stage >= 5)}
       />
     </>
   );

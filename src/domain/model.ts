@@ -37,12 +37,36 @@ export const LIMITS = Object.freeze({
   units: 64,
   verticalSpaces: 8,
   balconiesPerFloor: 4,
+  stagedRooms: 48,
   importBytes: 1_000_000,
 });
 export const getLimits = () => LIMITS;
 const sides: EdgeSide[] = ["north", "south", "east", "west"];
 const validName = (name: string) =>
   typeof name === "string" && !!name.trim() && name.length <= 80;
+function validRoomPresentation(room: Room): boolean {
+  return (
+    (room.furnishingRotation === undefined ||
+      [0, 90, 180, 270].includes(room.furnishingRotation)) &&
+    (room.floorFinish === undefined ||
+      ["auto", "wood", "tile", "stone"].includes(room.floorFinish)) &&
+    (room.furnishing === undefined ||
+      ["auto", "none"].includes(room.furnishing))
+  );
+}
+function roomPresentation(
+  room: Room,
+): Pick<Room, "furnishingRotation" | "floorFinish" | "furnishing"> {
+  return {
+    ...(room.furnishingRotation !== undefined
+      ? { furnishingRotation: room.furnishingRotation }
+      : {}),
+    ...(room.floorFinish !== undefined
+      ? { floorFinish: room.floorFinish }
+      : {}),
+    ...(room.furnishing !== undefined ? { furnishing: room.furnishing } : {}),
+  };
+}
 const errorsResult = (project: Project): EditResult => {
   const errors = validateProject(project);
   return errors.length
@@ -118,6 +142,8 @@ export function validateProject(project: Project): string[] {
     errors.push("This building supports up to 64 units.");
   if (project.verticalSpaces.length > LIMITS.verticalSpaces)
     errors.push("This building supports up to 8 vertical spaces.");
+  if ((project.stagedRooms?.length ?? 0) > LIMITS.stagedRooms)
+    errors.push("The room tray holds up to 48 rooms.");
   const envelope = rect(
     plot.setback,
     plot.setback,
@@ -135,6 +161,30 @@ export function validateProject(project: Project): string[] {
       errors.push("Every component must have a unique, valid ID.");
     ids.add(id);
   };
+  for (const { room, sourceFloorId } of project.stagedRooms ?? []) {
+    checkId(room.id);
+    if (
+      !Object.keys(ROOM_META).includes(room.kind) ||
+      !validName(room.name) ||
+      !validRect(room.bounds, 120)
+    )
+      errors.push(
+        "A room in the tray needs a valid name, type and dimensions.",
+      );
+    if (
+      typeof sourceFloorId !== "string" ||
+      !/^[a-zA-Z0-9_-]{1,64}$/.test(sourceFloorId)
+    )
+      errors.push("A room in the tray needs a valid original floor ID.");
+    if (
+      room.unitId !== null &&
+      (typeof room.unitId !== "string" ||
+        !/^[a-zA-Z0-9_-]{1,64}$/.test(room.unitId))
+    )
+      errors.push("A room in the tray needs a valid original unit ID.");
+    if (!validRoomPresentation(room))
+      errors.push("Choose a valid room finish and furnishing setting.");
+  }
   for (const unit of project.units) {
     checkId(unit.id);
     if (
@@ -191,6 +241,8 @@ export function validateProject(project: Project): string[] {
         errors.push("Unknown room type.");
       if (!validName(room.name))
         errors.push("Room names must contain 1–80 characters.");
+      if (!validRoomPresentation(room))
+        errors.push("Choose a valid room finish and furnishing setting.");
       if (!validRect(room.bounds, 120))
         errors.push("Rooms need dimensions of at least 1.2 m, in 0.1 m steps.");
       if (!contains(floor.footprint, room.bounds))
@@ -883,7 +935,9 @@ export function transformComponent(
     const span = horizontal ? p.w : p.d;
     const offset =
       mode === "resize"
-        ? balcony.offset
+        ? horizontal
+          ? b.x - p.x
+          : b.z - p.z
         : snap(
             (horizontal ? b.x + b.w / 2 - p.x : b.z + b.d / 2 - p.z) -
               width / 2,
@@ -897,7 +951,10 @@ export function transformComponent(
       edge,
       width,
       depth,
-      offset: Math.max(0, Math.min(span - width, offset)),
+      offset:
+        mode === "resize"
+          ? offset
+          : Math.max(0, Math.min(span - width, offset)),
     });
   }
   if (
@@ -1227,7 +1284,35 @@ export function parseProject(text: string): Project {
       if (!obj(a) || !str(a.unitId) || !rectangle(a.bounds))
         throw new Error("Project contains an invalid unit area.");
   }
+  if (value.stagedRooms !== undefined) {
+    if (
+      !Array.isArray(value.stagedRooms) ||
+      value.stagedRooms.length > LIMITS.stagedRooms
+    )
+      throw new Error("The room tray must contain at most 48 rooms.");
+    for (const entry of value.stagedRooms) {
+      if (!obj(entry) || !str(entry.sourceFloorId) || !obj(entry.room))
+        throw new Error("Project contains an invalid room tray item.");
+      const r = entry.room;
+      if (
+        !str(r.id) ||
+        !str(r.name) ||
+        !str(r.kind) ||
+        !rectangle(r.bounds) ||
+        !nullableId(r.unitId)
+      )
+        throw new Error("Project contains an invalid room in the tray.");
+    }
+  }
   const raw = value as Project;
+  const copyRoom = (room: Room): Room => ({
+    id: room.id,
+    name: room.name,
+    kind: room.kind,
+    bounds: copyRect(room.bounds),
+    unitId: room.unitId,
+    ...roomPresentation(room),
+  });
   const project: Project = {
     schemaVersion: 2,
     name: raw.name,
@@ -1241,6 +1326,14 @@ export function parseProject(text: string): Project {
     garden: raw.garden,
     parking: raw.parking,
     ...(raw.finish !== undefined ? { finish: raw.finish } : {}),
+    ...(raw.stagedRooms !== undefined
+      ? {
+          stagedRooms: raw.stagedRooms.map((entry) => ({
+            room: copyRoom(entry.room),
+            sourceFloorId: entry.sourceFloorId,
+          })),
+        }
+      : {}),
     units: raw.units.map((u) => ({ id: u.id, name: u.name, use: u.use })),
     verticalSpaces: raw.verticalSpaces.map((v) => ({
       id: v.id,
@@ -1255,13 +1348,7 @@ export function parseProject(text: string): Project {
       height: f.height,
       elevation: f.elevation,
       footprint: copyRect(f.footprint),
-      rooms: f.rooms.map((r) => ({
-        id: r.id,
-        name: r.name,
-        kind: r.kind,
-        bounds: copyRect(r.bounds),
-        unitId: r.unitId,
-      })),
+      rooms: f.rooms.map(copyRoom),
       balconies: f.balconies.map((b) => ({
         id: b.id,
         edge: b.edge,

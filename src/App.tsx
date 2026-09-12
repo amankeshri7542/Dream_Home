@@ -4,11 +4,11 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Archive,
   BedDouble,
   Copy,
   MousePointer2,
   Columns2,
-  CircleHelp,
   ZoomIn,
   ZoomOut,
   Check,
@@ -42,6 +42,8 @@ import SharePlan from "./components/SharePlan";
 import RoomCatalog from "./components/RoomCatalog";
 import SpaceInspector from "./components/SpaceInspector";
 import UnitEditor from "./components/UnitEditor";
+import RoomTray, { type TrayPointer } from "./components/RoomTray";
+import { restoreStagedRoom, setAsideRoom } from "./domain/tray";
 import { planItems, selectionFloor } from "./domain/selection";
 import { duplicateRoom, rotateRoom, resizeBuilding } from "./domain/builder";
 import {
@@ -98,7 +100,7 @@ function friendlyError(error: string) {
   if (error === "storage-unavailable")
     return "Saving is unavailable on this device. Download your project file to keep your changes.";
   if (/No free space/i.test(error))
-    return "This room needs more space. Try a smaller size or expand the building area.";
+    return "This room needs more space. Set another room aside in the tray, try a smaller size, or expand the building area.";
   return error;
 }
 
@@ -147,6 +149,19 @@ export default function App() {
     "orbit",
   );
   const [zoomStep, setZoomStep] = useState(0);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [stagedSelected, setStagedSelected] = useState<string | null>(null);
+  const [trayUnitId, setTrayUnitId] = useState("auto");
+  const [trayDrag, setTrayDrag] = useState<TrayPointer | null>(null);
+  const [trayDrop, setTrayDrop] = useState<
+    (TrayPointer & { key: number }) | null
+  >(null);
+  const [focusMode, setFocusMode] = useState(false);
+  const [framing, setFraming] = useState<"home" | "plot">("home");
+  const [focusRoomId, setFocusRoomId] = useState<string | null>(null);
+  const [fixedCorner, setFixedCorner] = useState<"nw" | "ne" | "sw" | "se">(
+    "nw",
+  );
   const [showGuide, setShowGuide] = useState(true);
   const editing = tool !== "select";
   const setEditing = (value: boolean) => setTool(value ? "move" : "select");
@@ -189,7 +204,12 @@ export default function App() {
       setView((v) => ({ ...v, floor: "all" }));
     if (selected && !selectionFloor(project, selected, activeFloor))
       setSelected(null);
-  }, [project, view.floor, selected, activeFloor]);
+    if (
+      stagedSelected &&
+      !project.stagedRooms?.some((piece) => piece.room.id === stagedSelected)
+    )
+      setStagedSelected(null);
+  }, [project, view.floor, selected, activeFloor, stagedSelected]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -205,6 +225,11 @@ export default function App() {
       if (e.key === "Escape") {
         setPanel(null);
         setSelected(null);
+        setFocusMode(false);
+        setStagedSelected(null);
+        setTrayOpen(false);
+        setTrayDrag(null);
+        setTrayDrop(null);
       }
     };
     window.addEventListener("keydown", handler);
@@ -222,8 +247,14 @@ export default function App() {
   function chooseFloor(id: string) {
     setViewing({ floor: id });
     setSelected(null);
+    setFocusRoomId(null);
+    setTrayUnitId("auto");
   }
   function choosePanel(next: Exclude<Panel, null>) {
+    setTrayOpen(false);
+    setStagedSelected(null);
+    setTrayDrag(null);
+    setTrayDrop(null);
     setPanel(panel === next ? null : next);
     setTool("select");
     setWelcome(false);
@@ -232,6 +263,7 @@ export default function App() {
   }
   function useStarter(next: Project, nextUnit: Unit) {
     commit(next);
+    clearPieceSelection();
     setUnit(nextUnit);
     setWelcome(false);
     setOverlay(null);
@@ -255,6 +287,7 @@ export default function App() {
         throw new Error("Choose a project file smaller than 1 MB.");
       const next = parseProject(await file.text());
       commit(next);
+      clearPieceSelection();
       setOverlay(null);
       setSelected(null);
       setPanel(null);
@@ -278,7 +311,66 @@ export default function App() {
         }),
       );
   }
+  function clearPieceSelection() {
+    setTrayOpen(false);
+    setStagedSelected(null);
+    setTrayDrag(null);
+    setTrayDrop(null);
+    setTrayUnitId("auto");
+    setFocusRoomId(null);
+    setFraming("home");
+  }
+  function putAside(id: string) {
+    const floor = selectionFloor(project, id, activeFloor);
+    if (floor && apply(setAsideRoom(project, floor.id, id))) {
+      setSelected(null);
+      setPanel(null);
+      setTrayOpen(true);
+      setMode((current) => (current === "split" ? "split" : "2d"));
+      setTool("move");
+      setViewing({ floor: floor.id });
+      setStagedSelected(null);
+      setMessage("");
+    }
+  }
+  function pieceRestored(id: string) {
+    setTrayOpen(false);
+    setStagedSelected(null);
+    setTrayDrag(null);
+    setTrayDrop(null);
+    setSelected(id);
+    setMessage("Piece placed. Move or resize it to make it yours.");
+  }
+  function placePiece(id: string, bounds: Rect) {
+    setTrayDrop(null);
+    if (
+      apply(
+        restoreStagedRoom(project, id, activeFloor.id, {
+          position: { x: bounds.x, z: bounds.z },
+          unitId: trayUnitId === "auto" ? undefined : trayUnitId || null,
+        }),
+      )
+    )
+      pieceRestored(id);
+  }
+  function resizeRoomDimension(axis: "w" | "d", value: number) {
+    if (!room || !chosenFloor) return;
+    const bounds = { ...room.bounds, [axis]: value };
+    if (axis === "w" && fixedCorner.endsWith("e"))
+      bounds.x += room.bounds.w - value;
+    if (axis === "d" && fixedCorner.startsWith("s"))
+      bounds.z += room.bounds.d - value;
+    apply(updateRoom(project, chosenFloor.id, room.id, { bounds }));
+  }
+  function fitHome() {
+    setZoomStep(0);
+    setFraming("home");
+    setFocusRoomId(null);
+    setCameraView("orbit");
+    setViewing({ resetKey: view.resetKey + 1 });
+  }
   function beginTool(next: "select" | "move" | "resize") {
+    setStagedSelected(null);
     setTool(next);
     setWelcome(false);
     setPanel(null);
@@ -287,7 +379,7 @@ export default function App() {
     setViewing({ floor: activeFloor.id });
     setMessage(
       next === "resize"
-        ? "Tap a space, then drag its round corner to resize."
+        ? "Tap a space, then pull any edge or corner. The opposite side stays in place."
         : next === "move"
           ? "Drag a space. Drop a room onto another to exchange uses and keep the walls."
           : "Tap any room, balcony or courtyard to see its options.",
@@ -309,6 +401,7 @@ export default function App() {
       );
   }
   function showOutside() {
+    setFocusRoomId(null);
     setMode("3d");
     setTool("select");
     setWelcome(false);
@@ -340,7 +433,9 @@ export default function App() {
   const instructions = "Drag to turn · pinch to zoom";
 
   return (
-    <div className={`home-app ${panel ? "panel-open" : ""}`}>
+    <div
+      className={`home-app hero-workspace ${panel ? "panel-open" : ""} ${editing ? "is-editing" : ""} ${trayOpen ? "tray-open" : ""} ${focusMode ? "focus-mode" : ""}`}
+    >
       <header className="topbar">
         <a href="./" className="brand" aria-label="Dream-Home">
           <span className="brand-mark">
@@ -471,6 +566,8 @@ export default function App() {
                     unit={unit}
                     cameraView={cameraView}
                     zoomStep={zoomStep}
+                    framing={framing}
+                    focusRoomId={focusRoomId}
                   />
                 </Suspense>
               )}
@@ -488,6 +585,15 @@ export default function App() {
                   editable={editing}
                   tool={tool}
                   onMove={changeRoomOnPlan}
+                  stagedRoomId={stagedSelected}
+                  stagedUnitId={
+                    trayUnitId === "auto" ? undefined : trayUnitId || null
+                  }
+                  onPlaceStaged={placePiece}
+                  onSetAside={putAside}
+                  trayDrag={trayDrag}
+                  trayDrop={trayDrop}
+                  onTrayDropHandled={() => setTrayDrop(null)}
                 />
               )}
             </div>
@@ -532,14 +638,31 @@ export default function App() {
                   <Undo2 size={22} />
                   <span>Undo</span>
                 </button>
-                <button onClick={() => setOverlay("help")}>
-                  <CircleHelp size={22} />
-                  <span>Help</span>
+                <button
+                  aria-label={`Room tray, ${project.stagedRooms?.length ?? 0} pieces`}
+                  aria-pressed={trayOpen}
+                  data-room-tray-drop
+                  onClick={() => {
+                    setTrayOpen(!trayOpen);
+                    setPanel(null);
+                    setMode("2d");
+                    setViewing({ floor: activeFloor.id });
+                    setTool("move");
+                  }}
+                >
+                  <Archive size={22} />
+                  <span>
+                    Tray
+                    {project.stagedRooms?.length
+                      ? ` · ${project.stagedRooms.length}`
+                      : ""}
+                  </span>
                 </button>
               </div>
               {selectedItem && editing && (
                 <button
                   className="selected-chip"
+                  aria-label={`Edit details for ${selectedItem.name}`}
                   onClick={() => {
                     setTool("select");
                     setPanel("rooms");
@@ -552,7 +675,7 @@ export default function App() {
                   <ChevronRight size={17} />
                 </button>
               )}
-              {!panel && tool === "select" && showGuide && (
+              {!panel && !trayOpen && tool === "select" && showGuide && (
                 <div className="next-step">
                   <div>
                     <strong>Make it yours</strong>
@@ -569,19 +692,49 @@ export default function App() {
             </>
           )}
           <div className="camera-actions">
+            {mode === "2d" && (
+              <button
+                aria-label="See home in 3D"
+                onClick={() => {
+                  setMode("3d");
+                  setTool("select");
+                  setSelected(null);
+                  setTrayOpen(false);
+                  setStagedSelected(null);
+                  setMessage("");
+                }}
+              >
+                <House size={19} />
+                <span>See in 3D</span>
+              </button>
+            )}
             <button
+              className="fit-home-button"
               aria-label="Reset view"
-              onClick={() => {
-                setZoomStep(0);
-                setCameraView("orbit");
-                setViewing({ resetKey: view.resetKey + 1 });
-              }}
+              onClick={fitHome}
             >
               <Maximize size={19} />
               <span>Fit</span>
             </button>
             {mode !== "2d" && (
               <>
+                <button
+                  aria-label="Top view of home"
+                  aria-pressed={cameraView === "top"}
+                  onClick={() => {
+                    setCameraView("top");
+                    setFocusRoomId(null);
+                    setViewing({
+                      floor: activeFloor.id,
+                      stage: 4,
+                      cutaway: true,
+                      roof: false,
+                    });
+                  }}
+                >
+                  <Grid2X2 size={19} />
+                  <span>Top</span>
+                </button>
                 <button
                   aria-label="Zoom in on home"
                   onClick={() => setZoomStep((n) => Math.min(8, n + 1))}
@@ -596,7 +749,79 @@ export default function App() {
                 </button>
               </>
             )}
+            <button
+              aria-label={focusMode ? "Exit focus mode" : "Focus on the model"}
+              aria-pressed={focusMode}
+              onClick={() => {
+                setFocusMode(!focusMode);
+                setPanel(null);
+                setWelcome(false);
+              }}
+            >
+              {focusMode ? <X size={20} /> : <Expand size={20} />}
+              <span>{focusMode ? "Exit" : "Focus"}</span>
+            </button>
           </div>
+          {trayOpen && (
+            <RoomTray
+              project={project}
+              floorId={activeFloor.id}
+              unit={unit}
+              selected={stagedSelected}
+              targetUnit={trayUnitId}
+              onTargetUnit={setTrayUnitId}
+              onPlace={(id) => {
+                setStagedSelected(id);
+                setSelected(null);
+                setTrayOpen(false);
+                setMode("2d");
+                setTool("move");
+                setMessage("");
+                setError("");
+              }}
+              onSelect={(id) => {
+                setStagedSelected(id);
+                setSelected(null);
+                setPanel(null);
+                setMode("2d");
+                setTool("move");
+                setError("");
+                setMessage("");
+              }}
+              onClose={() => {
+                setTrayOpen(false);
+                setStagedSelected(null);
+                setTrayDrag(null);
+                setTrayDrop(null);
+              }}
+              onApply={apply}
+              onRestored={pieceRestored}
+              onDrag={(pointer) => {
+                setTrayDrag(pointer);
+                if (pointer) {
+                  setStagedSelected(pointer.id);
+                  setSelected(null);
+                  setMode("2d");
+                  setTool("move");
+                }
+              }}
+              onDrop={(pointer) => setTrayDrop({ ...pointer, key: Date.now() })}
+            />
+          )}
+          {stagedSelected && !trayDrag && (
+            <div className="placement-prompt">
+              <span>Tap an empty space to place this piece</span>
+              <button
+                onClick={() => {
+                  setStagedSelected(null);
+                  setTrayDrag(null);
+                  setTrayDrop(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           {project.floors.length > 1 && (
             <div className="floating-floors">
               <select
@@ -1102,6 +1327,36 @@ export default function App() {
                         Duplicate
                       </button>
                     </div>
+                    <div className="room-piece-actions">
+                      <button
+                        className="secondary-button"
+                        onClick={() => putAside(room.id)}
+                      >
+                        <Archive size={18} />
+                        Set aside
+                      </button>
+                      <button
+                        className="secondary-button"
+                        onClick={() => {
+                          setFocusRoomId(room.id);
+                          setFraming("home");
+                          setZoomStep(0);
+                          setCameraView("top");
+                          setMode("3d");
+                          setPanel(null);
+                          setViewing({
+                            floor: chosenFloor.id,
+                            cutaway: true,
+                            roof: false,
+                            stage: 4,
+                            resetKey: view.resetKey + 1,
+                          });
+                        }}
+                      >
+                        <Eye size={18} />
+                        Look inside
+                      </button>
+                    </div>
                     <div className="selected-room-stat">
                       <span
                         className="room-color"
@@ -1124,13 +1379,7 @@ export default function App() {
                         language={language}
                         min={120}
                         max={chosenFloor.footprint.w}
-                        onChange={(w) =>
-                          apply(
-                            updateRoom(project, chosenFloor.id, room.id, {
-                              bounds: { ...room.bounds, w },
-                            }),
-                          )
-                        }
+                        onChange={(w) => resizeRoomDimension("w", w)}
                       />
                       <Dimension
                         label={"Room depth"}
@@ -1140,13 +1389,7 @@ export default function App() {
                         language={language}
                         min={120}
                         max={chosenFloor.footprint.d}
-                        onChange={(d) =>
-                          apply(
-                            updateRoom(project, chosenFloor.id, room.id, {
-                              bounds: { ...room.bounds, d },
-                            }),
-                          )
-                        }
+                        onChange={(d) => resizeRoomDimension("d", d)}
                       />
                     </div>
                     <p className="field-note">
@@ -1154,6 +1397,82 @@ export default function App() {
                         "Sketch dimensions are approximate. Changes snap to a small planning grid."
                       }
                     </p>
+                    <label className="select-label">
+                      Keep this corner fixed
+                      <select
+                        aria-label="Fixed corner for room dimensions"
+                        value={fixedCorner}
+                        onChange={(event) =>
+                          setFixedCorner(
+                            event.target.value as typeof fixedCorner,
+                          )
+                        }
+                      >
+                        <option value="nw">Top left</option>
+                        <option value="ne">Top right</option>
+                        <option value="sw">Bottom left</option>
+                        <option value="se">Bottom right</option>
+                      </select>
+                    </label>
+                    <details className="plain-details room-appearance">
+                      <summary>
+                        Room appearance
+                        <ChevronDown size={17} />
+                      </summary>
+                      <label className="select-label">
+                        Floor finish
+                        <select
+                          aria-label="Room floor finish"
+                          value={room.floorFinish ?? "auto"}
+                          onChange={(event) =>
+                            apply(
+                              updateRoom(project, chosenFloor.id, room.id, {
+                                floorFinish: event.target.value as NonNullable<
+                                  typeof room.floorFinish
+                                >,
+                              }),
+                            )
+                          }
+                        >
+                          <option value="auto">
+                            Recommended for this room
+                          </option>
+                          <option value="wood">Warm wood</option>
+                          <option value="tile">Light tile</option>
+                          <option value="stone">Natural stone</option>
+                        </select>
+                      </label>
+                      <button
+                        className="secondary-button full"
+                        onClick={() =>
+                          apply(
+                            updateRoom(project, chosenFloor.id, room.id, {
+                              furnishingRotation: (((room.furnishingRotation ??
+                                0) +
+                                90) %
+                                360) as 0 | 90 | 180 | 270,
+                            }),
+                          )
+                        }
+                      >
+                        <RotateCcw size={18} />
+                        Turn furnishings
+                      </button>
+                      <Switch
+                        label="Furnish this room"
+                        description="Simple objects help identify its use"
+                        checked={room.furnishing !== "none"}
+                        icon={<BedDouble size={20} />}
+                        onChange={() =>
+                          apply(
+                            updateRoom(project, chosenFloor.id, room.id, {
+                              furnishing:
+                                room.furnishing === "none" ? "auto" : "none",
+                            }),
+                          )
+                        }
+                      />
+                    </details>
                     <div className="nudge-control">
                       <span>
                         <strong>{"Move a little"}</strong>
@@ -1392,6 +1711,8 @@ export default function App() {
                     <div className="view-presets">
                       <button
                         onClick={() => {
+                          setFocusRoomId(null);
+                          setFraming("home");
                           setMode("3d");
                           setCameraView("orbit");
                           setViewing({
@@ -1413,6 +1734,8 @@ export default function App() {
                         onClick={() => {
                           setMode("3d");
                           setCameraView("front");
+                          setFocusRoomId(null);
+                          setFraming("home");
                           setViewing({
                             stage: 5,
                             roof: true,
@@ -1426,6 +1749,29 @@ export default function App() {
                         Front view
                       </button>
                     </div>
+                    <button
+                      className="secondary-button full"
+                      onClick={() => {
+                        setFraming("plot");
+                        setFocusRoomId(null);
+                        setZoomStep(0);
+                        setMode("3d");
+                        setPanel(null);
+                        setViewing({ resetKey: view.resetKey + 1 });
+                      }}
+                    >
+                      <Maximize size={18} />
+                      Fit entire plot
+                    </button>
+                    <Switch
+                      label="Room details"
+                      description="Beds, counters and everyday objects"
+                      checked={view.furnishings !== false}
+                      icon={<BedDouble size={22} />}
+                      onChange={() =>
+                        setViewing({ furnishings: view.furnishings === false })
+                      }
+                    />
                     <fieldset className="finish-choices">
                       <legend>Exterior finish</legend>
                       {(["ivory", "brick", "sand"] as const).map((finish) => (
@@ -1483,6 +1829,7 @@ export default function App() {
                     <button
                       className="secondary-button full"
                       onClick={() => {
+                        fitHome();
                         setViewing({
                           floor: "all",
                           resetKey: view.resetKey + 1,
@@ -1885,12 +2232,12 @@ export default function App() {
               {
                 icon: Move,
                 title: "Tap first, then change",
-                body: "Tap a room or find it under Rooms. Change its size or use the arrows. Use Move to drag a space or exchange room uses. Walls stay in place when swapping. Use Resize to drag its round corner. Green fits; red needs another spot.",
+                body: "Tap a room or find it under Rooms. Change its size or use the arrows. Use Move to drag a space or exchange room uses. Walls stay in place when swapping. Use Resize to pull any edge or corner. Green fits; red needs another spot.",
               },
               {
                 icon: Leaf,
-                title: "Think about the everyday",
-                body: "A courtyard, a bedroom downstairs and room for visitors are options to discuss with your family. Every household is different.",
+                title: "Make space with the room tray",
+                body: "Set a room aside while you rearrange. Drag it back, tap an empty space, or choose Fit to find a place. Its size and appearance stay with it.",
               },
               {
                 icon: Share2,

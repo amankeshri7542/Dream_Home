@@ -210,6 +210,7 @@ export function duplicateRoom(
     project,
     floorId,
     {
+      ...source,
       id: allocateId(`room-${source.kind}`, componentIds(project)),
       name: `${source.name.slice(0, 75)} copy`,
       kind: source.kind,
