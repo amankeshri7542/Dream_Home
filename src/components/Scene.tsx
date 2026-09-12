@@ -14,19 +14,18 @@ import { balconyBounds, deriveWalls, slabTiles } from "../domain/model";
 import {
   length,
   roomName,
-  text,
   unitLabel,
   type Language,
   type Unit,
 } from "../domain/display";
 import {
-  ROOM_META,
   type Floor,
   type Project,
   type Rect,
   type ViewSettings,
   type Wall,
 } from "../domain/types";
+import "./Scene.css";
 
 type Props = {
   project: Project;
@@ -35,7 +34,24 @@ type Props = {
   view: ViewSettings;
   language?: Language;
   unit?: Unit;
+  cameraView?: "orbit" | "front" | "top";
+  zoomStep?: number;
 };
+const FINISHES = {
+  ivory: { wall: "#e6e0d2", trim: "#c8c1af", roof: "#c3bba7" },
+  brick: { wall: "#ad634b", trim: "#d4b99b", roof: "#c0ad94" },
+  sand: { wall: "#ceb48b", trim: "#aa9170", roof: "#c9bda5" },
+};
+type Finish = typeof FINISHES.ivory;
+const ROOM_FLOORS = {
+  living: "#dbd3bf",
+  kitchen: "#c1cac1",
+  bedroom: "#d8c4ac",
+  bathroom: "#bbc9ca",
+  dining: "#d6ceb9",
+  utility: "#c6c3ba",
+};
+
 type BoxProps = {
   position: [number, number, number];
   size: [number, number, number];
@@ -76,21 +92,65 @@ function Plate({
 function CameraControls({
   project,
   resetKey,
+  cameraView = "orbit",
+  zoomStep = 0,
 }: {
   project: Project;
   resetKey: number;
+  cameraView?: Props["cameraView"];
+  zoomStep?: number;
 }) {
   const controls = useRef<OrbitControlsImpl>(null);
+  const previousZoom = useRef(zoomStep);
+  const latestZoom = useRef(zoomStep);
+  latestZoom.current = zoomStep;
   const { camera, size, invalidate } = useThree();
   const extent = Math.max(project.plot.width, project.plot.depth) / 100;
+  const buildingHeight =
+    Math.max(...project.floors.map((floor) => floor.elevation + floor.height)) /
+    100;
+  const road = project.plot.road;
+  const frontage =
+    (road === "north" || road === "south"
+      ? project.plot.width
+      : project.plot.depth) / 100;
   useEffect(() => {
     if (!(camera instanceof OrthographicCamera)) return;
-    const target = new Vector3(0, 1.2, 0);
-    camera.position.set(extent * 0.95, extent * 1.1, extent * 1.25);
-    camera.zoom = Math.min(
-      size.width / (extent * 1.8),
-      size.height / (extent * 1.45),
+    // A reframe already restores the fit; do not also apply old zoom-step deltas.
+    previousZoom.current = latestZoom.current;
+    const target = new Vector3(
+      0,
+      cameraView === "top" ? 0 : buildingHeight * 0.4,
+      0,
     );
+    const distance = extent * 1.6;
+    if (cameraView === "top")
+      camera.position.set(0, distance + buildingHeight, 0.001);
+    else if (cameraView === "front") {
+      camera.position.set(
+        road === "east" ? distance : road === "west" ? -distance : 0,
+        buildingHeight * 0.7 + 1.8,
+        road === "south" ? distance : road === "north" ? -distance : 0,
+      );
+    } else
+      camera.position.set(
+        extent * 0.95,
+        extent * 0.82 + buildingHeight * 0.45,
+        extent * 1.2,
+      );
+    camera.zoom =
+      cameraView === "front"
+        ? Math.min(
+            size.width / ((frontage + 3) * 1.3),
+            size.height / ((buildingHeight + 3) * 1.5),
+          )
+        : Math.min(
+            size.width / (extent * 1.7),
+            size.height /
+              (cameraView === "top"
+                ? extent * 1.5
+                : extent * 0.95 + buildingHeight * 0.9),
+          );
     camera.near = 0.1;
     camera.far = extent * 15;
     camera.lookAt(target);
@@ -100,16 +160,40 @@ function CameraControls({
       controls.current.update();
     }
     invalidate();
-  }, [camera, extent, invalidate, resetKey, size.width, size.height]);
+  }, [
+    camera,
+    extent,
+    frontage,
+    buildingHeight,
+    road,
+    cameraView,
+    invalidate,
+    resetKey,
+    size.width,
+    size.height,
+  ]);
+  useEffect(() => {
+    const delta = zoomStep - previousZoom.current;
+    previousZoom.current = zoomStep;
+    if (!(camera instanceof OrthographicCamera) || !delta) return;
+    camera.zoom = Math.max(
+      0.8,
+      Math.min(110, camera.zoom * Math.pow(1.2, delta)),
+    );
+    camera.updateProjectionMatrix();
+    controls.current?.update();
+    invalidate();
+  }, [camera, invalidate, zoomStep]);
   return (
     <OrbitControls
       ref={controls}
       makeDefault
       enableDamping
       dampingFactor={0.09}
+      enableRotate={cameraView !== "top"}
       minZoom={0.8}
       maxZoom={110}
-      minPolarAngle={0.15}
+      minPolarAngle={0.00001}
       maxPolarAngle={Math.PI / 2.08}
       maxDistance={extent * 5}
     />
@@ -154,16 +238,16 @@ function Road({ project }: { project: Project }) {
       position={[x, -0.16, z]}
       rotation={[0, horizontal ? 0 : Math.PI / 2, 0]}
     >
-      <Box position={[0, 0, 0]} size={[length, 0.13, 3.5]} color="#bdc7cc" />
+      <Box position={[0, 0, 0]} size={[length, 0.13, 3.5]} color="#818b88" />
       <Box
         position={[0, 0.07, -1.55]}
         size={[length, 0.06, 0.24]}
-        color="#f6f3eb"
+        color="#cccac1"
       />
       <Box
         position={[0, 0.07, 1.55]}
         size={[length, 0.06, 0.24]}
-        color="#f6f3eb"
+        color="#cccac1"
       />
       {Array.from({ length: Math.floor(length / 2) }, (_, i) => (
         <Box
@@ -258,12 +342,12 @@ function Plot({
       <Box
         position={[w / 2, -0.18, d / 2]}
         size={[w + 0.14, 0.38, d + 0.14]}
-        color="#d8d5c9"
+        color="#c3b8a0"
       />
       <Box
         position={[w / 2, 0.018, d / 2]}
         size={[w, 0.04, d]}
-        color={project.garden && landscape ? "#b8c8a6" : "#e7e2d6"}
+        color={project.garden && landscape ? "#8fa782" : "#d0c7b5"}
       />
       <Road project={project} />
       <Line
@@ -294,7 +378,7 @@ function Plot({
             key={`path${i}`}
             position={pathPosition(0.25 + i * 0.46)}
             size={horizontal ? [1.12, 0.07, 0.3] : [0.3, 0.07, 1.12]}
-            color="#ebe6d8"
+            color="#bdb4a0"
           />
         ))}
       {project.parking && parkingFits && (
@@ -347,12 +431,18 @@ function WallGeometry({
   height,
   openings,
   cut,
+  finish,
+  outward,
+  entry,
 }: {
   wall: Wall;
   base: number;
   height: number;
   openings: boolean;
   cut: boolean;
+  finish: Finish;
+  outward: number;
+  entry: boolean;
 }) {
   const length = wall.length / 100;
   const thickness = wall.exterior ? 0.17 : 0.12;
@@ -404,17 +494,43 @@ function WallGeometry({
               0,
             ]}
             size={[piece.length, piece.height, thickness]}
-            color={wall.exterior ? "#f3f0e7" : "#e7e4da"}
+            color={wall.exterior ? finish.wall : "#e3ded1"}
           />
           {cut && piece.bottom + piece.height >= height - 0.001 && (
             <Box
               position={[piece.start + piece.length / 2, height + 0.005, 0]}
               size={[piece.length, 0.018, thickness + 0.016]}
-              color="#d1c9b8"
+              color={finish.trim}
             />
           )}
         </group>
       ))}
+      {entry && !cut && openings && opening?.kind === "door" && (
+        <>
+          <Box
+            position={[length / 2, lintel + 0.18, outward * 0.36]}
+            size={[openingWidth + 0.55, 0.13, 0.95]}
+            color={finish.trim}
+          />
+          <Box
+            position={[length / 2, -0.05, outward * 0.32]}
+            size={[openingWidth + 0.3, 0.1, 0.7]}
+            color="#adab9d"
+          />
+          {[-1, 1].map((side) => (
+            <Box
+              key={side}
+              position={[
+                length / 2 + side * (openingWidth / 2 + 0.045),
+                lintel / 2,
+                outward * 0.035,
+              ]}
+              size={[0.08, lintel, thickness + 0.06]}
+              color="#846448"
+            />
+          ))}
+        </>
+      )}
       {openings && opening && openingWidth > 0 && glassHeight > 0 && (
         <>
           {opening.kind === "window" ? (
@@ -422,28 +538,48 @@ function WallGeometry({
               <mesh position={[length / 2, sill + glassHeight / 2, 0]}>
                 <boxGeometry args={[openingWidth, glassHeight, 0.035]} />
                 <meshStandardMaterial
-                  color="#9dbac3"
+                  color="#557d88"
                   transparent
-                  opacity={0.4}
-                  roughness={0.2}
+                  opacity={0.64}
+                  roughness={0.12}
                   depthWrite={false}
                 />
               </mesh>
               <Box
                 position={[length / 2, sill + glassHeight / 2, 0]}
                 size={[0.045, glassHeight, 0.09]}
-                color="#7d8b89"
+                color="#394b4a"
               />
               <Box
                 position={[length / 2, sill, 0]}
                 size={[openingWidth + 0.06, 0.045, 0.23]}
-                color="#cbc7bb"
+                color={finish.trim}
               />
+              {[-1, 1].map((side) => (
+                <Box
+                  key={side}
+                  position={[
+                    length / 2 + side * (openingWidth / 2 - 0.025),
+                    sill + glassHeight / 2,
+                    0,
+                  ]}
+                  size={[0.055, glassHeight, 0.11]}
+                  color="#394b4a"
+                  roughness={0.4}
+                />
+              ))}
+              {!cut && wall.exterior && (
+                <Box
+                  position={[length / 2, lintel + 0.12, outward * 0.2]}
+                  size={[openingWidth + 0.24, 0.07, 0.65]}
+                  color={finish.trim}
+                />
+              )}
               {!cut && (
                 <Box
                   position={[length / 2, lintel, 0]}
                   size={[openingWidth + 0.06, 0.045, 0.09]}
-                  color="#7d8b89"
+                  color="#394b4a"
                 />
               )}
             </>
@@ -455,7 +591,7 @@ function WallGeometry({
               <Box
                 position={[openingWidth / 2, Math.min(lintel, height) / 2, 0]}
                 size={[openingWidth - 0.04, Math.min(lintel, height), 0.045]}
-                color="#b89a73"
+                color="#846448"
               />
             </group>
           )}
@@ -566,7 +702,7 @@ function Balcony({ floor }: { floor: Floor }) {
           [width / 2, 1, depth / 2],
           [width / 2, 1, -depth / 2],
         ]}
-        color="#a3a99e"
+        color="#455550"
         lineWidth={2}
       />
       {Array.from({ length: 10 }, (_, i) => (
@@ -574,9 +710,82 @@ function Balcony({ floor }: { floor: Floor }) {
           key={i}
           position={[-width / 2 + (width * i) / 9, 0.54, depth / 2 - 0.03]}
           size={[0.035, 0.95, 0.035]}
-          color="#adb2a7"
+          color="#5b655b"
         />
       ))}
+    </group>
+  );
+}
+
+function RoofEdge({
+  floor,
+  base,
+  finish,
+}: {
+  floor: Floor;
+  base: number;
+  finish: Finish;
+}) {
+  const rings = [
+    floor.footprint,
+    ...floor.voids
+      .filter((space) => space.kind === "courtyard")
+      .map((space) => space.bounds),
+  ];
+  return (
+    <group>
+      {rings.flatMap((bounds, ringIndex) => {
+        const x = bounds.x / 100,
+          z = bounds.z / 100,
+          w = bounds.w / 100,
+          d = bounds.d / 100;
+        // Courtyard guards sit on the slab side, leaving the whole opening clear.
+        const offset = ringIndex === 0 ? 0.075 : -0.075;
+        const segments = [
+          {
+            position: [x + w / 2, base + 0.38, z + offset] as [
+              number,
+              number,
+              number,
+            ],
+            size: [w, 0.55, 0.15] as [number, number, number],
+          },
+          {
+            position: [x + w / 2, base + 0.38, z + d - offset] as [
+              number,
+              number,
+              number,
+            ],
+            size: [w, 0.55, 0.15] as [number, number, number],
+          },
+          {
+            position: [x + offset, base + 0.38, z + d / 2] as [
+              number,
+              number,
+              number,
+            ],
+            size: [0.15, 0.55, d] as [number, number, number],
+          },
+          {
+            position: [x + w - offset, base + 0.38, z + d / 2] as [
+              number,
+              number,
+              number,
+            ],
+            size: [0.15, 0.55, d] as [number, number, number],
+          },
+        ];
+        return segments.map((segment, i) => (
+          <group key={`${ringIndex}-${i}`}>
+            <Box {...segment} color={finish.wall} />
+            <Box
+              position={[segment.position[0], base + 0.69, segment.position[2]]}
+              size={[segment.size[0] + 0.035, 0.065, segment.size[2] + 0.035]}
+              color={finish.trim}
+            />
+          </group>
+        ));
+      })}
     </group>
   );
 }
@@ -590,8 +799,8 @@ function FloorGeometry({
   ground,
   hasAbove,
   road,
-  language,
   unit,
+  finish,
 }: {
   floor: Floor;
   selected: string | null;
@@ -603,6 +812,7 @@ function FloorGeometry({
   road: Project["plot"]["road"];
   language: Language;
   unit: Unit;
+  finish: Finish;
 }) {
   const walls = useMemo(
     () => deriveWalls(floor, ground ? road : "south"),
@@ -671,9 +881,7 @@ function FloorGeometry({
                   />
                   <meshStandardMaterial
                     color={
-                      selected === room.id
-                        ? "#e7bb73"
-                        : ROOM_META[room.kind].color
+                      selected === room.id ? "#e7bb73" : ROOM_FLOORS[room.kind]
                     }
                     roughness={0.9}
                   />
@@ -725,30 +933,11 @@ function FloorGeometry({
                   >
                     <div
                       className={`scene-room-label${selected === room.id ? " selected" : ""}`}
-                      style={{
-                        whiteSpace: "nowrap",
-                        fontSize: 10,
-                        color: "#39463e",
-                        background: "rgba(255,255,250,.83)",
-                        padding: "4px 7px",
-                        borderRadius: 5,
-                        border: "1px solid rgba(87,99,86,.12)",
-                        textAlign: "center",
-                        boxShadow: "0 2px 7px #4152400d",
-                      }}
                     >
-                      {roomName(room, language)}
-                      <span
-                        style={{
-                          display: "block",
-                          fontSize: 9,
-                          opacity: 0.6,
-                          marginTop: 1,
-                        }}
-                      >
+                      {roomName(room)}
+                      <span>
                         {length(room.bounds.w, unit)} ×{" "}
-                        {length(room.bounds.d, unit)}{" "}
-                        {unitLabel(unit, language)}
+                        {length(room.bounds.d, unit)} {unitLabel(unit)}
                       </span>
                     </div>
                   </Html>
@@ -764,6 +953,17 @@ function FloorGeometry({
                 height={height}
                 openings={view.openings}
                 cut={cut}
+                finish={finish}
+                outward={
+                  wall.axis === "x"
+                    ? wall.z <= floor.footprint.z
+                      ? -1
+                      : 1
+                    : wall.x <= floor.footprint.x
+                      ? 1
+                      : -1
+                }
+                entry={ground && wall.exterior}
               />
             ))}
           {hasAbove && <Stairs floor={floor} />}
@@ -784,19 +984,26 @@ function FloorGeometry({
               />
             </group>
           ))}
-      {view.stage >= 5 &&
-        !hasAbove &&
-        view.roof &&
-        top &&
-        roofTiles.map((tile, i) => (
-          <Plate
-            key={`roof${i}`}
-            rect={tile}
-            y={base + floor.height / 100 + 0.05}
-            height={0.16}
-            color="#9ca69d"
-          />
-        ))}
+      {view.stage >= 5 && !hasAbove && view.roof && top && (
+        <>
+          {roofTiles.map((tile, i) => (
+            <Plate
+              key={`roof${i}`}
+              rect={tile}
+              y={base + floor.height / 100 + 0.05}
+              height={0.16}
+              color={finish.roof}
+            />
+          ))}
+          {view.walls && (
+            <RoofEdge
+              floor={floor}
+              base={base + floor.height / 100}
+              finish={finish}
+            />
+          )}
+        </>
+      )}
     </group>
   );
 }
@@ -808,7 +1015,10 @@ function House({
   view,
   language = "en",
   unit = "ft",
+  cameraView = "orbit",
+  zoomStep = 0,
 }: Props) {
+  const finish = FINISHES[project.finish ?? "ivory"];
   const visible = project.floors.filter(
     (f) => view.floor === "all" || f.id === view.floor,
   );
@@ -818,12 +1028,12 @@ function House({
   );
   return (
     <>
-      <color attach="background" args={["#e8eef1"]} />
-      <ambientLight intensity={0.8} />
-      <hemisphereLight args={["#fffaf0", "#cad6d1", 1]} />
+      <color attach="background" args={["#dce5e4"]} />
+      <ambientLight intensity={0.35} />
+      <hemisphereLight args={["#fffaf0", "#859182", 0.8]} />
       <directionalLight
         position={[-12, 25, 12]}
-        intensity={1.8}
+        intensity={2.2}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-25}
@@ -839,7 +1049,7 @@ function House({
         receiveShadow
       >
         <planeGeometry args={[200, 200]} />
-        <shadowMaterial transparent opacity={0.11} />
+        <shadowMaterial transparent opacity={0.19} />
       </mesh>
       <group
         position={[-project.plot.width / 200, 0, -project.plot.depth / 200]}
@@ -857,44 +1067,31 @@ function House({
             road={project.plot.road}
             language={language}
             unit={unit}
+            finish={finish}
             hasAbove={project.floors.some(
               (other) => other.elevation === floor.elevation + floor.height,
             )}
           />
         ))}
       </group>
-      <CameraControls project={project} resetKey={view.resetKey} />
+      <CameraControls
+        project={project}
+        resetKey={view.resetKey}
+        cameraView={cameraView}
+        zoomStep={zoomStep}
+      />
     </>
   );
 }
 
-function Fallback({ language = "en" }: { language?: Language }) {
+function Fallback() {
   return (
-    <div
-      role="status"
-      style={{
-        height: "100%",
-        display: "grid",
-        placeContent: "center",
-        textAlign: "center",
-        padding: 28,
-        background: "#e8eef1",
-        color: "#3f524a",
-      }}
-    >
-      <strong>
-        {text(
-          language,
-          "3D isn’t available in this browser",
-          "इस ब्राउज़र में 3D उपलब्ध नहीं है",
-        )}
-      </strong>
-      <p style={{ maxWidth: 320, lineHeight: 1.6 }}>
-        {text(
-          language,
-          "Choose 2D plan to keep shaping your home. To explore in 3D, try a browser with WebGL enabled.",
-          "घर का नक्शा बनाने के लिए 2D नक्शा चुनें। 3D देखने के लिए WebGL वाले ब्राउज़र का उपयोग करें।",
-        )}
+    <div role="status" className="scene-fallback">
+      <strong>{"3D isn’t available in this browser"}</strong>
+      <p>
+        {
+          "Choose 2D plan to keep shaping your home. To explore in 3D, try a browser with WebGL enabled."
+        }
       </p>
     </div>
   );
@@ -909,11 +1106,7 @@ class SceneBoundary extends Component<
     return { failed: true };
   }
   render() {
-    return this.state.failed ? (
-      <Fallback language={this.props.language} />
-    ) : (
-      this.props.children
-    );
+    return this.state.failed ? <Fallback /> : this.props.children;
   }
 }
 
@@ -936,7 +1129,7 @@ export default function Scene(props: Props) {
     },
     [],
   );
-  if (!supported) return <Fallback language={language} />;
+  if (!supported) return <Fallback />;
   return (
     <SceneBoundary language={language}>
       <Canvas
@@ -953,11 +1146,9 @@ export default function Scene(props: Props) {
         onPointerMissed={() => props.onSelect(null)}
         fallback={
           <span>
-            {text(
-              language,
-              "Interactive 3D home. Use the Rooms list or 2D plan to edit with the keyboard.",
-              "इंटरैक्टिव 3D घर। कीबोर्ड से बदलाव करने के लिए कमरों की सूची या 2D नक्शा चुनें।",
-            )}
+            {
+              "Interactive 3D home. Use the Rooms list or 2D plan to edit with the keyboard."
+            }
           </span>
         }
         style={{ width: "100%", height: "100%", touchAction: "none" }}

@@ -1,38 +1,43 @@
 # Dream-Home
 
-A mobile-first, browser-local home prototyping sandbox for plot owners. React, TypeScript, Vite and procedural Three.js. No account, backend, AI calls or API keys are needed during use.
+A mobile-first home-building sandbox for plot owners. Start with a plot, find a fitting layout, then shape the rooms directly. React, TypeScript, Vite and procedural Three.js; no account, backend, runtime AI calls or API keys.
 
-## Run
+[Open Dream-Home](https://dream-home-liard-nine.vercel.app/)
 
-Use Node.js 22.12+ (tested with Node 24).
+## Run locally
+
+Node.js 22.12+ (verified on Node 24):
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open [localhost:5173](http://localhost:5173). Production output is `dist/`; `npm run preview` serves it locally after building.
+Open [localhost:5173](http://localhost:5173). `npm run build` creates `dist/`; `npm run preview` serves the production build locally. GitHub's `main` branch is the existing Vercel deployment source.
 
-## Use
+## Build a home
 
-Choose **Start with my plot**, enter measured sides, choose bedrooms/floors, then select a fitting family, aangan or front-yard starting home. Feet/sq ft are the default; metres and Hindi are available. Recommendations never silently change the requested bedroom or floor counts.
+1. Choose **Start with my plot**, enter measured sides, choose bedrooms and floors, then select a family, aangan or front-yard starting home. Feet/sq ft are the default; metres remain available. Recommendations preserve the requested bedroom and floor counts.
+2. Use **Add room** for nine room choices with compact, regular and spacious sizes. Rooms are placed in a clear area; when no space fits, adjust the building area in **My plot**. Maximum expansion preserves the sketch margin and existing balconies.
+3. Use **Move** to drag a room or swap compatible rooms. Green previews fit; red previews explain the problem. **Resize** gives a large corner handle. Cancelled/invalid drags do not change the project. A zoomed plan can be panned by dragging empty space.
+4. Tap **Edit details** for dimension fields, smaller/bigger buttons, position arrows, rotate, duplicate, exact placement and a tap-based swap selector. **Undo** is always available in the building toolbar; redo and backups are in **More**.
+5. **View** contains inside/outside/front cameras and ivory, warm brick and sandstone finishes. Advanced floor isolation, balconies, stages, layers, labels and orientation remain available. Desktop also offers **Plan + 3D** side by side.
+6. **Share** prepares a PNG of all floors and room dimensions. Use native file sharing where supported, or download the image. Editable JSON remains the backup/import format.
 
-Explore the model with orbit/pan/zoom. **My plot**, **Rooms** and **View** each open one panel. Select rooms in 3D, the list or the floor plan. Change dimensions or nudge a room; enable **Move on plan** for deliberate dragging. Advanced controls include additional floors, balconies, construction stages, cutaway and visibility layers.
-
-**Share** prepares a PNG of all floors with room dimensions. Use native file sharing where supported or download the image. **More** contains editable JSON backup/import, units, history and usage tips. Changes autosave locally; up to 50 edits can be undone. Existing schema-v1 files remain supported. Multiple tabs do not synchronize.
+The interface is English only; old language preferences normalize to English. Imported custom names are preserved. Changes save in the current browser. Up to 50 edits can be undone; multiple tabs do not synchronize.
 
 ## Architecture
 
-- `src/domain/types.ts`: versioned semantic document, integer centimetres.
+- `src/domain/types.ts`: schema-v1 semantic document in integer centimetres, with optional `finish`.
 - `src/domain/model.ts`: atomic edits, validation, shared walls and geometry.
 - `src/domain/starters.ts`: deterministic parameterized recommendations.
-- `src/domain/display.ts`: language and display-unit conversion.
-- `src/domain/export.ts`: all-floor SVG/PNG handoff.
-- `src/useProject.ts`: history, local persistence and recovery.
-- `src/components/GuidedStart.tsx`: isolated setup draft.
-- `src/components/Scene.tsx` and `Plan.tsx`: shared-document 3D and SVG views.
+- `src/domain/builder.ts`: catalog, efficient free-space placement, validated swaps, rotation, duplication and aligned building resizing.
+- `src/domain/display.ts` and `export.ts`: units and all-floor PNG handoff.
+- `src/useProject.ts`: history, local persistence and unreadable-save recovery.
+- `src/components/GuidedStart.tsx` and `RoomCatalog.tsx`: setup and adding rooms.
+- `src/components/Scene.tsx` and `Plan.tsx`: shared-document 3D and direct SVG manipulation.
 
-See [mobile design and research](docs/MOBILE-FIRST.md), [original architecture plan](docs/PLAN.md) and [verification](docs/VERIFICATION.md).
+See [the direct-building plan](docs/GAME-LIKE-EDITOR.md), [earlier regional research](docs/MOBILE-FIRST.md) and [verification](docs/VERIFICATION.md).
 
 ## Verify
 
@@ -40,16 +45,16 @@ See [mobile design and research](docs/MOBILE-FIRST.md), [original architecture p
 npm run typecheck
 npm run lint
 npm test
-npm run build
 npm run test:e2e
+npm run build
 ```
 
-Browser tests use installed Google Chrome in isolated contexts and start/reuse the dev server.
+Browser tests use installed Google Chrome in isolated contexts. They start or reuse the local development server. Screenshots wait for actual WebGL pixels, rather than only canvas attachment.
 
-## Current limits
+## Scope
 
-This is a conceptual prototype for discussion with an architect, not an engineering or regulatory plan. Rectangular plots and axis-aligned spaces; uniform sketch margin; fixed 3m floor height. Guided setup supports 1–3 total bedrooms and 1–2 floors; advanced editing supports up to three floors where an aligned stair shaft exists. Courtyard/stair positions come from the generator. Balconies have a fixed south-facing position. Invalid edits reject instead of rearranging neighbours; automatic openings and leftover circulation do not guarantee an accessible or compliant layout.
+A visual prototype for discussion with an architect, not an engineering or regulatory plan. Plots and spaces are rectangular and axis-aligned, with a uniform sketch margin and fixed 3m floor height. Guided setup supports 1–3 total bedrooms and 1–2 floors; advanced editing supports up to three floors with an aligned stair shaft. Courtyard/stair positions originate in the starter. Balconies retain a fixed south-facing position.
 
-No basements, arbitrary plot polygons, custom structural design, independently serviced apartments, cost estimates, detailed interiors or CAD/BIM output. Site planting and parking are schematic. No automatic katha/dhur conversion, local-law verification or solar simulation. Core UI is bilingual; some detailed validation messages and imported custom names remain in their original language.
+Room dimensions are preserved when swapping; incompatible swaps reject. Invalid edits leave the document unchanged. Automatic openings and unassigned circulation do not guarantee an accessible or compliant floor plan. Finishes and structural stages are illustrative; materials use procedural colors and geometry, not photorealistic assets.
 
-HTTPS hosting is needed for broadly available native Web Share. This release is not deployed and does not promise offline/PWA operation. Actual low-end Android/iOS performance still needs device testing.
+No basements, arbitrary plot polygons, custom structural design, independently serviced apartments, costs, furniture catalogs or CAD/BIM output. Planting and parking are schematic. No universal katha/dhur conversion, local-law verification or solar simulation. No offline/PWA promise or cloud synchronization. Physical Android/iOS and usability testing with older plot owners remain necessary before claiming device-wide performance or validated ease of use.

@@ -199,6 +199,11 @@ export function createPreset(id: PresetId): Project {
 
 export function validateProject(project: Project): string[] {
   const errors: string[] = [];
+  if (
+    project.finish !== undefined &&
+    !["ivory", "brick", "sand"].includes(project.finish)
+  )
+    errors.push("Choose an ivory, brick or sand exterior finish.");
   const { plot } = project;
   if (
     ![plot.width, plot.depth].every(
@@ -711,6 +716,7 @@ export function parseProject(text: string): Project {
     },
     garden: project.garden,
     parking: project.parking,
+    ...(project.finish !== undefined ? { finish: project.finish } : {}),
     floors: project.floors.map((f) => ({
       id: f.id,
       name: f.name,

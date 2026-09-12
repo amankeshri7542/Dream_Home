@@ -19,7 +19,6 @@ import {
   roadName,
   fromDisplay,
   length,
-  text,
   toDisplay,
   unitLabel,
 } from "../domain/display";
@@ -78,7 +77,6 @@ export function MiniPlan({ project }: { project: Project }) {
 
 export default function GuidedStart({
   project,
-  language,
   unit: initialUnit,
   onClose,
   onUse,
@@ -89,7 +87,6 @@ export default function GuidedStart({
   onClose: () => void;
   onUse: (project: Project, unit: Unit) => void;
 }) {
-  const t = (en: string, hi: string) => text(language, en, hi);
   const [step, setStep] = useState(0);
   const [unit, setUnit] = useState<Unit>(initialUnit);
   const [width, setWidth] = useState(
@@ -141,10 +138,10 @@ export default function GuidedStart({
   const selected = options.find((o) => o.id === (chosen ?? recommended?.id));
   const styleName = (id: HomeStyle) =>
     id === "family"
-      ? t("Everyday family home", "परिवार का घर")
+      ? "Everyday family home"
       : id === "courtyard"
-        ? t("A home with an aangan", "आँगन वाला घर")
-        : t("A little more open space", "थोड़ी ज़्यादा खुली जगह");
+        ? "A home with an aangan"
+        : "A little more open space";
   function switchUnit(next: Unit) {
     if (next === unit) return;
     setWidth(String(Number(toDisplay(w, next).toFixed(1))));
@@ -156,31 +153,22 @@ export default function GuidedStart({
       <div className="sheet-heading">
         <button
           className="round-button"
-          aria-label={t("Go back", "पीछे जाएँ")}
+          aria-label={"Go back"}
           onClick={() => (step ? setStep(step - 1) : onClose())}
         >
           <ArrowLeft size={21} />
         </button>
-        <span className="step-caption">
-          {t("A home that starts with you", "आपसे शुरू होता है आपका घर")}
-        </span>
+        <span className="step-caption">{"A home that starts with you"}</span>
         <button
           className="round-button"
-          aria-label={t("Close setup", "सेटअप बंद करें")}
+          aria-label={"Close setup"}
           onClick={onClose}
         >
           <X size={21} />
         </button>
       </div>
-      <div
-        className="step-progress"
-        aria-label={t(`Step ${step + 1} of 3`, `चरण ${step + 1} / 3`)}
-      >
-        {[
-          t("Your plot", "आपका प्लॉट"),
-          t("Your needs", "आपकी ज़रूरतें"),
-          t("Your options", "आपके विकल्प"),
-        ].map((s, i) => (
+      <div className="step-progress" aria-label={`Step ${step + 1} of 3`}>
+        {["Your plot", "Your needs", "Your options"].map((s, i) => (
           <span key={i} className={step >= i ? "done" : ""}>
             <i>{step > i ? <Check size={12} /> : i + 1}</i>
             {s}
@@ -190,85 +178,75 @@ export default function GuidedStart({
       <div className="guided-body">
         {step === 0 && (
           <>
-            <div className="section-kicker">
-              {t("LET’S START WITH THE LAND", "ज़मीन से शुरुआत करें")}
-            </div>
-            <h2>{t("How big is your plot?", "आपका प्लॉट कितना बड़ा है?")}</h2>
+            <div className="section-kicker">{"LET’S START WITH THE LAND"}</div>
+            <h2>{"How big is your plot?"}</h2>
             <p className="supporting">
-              {t(
-                "Use the side measurements from your plot papers.",
-                "प्लॉट के कागज़ों में लिखी लंबाई और चौड़ाई भरें।",
-              )}
+              {"Use the side measurements from your plot papers."}
             </p>
             <div className="plot-entry">
               <div className="plot-sketch">
                 <span className="sketch-width">
-                  {width || "—"} {unitLabel(unit, language)}
+                  {width || "—"} {unitLabel(unit)}
                 </span>
                 <div className="sketch-land">
                   <House size={30} strokeWidth={1} />
                   <small>
                     {width && depth
-                      ? `${area((w * d) / 10000, unit)} ${areaLabel(unit, language)}`
+                      ? `${area((w * d) / 10000, unit)} ${areaLabel(unit)}`
                       : "—"}
                   </small>
                 </div>
                 <span className="sketch-depth">
-                  {depth || "—"} {unitLabel(unit, language)}
+                  {depth || "—"} {unitLabel(unit)}
                 </span>
                 <span className={`sketch-road road-${road}`}>
-                  {roadName(road, language)}
+                  {roadName(road)}
                 </span>
               </div>
               <div className="plot-fields">
-                <div
-                  className="unit-switch"
-                  aria-label={t("Measurement unit", "माप की इकाई")}
-                >
+                <div className="unit-switch" aria-label={"Measurement unit"}>
                   <button
                     aria-pressed={unit === "ft"}
                     onClick={() => switchUnit("ft")}
                   >
-                    {t("Feet", "फ़ीट")}
+                    {"Feet"}
                   </button>
                   <button
                     aria-pressed={unit === "m"}
                     onClick={() => switchUnit("m")}
                   >
-                    {t("Metres", "मीटर")}
+                    {"Metres"}
                   </button>
                 </div>
                 <label className="big-field">
-                  {t("Plot width", "प्लॉट की चौड़ाई")}
+                  {"Plot width"}
                   <div>
                     <input
-                      aria-label={t("Plot width", "प्लॉट की चौड़ाई")}
+                      aria-label={"Plot width"}
                       type="number"
                       inputMode="decimal"
                       value={width}
                       onChange={(e) => setWidth(e.target.value)}
                     />
-                    <span>{unitLabel(unit, language)}</span>
+                    <span>{unitLabel(unit)}</span>
                   </div>
                 </label>
                 <label className="big-field">
-                  {t("Plot depth", "प्लॉट की लंबाई")}
+                  {"Plot depth"}
                   <div>
                     <input
-                      aria-label={t("Plot depth", "प्लॉट की लंबाई")}
+                      aria-label={"Plot depth"}
                       type="number"
                       inputMode="decimal"
                       value={depth}
                       onChange={(e) => setDepth(e.target.value)}
                     />
-                    <span>{unitLabel(unit, language)}</span>
+                    <span>{unitLabel(unit)}</span>
                   </div>
                 </label>
               </div>
             </div>
-            <span className="field-caption">
-              {t("Or try an example size", "या एक उदाहरण चुनें")}
-            </span>
+            <span className="field-caption">{"Or try an example size"}</span>
             <div className="size-chips">
               {[
                 [20, 40],
@@ -302,78 +280,61 @@ export default function GuidedStart({
             </div>
             <details className="plain-details">
               <summary>
-                {t("Road side & open margin", "रास्ते की दिशा और खुला हिस्सा")}
+                {"Road side & open margin"}
                 <ChevronDown size={16} />
               </summary>
               <label className="select-label">
-                {t("Road along the plot", "प्लॉट के किस तरफ रास्ता है?")}
+                {"Road along the plot"}
                 <select
                   value={road}
                   onChange={(e) =>
                     setRoad(e.target.value as Project["plot"]["road"])
                   }
                 >
-                  <option value="south">
-                    {t("Front / bottom of plan", "सामने / नक्शे में नीचे")}
-                  </option>
-                  <option value="east">{t("Right", "दाईं तरफ")}</option>
-                  <option value="north">
-                    {t("Back / top of plan", "पीछे / नक्शे में ऊपर")}
-                  </option>
-                  <option value="west">{t("Left", "बाईं तरफ")}</option>
+                  <option value="south">{"Front / bottom of plan"}</option>
+                  <option value="east">{"Right"}</option>
+                  <option value="north">{"Back / top of plan"}</option>
+                  <option value="west">{"Left"}</option>
                 </select>
               </label>
               <label className="big-field">
-                {t(
-                  "Open margin on each side (ft)",
-                  "हर तरफ खुला हिस्सा (फ़ीट)",
-                )}
+                {"Open margin on each side (ft)"}
                 <input
                   type="number"
-                  aria-label={t("Open margin in feet", "खुला हिस्सा फ़ीट में")}
+                  aria-label={"Open margin in feet"}
                   value={margin}
                   onChange={(e) => setMargin(e.target.value)}
                 />
               </label>
               <p className="field-note">
-                {t(
-                  "This margin is a sketch assumption, not a local setback requirement. Confirm the required space with your local architect.",
-                  "यह सिर्फ़ शुरुआती नक्शे का अनुमान है, स्थानीय नियम नहीं। ज़रूरी खुली जगह अपने आर्किटेक्ट से जाँचें।",
-                )}
+                {
+                  "This margin is a sketch assumption, not a local setback requirement. Confirm the required space with your local architect."
+                }
               </p>
             </details>
             <p className="local-note">
-              {t(
-                "Know the area in katha or dhur? Use measured sides here—local conversions vary.",
-                "क्षेत्रफल कट्ठा या धुर में पता है? यहाँ नापी हुई लंबाई–चौड़ाई भरें। स्थानीय माप अलग हो सकते हैं।",
-              )}
+              {
+                "Know the area in katha or dhur? Use measured sides here—local conversions vary."
+              }
             </p>
             {!valid && (
               <p className="inline-error" role="status">
-                {t(
-                  "Enter both sides between 4 and 100 metres and a valid open margin.",
-                  "दोनों तरफ का माप 4 से 100 मीटर के बीच और सही खुला हिस्सा भरें।",
-                )}
+                {
+                  "Enter both sides between 4 and 100 metres and a valid open margin."
+                }
               </p>
             )}
           </>
         )}
         {step === 1 && (
           <>
-            <div className="section-kicker">
-              {t("ROOM FOR YOUR EVERYDAY", "रोज़मर्रा की ज़रूरतें")}
-            </div>
-            <h2>
-              {t("What feels like home?", "आपके घर में क्या होना चाहिए?")}
-            </h2>
+            <div className="section-kicker">{"ROOM FOR YOUR EVERYDAY"}</div>
+            <h2>{"What feels like home?"}</h2>
             <p className="supporting">
-              {t(
-                "Just the essentials for now. You can change things later.",
-                "अभी ज़रूरी बातें चुनें। बाद में बदलाव कर सकते हैं।",
-              )}
+              {"Just the essentials for now. You can change things later."}
             </p>
             <div className="choice-section">
-              <h3>{t("Bedrooms in the whole home", "पूरे घर में बेडरूम")}</h3>
+              <h3>{"Bedrooms in the whole home"}</h3>
               <div className="number-options">
                 {([1, 2, 3] as const).map((n) => (
                   <button
@@ -382,13 +343,13 @@ export default function GuidedStart({
                     onClick={() => setBedrooms(n)}
                   >
                     <strong>{n}</strong>
-                    <span>{t(n === 1 ? "bedroom" : "bedrooms", "बेडरूम")}</span>
+                    <span>{n === 1 ? "bedroom" : "bedrooms"}</span>
                   </button>
                 ))}
               </div>
             </div>
             <div className="choice-section">
-              <h3>{t("How many floors?", "कितनी मंज़िलें?")}</h3>
+              <h3>{"How many floors?"}</h3>
               <div className="floor-options">
                 {([1, 2] as const).map((n) => (
                   <button
@@ -401,14 +362,12 @@ export default function GuidedStart({
                       {n === 2 && <i />}
                     </span>
                     <strong>
-                      {n === 1
-                        ? t("Ground floor only", "सिर्फ़ भूतल")
-                        : t("Ground + one", "भूतल + एक मंज़िल")}
+                      {n === 1 ? "Ground floor only" : "Ground + one"}
                     </strong>
                     <small>
                       {n === 1
-                        ? t("Everything on one level", "सब कुछ एक ही तल पर")
-                        : t("More room upstairs", "ऊपर और जगह")}
+                        ? "Everything on one level"
+                        : "More room upstairs"}
                     </small>
                   </button>
                 ))}
@@ -422,22 +381,17 @@ export default function GuidedStart({
             >
               <Sun size={24} />
               <span>
-                <strong>
-                  {t("I’d love a small aangan", "मुझे एक छोटा आँगन चाहिए")}
-                </strong>
-                <small>
-                  {t("An open-to-sky space, if it fits", "जगह हो तो खुला आँगन")}
-                </small>
+                <strong>{"I’d love a small aangan"}</strong>
+                <small>{"An open-to-sky space, if it fits"}</small>
               </span>
               <i className={`toggle ${preferCourtyard ? "on" : ""}`} />
             </button>
             <div className="advice-note">
               <Leaf size={19} />
               <p>
-                {t(
-                  "Every option keeps a bedroom on the ground floor. A helpful starting point for family members who prefer fewer stairs.",
-                  "हर विकल्प में भूतल पर एक बेडरूम रहेगा। सीढ़ियों से बचना चाहने वाले परिवारजनों के लिए यह मददगार शुरुआत है।",
-                )}
+                {
+                  "Every option keeps a bedroom on the ground floor. A helpful starting point for family members who prefer fewer stairs."
+                }
               </p>
             </div>
           </>
@@ -445,25 +399,21 @@ export default function GuidedStart({
         {step === 2 && (
           <>
             <div className="section-kicker">
-              {t("A FEW WAYS TO MAKE IT YOURS", "आपके घर के कुछ विकल्प")}
+              {"A FEW WAYS TO MAKE IT YOURS"}
             </div>
-            <h2>{t("Start with a possibility.", "एक पसंद से शुरुआत करें।")}</h2>
+            <h2>{"Start with a possibility."}</h2>
             <p className="supporting">
-              {length(w, unit)} × {length(d, unit)} {unitLabel(unit, language)}{" "}
-              <span>·</span> {bedrooms} {t("bedrooms", "बेडरूम")} <span>·</span>{" "}
-              {floors} {t(floors === 1 ? "floor" : "floors", "मंज़िल")}.{" "}
-              {t(
-                "Each available option fits these choices.",
-                "हर उपलब्ध विकल्प इन पसंदों के अनुसार बनाया गया है।",
-              )}
+              {length(w, unit)} × {length(d, unit)} {unitLabel(unit)}{" "}
+              <span>·</span> {bedrooms} {"bedrooms"} <span>·</span> {floors}{" "}
+              {floors === 1 ? "floor" : "floors"}.{" "}
+              {"Each available option fits these choices."}
             </p>
             {preferCourtyard &&
               !options.find((o) => o.id === "courtyard")?.project && (
                 <p className="inline-error">
-                  {t(
-                    "An aangan does not fit this starter arrangement. Other options keep your bedroom and floor choices.",
-                    "इस शुरुआती नक्शे में आँगन नहीं समा रहा। दूसरे विकल्पों में आपके चुने बेडरूम और मंज़िलें बरकरार हैं।",
-                  )}
+                  {
+                    "An aangan does not fit this starter arrangement. Other options keep your bedroom and floor choices."
+                  }
                 </p>
               )}
             <div className="recommendations">
@@ -484,37 +434,22 @@ export default function GuidedStart({
                   </div>
                   <div className="recommendation-copy">
                     {recommended?.id === o.id && (
-                      <span className="recommended-tag">
-                        {t("A GOOD START", "अच्छी शुरुआत")}
-                      </span>
+                      <span className="recommended-tag">{"A GOOD START"}</span>
                     )}
                     <h3>{styleName(o.id)}</h3>
                     <p>
                       {!o.project
-                        ? t(
-                            "This arrangement needs more space. Try fewer bedrooms, another floor or a larger plot.",
-                            "इस नक्शे के लिए ज़्यादा जगह चाहिए। कम बेडरूम, एक और मंज़िल या बड़ा प्लॉट आज़माएँ।",
-                          )
+                        ? "This arrangement needs more space. Try fewer bedrooms, another floor or a larger plot."
                         : o.id === "family"
-                          ? t(
-                              "A simple layout for everyday family life.",
-                              "परिवार की रोज़मर्रा की ज़रूरतों का सरल नक्शा।",
-                            )
+                          ? "A simple layout for everyday family life."
                           : o.id === "courtyard"
-                            ? t(
-                                "Rooms beside a small open-to-sky courtyard.",
-                                "छोटे खुले आँगन के साथ कमरे।",
-                              )
-                            : t(
-                                "A deeper open strip beside the house.",
-                                "घर के पास थोड़ा ज़्यादा खुला हिस्सा।",
-                              )}
+                            ? "Rooms beside a small open-to-sky courtyard."
+                            : "A deeper open strip beside the house."}
                     </p>
                     {o.project && (
                       <small>
                         {area(projectStats(o.project).builtArea, unit)}{" "}
-                        {areaLabel(unit, language)}{" "}
-                        {t("floor area", "फ़्लोर क्षेत्रफल")}
+                        {areaLabel(unit)} {"floor area"}
                       </small>
                     )}
                   </div>
@@ -527,10 +462,9 @@ export default function GuidedStart({
               ))}
             </div>
             <p className="field-note">
-              {t(
-                "These are editable concept layouts, not approved building plans. Light, ventilation, access and local rules still need professional review.",
-                "ये बदलने योग्य शुरुआती नक्शे हैं, स्वीकृत बिल्डिंग प्लान नहीं। रोशनी, हवा, आवागमन और स्थानीय नियमों की विशेषज्ञ जाँच ज़रूरी है।",
-              )}
+              {
+                "These are editable concept layouts, not approved building plans. Light, ventilation, access and local rules still need professional review."
+              }
             </p>
           </>
         )}
@@ -538,11 +472,8 @@ export default function GuidedStart({
       <div className="guided-footer">
         <span>
           {step === 2
-            ? t(
-                "Your current home stays in Undo.",
-                "पिछला घर “वापस” से मिलेगा।",
-              )
-            : t("No sign-up. No payment.", "न साइन-अप, न भुगतान।")}
+            ? "Your current home stays in Undo."
+            : "No sign-up. No payment."}
         </span>
         <button
           className="primary-button"
@@ -557,10 +488,10 @@ export default function GuidedStart({
           }}
         >
           {step === 0
-            ? t("Next: my needs", "अगला: मेरी ज़रूरतें")
+            ? "Next: my needs"
             : step === 1
-              ? t("See my options", "मेरे विकल्प देखें")
-              : t("Make this my starting home", "इस घर से शुरू करें")}
+              ? "See my options"
+              : "Make this my starting home"}
           <ArrowRight size={18} />
         </button>
       </div>

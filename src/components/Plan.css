@@ -1,0 +1,123 @@
+.plan-wrap.direct-plan {
+  position: relative;
+  inset: auto;
+  display: block;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+  overflow: hidden;
+}
+.direct-plan .plan-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: visible;
+}
+.direct-plan .plan-room {
+  cursor: pointer;
+}
+.direct-plan.tool-move .plan-room {
+  cursor: grab;
+}
+.direct-plan.has-preview .plan-room {
+  cursor: grabbing;
+}
+.direct-plan .plan-room-caption {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.2em;
+  text-align: center;
+  color: #29493c;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.direct-plan .plan-room-caption strong {
+  font-size: 1em;
+  font-weight: 650;
+  max-width: 100%;
+}
+.direct-plan .plan-room-caption span {
+  font-size: 0.85em;
+  font-weight: 550;
+  max-width: 100%;
+}
+.direct-plan .plan-tools {
+  position: absolute;
+  left: 14px;
+  right: auto;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  padding: 4px;
+  border: 1px solid #d9e3d7;
+  border-radius: 16px;
+  background: #fffef7ed;
+  box-shadow: 0 3px 12px #234b3510;
+}
+.direct-plan .plan-tools button {
+  min-width: 46px;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #315b47;
+}
+.direct-plan .plan-tools button:hover:not(:disabled) {
+  background: #e6eee2;
+}
+.direct-plan .plan-tools button:disabled {
+  opacity: 0.4;
+}
+.direct-plan .plan-hint {
+  position: absolute;
+  top: 12px;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
+  width: max-content;
+  max-width: min(460px, calc(100% - 24px));
+  padding: 8px 12px;
+  color: #41614e;
+  background: #fffdf2e8;
+  border: 1px solid #d6e2d0;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+.direct-plan .plan-hint.is-valid {
+  color: #216b42;
+  background: #ebf7e8f2;
+  border-color: #8dbc8b;
+}
+.direct-plan .plan-hint.is-invalid {
+  color: #a2322c;
+  background: #fff0eaf5;
+  border-color: #e5a49b;
+}
+.direct-plan .plan-resize-handle {
+  cursor: nwse-resize;
+  outline: none;
+}
+.direct-plan .plan-resize-handle:focus-visible circle {
+  stroke: #edb948;
+}
+@media (max-width: 760px) {
+  .direct-plan .plan-hint {
+    font-size: 11px;
+  }
+}

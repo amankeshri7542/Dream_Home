@@ -26,6 +26,7 @@ export type Project = {
   floors: Floor[];
   garden: boolean;
   parking: boolean;
+  finish?: "ivory" | "brick" | "sand";
 };
 export type Wall = {
   id: string;

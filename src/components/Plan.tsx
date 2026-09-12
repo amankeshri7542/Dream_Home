@@ -1,18 +1,21 @@
-import { useState, useRef } from "react";
-import type { PointerEvent } from "react";
-import type { Floor, Project, Rect, ViewSettings } from "../domain/types";
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { Maximize2, Minus, Plus } from "lucide-react";
+import type { Floor, Project, Rect, Room, ViewSettings } from "../domain/types";
 import { ROOM_META } from "../domain/types";
-import { balconyBounds, deriveWalls } from "../domain/model";
+import { balconyBounds, deriveWalls, updateRoom } from "../domain/model";
+import { moveRoomSmart } from "../domain/builder";
 import {
   floorName,
   length,
-  roomName,
-  text,
   unitLabel,
   type Language,
   type Unit,
 } from "../domain/display";
+import "./Plan.css";
 
+type Tool = "select" | "move" | "resize";
+type Feedback = { valid: boolean; message: string };
 type Props = {
   project: Project;
   floor: Floor;
@@ -23,7 +26,28 @@ type Props = {
   language?: Language;
   unit?: Unit;
   editable?: boolean;
+  tool?: Tool;
+  onInteraction?: (feedback: Feedback) => void;
 };
+type Gesture = {
+  pointerId: number;
+  capture: Element;
+  inverse: DOMMatrix;
+  client: { x: number; y: number };
+  start: { x: number; z: number };
+  kind: Tool | "pan";
+  room?: Room;
+  pan: { x: number; z: number };
+};
+type Preview = {
+  id: string;
+  bounds: Rect;
+  floor: Floor;
+  valid: boolean;
+  message: string;
+};
+const snap = (value: number) => Math.round(value / 10) * 10;
+
 export default function Plan({
   project,
   floor,
@@ -31,89 +55,259 @@ export default function Plan({
   onSelect,
   onMove,
   view,
-  language = "en",
   unit = "ft",
   editable = false,
+  tool,
+  onInteraction,
 }: Props) {
+  const activeTool = tool ?? (editable ? "move" : "select");
   const svg = useRef<SVGSVGElement>(null);
-  const drag = useRef<{
-    id: string;
-    start: { x: number; y: number };
-    client: { x: number; y: number };
-    bounds: Rect;
-    editable: boolean;
-  } | null>(null);
-  const [preview, setPreview] = useState<{ id: string; bounds: Rect } | null>(
-    null,
-  );
-  const { width, depth, setback } = project.plot;
+  const gesture = useRef<Gesture | null>(null);
+  const lastFeedback = useRef("");
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [zoom, setZoom] = useState(1);
-  const viewWidth = (width + 480) / zoom;
-  const viewHeight = (depth + 440) / zoom;
-  const point = (e: PointerEvent) => {
-    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(
-      svg.current!.getScreenCTM()!.inverse(),
+  const [pan, setPan] = useState({ x: 0, z: 0 });
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const { width, depth, setback } = project.plot;
+  const viewWidth = (width + 360) / zoom;
+  const viewHeight = (depth + 360) / zoom;
+  const scale =
+    Math.min(viewport.width / viewWidth, viewport.height / viewHeight) || 0.2;
+  const pixel = 1 / scale;
+  const displayFloor = preview?.floor ?? floor;
+  const highlighted = preview?.id ?? selected;
+  const selectedRoom = displayFloor.rooms.find(
+    (room) => room.id === highlighted,
+  );
+  const road = project.plot.road;
+  const balcony = balconyBounds(floor);
+
+  useEffect(() => {
+    const element = svg.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setViewport({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const old = gesture.current;
+    gesture.current = null;
+    if (old?.capture.hasPointerCapture(old.pointerId))
+      old.capture.releasePointerCapture(old.pointerId);
+    setZoom(1);
+    setPan({ x: 0, z: 0 });
+    setPreview(null);
+    setFeedback(null);
+  }, [floor.id, view.resetKey]);
+
+  function report(next: Feedback) {
+    const feedback = { valid: next.valid, message: next.message };
+    setFeedback(feedback);
+    const key = `${next.valid}:${next.message}`;
+    if (key !== lastFeedback.current) {
+      lastFeedback.current = key;
+      onInteraction?.(feedback);
+    }
+  }
+  function coordinates(event: ReactPointerEvent, inverse: DOMMatrix) {
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+      inverse,
     );
-    return { x: p.x, y: p.y };
-  };
-  function move(e: PointerEvent) {
+    return { x: point.x, z: point.y };
+  }
+  function begin(event: ReactPointerEvent, kind: Gesture["kind"], room?: Room) {
+    if (!event.isPrimary || event.button !== 0 || gesture.current) return;
+    const matrix = svg.current?.getScreenCTM();
+    if (!matrix) return;
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const inverse = matrix.inverse();
+    gesture.current = {
+      pointerId: event.pointerId,
+      capture: event.currentTarget,
+      inverse,
+      client: { x: event.clientX, y: event.clientY },
+      start: coordinates(event, inverse),
+      kind,
+      room,
+      pan,
+    };
+    setFeedback(null);
+  }
+  function candidate(event: ReactPointerEvent, start: Gesture): Preview | null {
+    if (!start.room) return null;
+    const point = coordinates(event, start.inverse);
+    const dx = point.x - start.start.x,
+      dz = point.z - start.start.z;
+    const original = start.room.bounds;
+    const bounds =
+      start.kind === "resize"
+        ? {
+            ...original,
+            w: Math.max(120, snap(original.w + dx)),
+            d: Math.max(120, snap(original.d + dz)),
+          }
+        : { ...original, x: snap(original.x + dx), z: snap(original.z + dz) };
+    const result =
+      start.kind === "resize"
+        ? updateRoom(project, floor.id, start.room.id, { bounds })
+        : moveRoomSmart(project, floor.id, start.room.id, bounds);
+    if (!result.ok)
+      return {
+        id: start.room.id,
+        bounds,
+        floor: {
+          ...floor,
+          rooms: floor.rooms.map((room) =>
+            room.id === start.room!.id ? { ...room, bounds } : room,
+          ),
+        },
+        valid: false,
+        message: result.error,
+      };
+    const nextFloor = result.project.floors.find((f) => f.id === floor.id)!;
+    const other = nextFloor.rooms.find(
+      (room) =>
+        room.id !== start.room!.id &&
+        floor.rooms.some(
+          (before) =>
+            before.id === room.id &&
+            (before.bounds.x !== room.bounds.x ||
+              before.bounds.z !== room.bounds.z),
+        ),
+    );
+    return {
+      id: start.room.id,
+      bounds,
+      floor: nextFloor,
+      valid: true,
+      message: other
+        ? `Release to swap with ${other.name}`
+        : start.kind === "resize"
+          ? "Fits here · release to resize"
+          : "Fits here · release to place",
+    };
+  }
+  function move(event: ReactPointerEvent) {
+    const start = gesture.current;
     if (
-      !drag.current?.editable ||
+      !start ||
+      start.pointerId !== event.pointerId ||
       Math.hypot(
-        e.clientX - drag.current.client.x,
-        e.clientY - drag.current.client.y,
+        event.clientX - start.client.x,
+        event.clientY - start.client.y,
       ) <= 5
     )
       return;
-    const start = drag.current;
-    setPreview({
-      id: start.id,
-      bounds: movedBounds(e, start),
-    });
+    if (start.kind === "pan") {
+      if (zoom <= 1) return;
+      const point = coordinates(event, start.inverse);
+      setPan({
+        x: Math.max(
+          -width / 2,
+          Math.min(width / 2, start.pan.x - point.x + start.start.x),
+        ),
+        z: Math.max(
+          -depth / 2,
+          Math.min(depth / 2, start.pan.z - point.z + start.start.z),
+        ),
+      });
+      return;
+    }
+    if (start.kind === "select") return;
+    const next = candidate(event, start);
+    if (next) {
+      setPreview(next);
+      report(next);
+    }
   }
-  function movedBounds(
-    e: PointerEvent,
-    start: NonNullable<typeof drag.current>,
-  ): Rect {
-    const p = point(e);
-    return {
-      ...start.bounds,
-      x: Math.round((start.bounds.x + p.x - start.start.x) / 10) * 10,
-      z: Math.round((start.bounds.z + p.y - start.start.y) / 10) * 10,
-    };
-  }
-  function end(e: PointerEvent) {
-    const start = drag.current;
-    if (!start) return;
-    // Resolve the last pointer position before selection can open a sheet and resize the SVG.
-    const moved =
-      Math.hypot(e.clientX - start.client.x, e.clientY - start.client.y) > 5;
-    const bounds = start.editable && moved ? movedBounds(e, start) : null;
-    drag.current = null;
+  function clearGesture() {
+    const start = gesture.current;
+    gesture.current = null;
+    if (start?.capture.hasPointerCapture(start.pointerId))
+      start.capture.releasePointerCapture(start.pointerId);
     setPreview(null);
-    if (bounds) onMove(start.id, bounds);
-    if (!moved || start.editable) onSelect(start.id);
   }
-  const road = project.plot.road;
-  const balcony = balconyBounds(floor);
+  function end(event: ReactPointerEvent) {
+    const start = gesture.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const moved =
+      Math.hypot(
+        event.clientX - start.client.x,
+        event.clientY - start.client.y,
+      ) > 5;
+    const next =
+      moved && (start.kind === "move" || start.kind === "resize")
+        ? candidate(event, start)
+        : null;
+    clearGesture();
+    // Selection can open the app's controls; it happens only after the final coordinate is resolved.
+    if (next?.valid) {
+      onMove(next.id, next.bounds);
+      report({
+        valid: true,
+        message: start.kind === "resize" ? "Room resized" : "Room placed",
+      });
+    } else if (next) report(next);
+    if (start.room && (!moved || start.kind !== "select"))
+      onSelect(start.room.id);
+    else if (!moved && start.kind === "pan") onSelect(null);
+  }
+  function changeZoom(next: number) {
+    clearGesture();
+    setZoom(next);
+    if (next === 1) setPan({ x: 0, z: 0 });
+  }
+  function keyboardResize(dx: number, dz: number) {
+    if (!selectedRoom) return;
+    const bounds = {
+      ...selectedRoom.bounds,
+      w: selectedRoom.bounds.w + dx,
+      d: selectedRoom.bounds.d + dz,
+    };
+    const result = updateRoom(project, floor.id, selectedRoom.id, { bounds });
+    if (result.ok) {
+      onMove(selectedRoom.id, bounds);
+      report({ valid: true, message: "Room resized" });
+    } else report({ valid: false, message: result.error });
+  }
+  const hint =
+    activeTool === "move"
+      ? "Drag a room · drop on another to swap"
+      : activeTool === "resize"
+        ? "Select a room · drag its corner to resize"
+        : "Tap a room to choose it";
   return (
-    <div className="plan-wrap">
+    <div
+      className={`plan-wrap direct-plan tool-${activeTool}${preview ? " has-preview" : ""}`}
+    >
       <svg
         ref={svg}
         className="plan-svg"
-        viewBox={`${width / 2 - viewWidth / 2} ${depth / 2 - viewHeight / 2} ${viewWidth} ${viewHeight}`}
-        role="img"
-        aria-label={`${floorName(
-          project.floors.findIndex((f) => f.id === floor.id),
-          language,
-        )}. ${text(language, "Floor plan. Tap a room to select it.", "नक्शा। कमरा चुनने के लिए उस पर टैप करें।")}`}
-        style={{ touchAction: "none" }}
+        viewBox={`${width / 2 + pan.x - viewWidth / 2} ${depth / 2 + pan.z - viewHeight / 2} ${viewWidth} ${viewHeight}`}
+        role="group"
+        aria-label={`${floorName(project.floors.findIndex((f) => f.id === floor.id))}. Interactive floor plan.`}
+        onPointerDown={(event) => begin(event, "pan")}
         onPointerMove={move}
         onPointerUp={end}
-        onPointerCancel={() => {
-          drag.current = null;
-          setPreview(null);
+        onPointerCancel={(event) => {
+          if (gesture.current?.pointerId !== event.pointerId) return;
+          clearGesture();
+          setFeedback(null);
         }}
+        onLostPointerCapture={(event) => {
+          if (gesture.current?.pointerId === event.pointerId) {
+            clearGesture();
+            setFeedback(null);
+          }
+        }}
+        style={{ touchAction: "none", cursor: zoom > 1 ? "grab" : undefined }}
       >
         <defs>
           <pattern
@@ -131,18 +325,13 @@ export default function Plan({
           </pattern>
         </defs>
         <rect
-          x="0"
-          y="0"
           width={width}
           height={depth}
-          fill="#edf1e8"
+          fill="#e6eddf"
           stroke="#73887c"
           strokeWidth="8"
-          onClick={() => onSelect(null)}
         />
         <rect
-          x="0"
-          y="0"
           width={width}
           height={depth}
           fill="url(#plan-grid)"
@@ -157,6 +346,7 @@ export default function Plan({
           stroke="#98a69e"
           strokeWidth="5"
           strokeDasharray="22 20"
+          pointerEvents="none"
         />
         <rect
           x={floor.footprint.x}
@@ -167,127 +357,137 @@ export default function Plan({
           stroke="#66746f"
           strokeWidth="12"
         />
-        {floor.rooms.map((room) => {
-          const b = preview?.id === room.id ? preview.bounds : room.bounds;
+        {displayFloor.rooms.map((room) => {
+          const b = room.bounds,
+            active = room.id === highlighted;
+          const outline = active
+            ? preview
+              ? preview.valid
+                ? "#248653"
+                : "#cb4942"
+              : "#285f4b"
+            : "#a6aaa3";
           return (
             <g
               key={room.id}
-              className="plan-room"
-              onPointerDown={(e) => {
-                if (!e.isPrimary || e.button !== 0) return;
-                e.stopPropagation();
-                e.currentTarget.setPointerCapture(e.pointerId);
-                drag.current = {
-                  id: room.id,
-                  start: point(e),
-                  client: { x: e.clientX, y: e.clientY },
-                  bounds: room.bounds,
-                  editable,
-                };
-              }}
-              onClick={(e) => e.stopPropagation()}
+              className={`plan-room${active ? " active" : ""}`}
+              onPointerDown={(event) =>
+                begin(
+                  event,
+                  activeTool === "move" ? "move" : "select",
+                  floor.rooms.find((original) => original.id === room.id),
+                )
+              }
             >
+              <title>
+                {room.name}: {length(b.w, unit)} × {length(b.d, unit)}{" "}
+                {unitLabel(unit)}
+              </title>
               <rect
                 x={b.x + 5}
                 y={b.z + 5}
                 width={b.w - 10}
                 height={b.d - 10}
                 fill={ROOM_META[room.kind].color}
-                fillOpacity={selected === room.id ? 0.85 : 0.48}
-                stroke={selected === room.id ? "#355e51" : "#a6aaa3"}
-                strokeWidth={selected === room.id ? 12 : 3}
+                fillOpacity={active ? 0.94 : 0.72}
+                stroke={outline}
+                strokeWidth={active ? 3 * pixel : pixel}
               />
-              <text
-                x={b.x + b.w / 2}
-                y={b.z + b.d / 2 - 12}
-                textAnchor="middle"
-                fontSize={Math.min(38, b.w / 8)}
-                fill="#344c47"
-                fontWeight="600"
+              <foreignObject
+                x={b.x + 10}
+                y={b.z + 10}
+                width={Math.max(1, b.w - 20)}
+                height={Math.max(1, b.d - 20)}
                 pointerEvents="none"
               >
-                {roomName(room, language)}
-              </text>
-              <text
-                x={b.x + b.w / 2}
-                y={b.z + b.d / 2 + 38}
-                textAnchor="middle"
-                fontSize="28"
-                fill="#5e716d"
-                pointerEvents="none"
-              >
-                {length(b.w, unit)} × {length(b.d, unit)}{" "}
-                {unitLabel(unit, language)}
-              </text>
+                <div
+                  className="plan-room-caption"
+                  style={{ fontSize: 12 * pixel }}
+                >
+                  <strong>{room.name}</strong>
+                  {active && (
+                    <span>
+                      {length(b.w, unit)} × {length(b.d, unit)}{" "}
+                      {unitLabel(unit)}
+                    </span>
+                  )}
+                </div>
+              </foreignObject>
             </g>
           );
         })}
-        {floor.voids.map((v) => (
-          <g key={v.id}>
+        {floor.voids.map((space) => (
+          <g key={space.id} pointerEvents="none">
             <rect
-              x={v.bounds.x}
-              y={v.bounds.z}
-              width={v.bounds.w}
-              height={v.bounds.d}
-              fill={v.kind === "courtyard" ? "#b9c9a5" : "#e5e3d9"}
+              x={space.bounds.x}
+              y={space.bounds.z}
+              width={space.bounds.w}
+              height={space.bounds.d}
+              fill={space.kind === "courtyard" ? "#b9c9a5" : "#e5e3d9"}
               stroke="#849783"
               strokeWidth="6"
             />
-            {v.kind === "stairs" &&
+            {space.kind === "stairs" &&
               Array.from({ length: 12 }, (_, i) => (
                 <line
                   key={i}
-                  x1={v.bounds.x}
-                  x2={v.bounds.x + v.bounds.w}
-                  y1={v.bounds.z + (i * v.bounds.d) / 12}
-                  y2={v.bounds.z + (i * v.bounds.d) / 12}
+                  x1={space.bounds.x}
+                  x2={space.bounds.x + space.bounds.w}
+                  y1={space.bounds.z + (i * space.bounds.d) / 12}
+                  y2={space.bounds.z + (i * space.bounds.d) / 12}
                   stroke="#aaa99d"
                   strokeWidth="4"
                 />
               ))}
             <text
-              x={v.bounds.x + v.bounds.w / 2}
-              y={v.bounds.z + v.bounds.d / 2}
+              x={space.bounds.x + space.bounds.w / 2}
+              y={space.bounds.z + space.bounds.d / 2}
               textAnchor="middle"
-              fontSize="27"
+              fontSize={11 * pixel}
               fill="#45634f"
             >
-              {v.kind === "stairs"
-                ? text(language, "Stairs ↑", "सीढ़ियाँ ↑")
-                : text(language, "Aangan", "आँगन")}
+              {space.kind === "stairs" ? "Stairs ↑" : "Aangan"}
             </text>
           </g>
         ))}
         {view.walls &&
-          deriveWalls(floor, road).map((w) => (
-            <g key={w.id} pointerEvents="none">
+          deriveWalls(displayFloor, road).map((wall) => (
+            <g key={wall.id} pointerEvents="none">
               <line
-                x1={w.x}
-                y1={w.z}
-                x2={w.x + (w.axis === "x" ? w.length : 0)}
-                y2={w.z + (w.axis === "z" ? w.length : 0)}
+                x1={wall.x}
+                y1={wall.z}
+                x2={wall.x + (wall.axis === "x" ? wall.length : 0)}
+                y2={wall.z + (wall.axis === "z" ? wall.length : 0)}
                 stroke="#59675f"
                 strokeWidth="14"
               />
-              {view.openings && w.opening && (
+              {view.openings && wall.opening && (
                 <line
                   x1={
-                    w.x +
-                    (w.axis === "x" ? (w.length - w.opening.width) / 2 : 0)
+                    wall.x +
+                    (wall.axis === "x"
+                      ? (wall.length - wall.opening.width) / 2
+                      : 0)
                   }
                   y1={
-                    w.z +
-                    (w.axis === "z" ? (w.length - w.opening.width) / 2 : 0)
+                    wall.z +
+                    (wall.axis === "z"
+                      ? (wall.length - wall.opening.width) / 2
+                      : 0)
                   }
                   x2={
-                    w.x +
-                    (w.axis === "x" ? (w.length + w.opening.width) / 2 : 0)
+                    wall.x +
+                    (wall.axis === "x"
+                      ? (wall.length + wall.opening.width) / 2
+                      : 0)
                   }
                   y2={
-                    w.z +
-                    (w.axis === "z" ? (w.length + w.opening.width) / 2 : 0)
+                    wall.z +
+                    (wall.axis === "z"
+                      ? (wall.length + wall.opening.width) / 2
+                      : 0)
                   }
-                  stroke={w.opening.kind === "door" ? "#faf9f3" : "#99c8d4"}
+                  stroke={wall.opening.kind === "door" ? "#faf9f3" : "#99c8d4"}
                   strokeWidth="16"
                 />
               )}
@@ -302,83 +502,122 @@ export default function Plan({
             fill="#cdb796"
             stroke="#73847c"
             strokeWidth="7"
+            pointerEvents="none"
           />
         )}
-        <g fill="#718078" fontSize="35" textAnchor="middle">
-          <text x={width / 2} y="-85">
-            {length(width, unit)} {unitLabel(unit, language)}
+        <g
+          fill="#607669"
+          fontSize={11 * pixel}
+          textAnchor="middle"
+          pointerEvents="none"
+        >
+          <text x={width / 2} y={-55}>
+            {length(width, unit)} {unitLabel(unit)}
           </text>
-          <text transform={`translate(-90 ${depth / 2}) rotate(-90)`}>
-            {length(depth, unit)} {unitLabel(unit, language)}
+          <text transform={`translate(-55 ${depth / 2}) rotate(-90)`}>
+            {length(depth, unit)} {unitLabel(unit)}
           </text>
         </g>
-        <path
-          d={`M0 -45V-20 M0 -35H${width} M${width} -45V-20 M-45 0H-20 M-35 0V${depth} M-45 ${depth}H-20`}
-          stroke="#879b91"
-          strokeWidth="4"
-          fill="none"
-        />
         <text
-          x={road === "west" ? -150 : road === "east" ? width + 150 : width / 2}
+          x={road === "west" ? -135 : road === "east" ? width + 135 : width / 2}
           y={
-            road === "north" ? -155 : road === "south" ? depth + 145 : depth / 2
+            road === "north" ? -135 : road === "south" ? depth + 135 : depth / 2
           }
           transform={
             road === "west" || road === "east"
-              ? `rotate(-90 ${road === "west" ? -150 : width + 150} ${depth / 2})`
+              ? `rotate(-90 ${road === "west" ? -135 : width + 135} ${depth / 2})`
               : undefined
           }
           textAnchor="middle"
-          fontSize="30"
-          letterSpacing="10"
-          fill="#7e8b89"
+          fontSize={10 * pixel}
+          fill="#6a7c72"
+          pointerEvents="none"
         >
-          {text(language, "ROAD", "सड़क")}
+          ROAD
         </text>
+        {activeTool === "resize" && selectedRoom && (
+          <g
+            className="plan-resize-handle"
+            role="button"
+            tabIndex={0}
+            aria-label={`Resize ${selectedRoom.name}; drag the corner or use arrow keys`}
+            transform={`translate(${selectedRoom.bounds.x + selectedRoom.bounds.w} ${selectedRoom.bounds.z + selectedRoom.bounds.d})`}
+            onPointerDown={(event) =>
+              begin(
+                event,
+                "resize",
+                floor.rooms.find((room) => room.id === selectedRoom.id),
+              )
+            }
+            onKeyDown={(event) => {
+              const delta: Record<string, [number, number]> = {
+                ArrowLeft: [-10, 0],
+                ArrowRight: [10, 0],
+                ArrowUp: [0, -10],
+                ArrowDown: [0, 10],
+              };
+              if (delta[event.key]) {
+                event.preventDefault();
+                keyboardResize(...delta[event.key]);
+              }
+            }}
+          >
+            <rect
+              x={-25 * pixel}
+              y={-25 * pixel}
+              width={50 * pixel}
+              height={50 * pixel}
+              fill="transparent"
+            />
+            <circle
+              r={22 * pixel}
+              fill={preview && !preview.valid ? "#cb4942" : "#285f4b"}
+              stroke="#fffdf6"
+              strokeWidth={3 * pixel}
+            />
+            <path
+              d={`M ${-7 * pixel} ${7 * pixel} L ${7 * pixel} ${-7 * pixel} M ${-7 * pixel} 0 V ${7 * pixel} H 0 M 0 ${-7 * pixel} H ${7 * pixel} V 0`}
+              fill="none"
+              stroke="white"
+              strokeWidth={2 * pixel}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </g>
+        )}
       </svg>
-      <div
-        className="plan-tools"
-        role="group"
-        aria-label={text(language, "Floor plan zoom", "नक्शे का ज़ूम")}
-      >
+      <div className="plan-tools" role="group" aria-label="Floor plan zoom">
         <button
           type="button"
-          style={{ minWidth: 44, minHeight: 44 }}
-          aria-label={text(language, "Zoom in on plan", "नक्शा बड़ा करें")}
+          aria-label="Zoom in on plan"
           disabled={zoom >= 4}
-          onClick={() => setZoom((z) => Math.min(4, z * 1.3))}
+          onClick={() => changeZoom(Math.min(4, zoom * 1.3))}
         >
-          ＋
+          <Plus size={20} />
         </button>
         <button
           type="button"
-          style={{ minWidth: 44, minHeight: 44 }}
-          aria-label={text(language, "Zoom out of plan", "नक्शा छोटा करें")}
+          aria-label="Zoom out of plan"
           disabled={zoom <= 1}
-          onClick={() => setZoom((z) => Math.max(1, z / 1.3))}
+          onClick={() => changeZoom(Math.max(1, zoom / 1.3))}
         >
-          −
+          <Minus size={20} />
         </button>
         <button
           type="button"
-          style={{ minWidth: 44, minHeight: 44 }}
-          onClick={() => setZoom(1)}
+          aria-label="Fit plan"
+          onClick={() => changeZoom(1)}
         >
-          {text(language, "Fit", "पूरा")}
+          <Maximize2 size={17} />
+          <span>Fit</span>
         </button>
       </div>
-      <div className="plan-hint">
-        {editable
-          ? text(
-              language,
-              "Drag a room to move · 10 cm grid",
-              "कमरा खींचकर खिसकाएँ · 10 सेमी ग्रिड",
-            )
-          : text(
-              language,
-              "Tap a room to change its size or position",
-              "आकार या जगह बदलने के लिए कमरे पर टैप करें",
-            )}
+      <div
+        className={`plan-hint${feedback ? (feedback.valid ? " is-valid" : " is-invalid") : ""}`}
+        role="status"
+      >
+        {feedback?.message ??
+          `${hint}${zoom > 1 ? " · drag empty space to pan" : ""}`}
       </div>
     </div>
   );

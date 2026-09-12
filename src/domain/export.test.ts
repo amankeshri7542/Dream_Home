@@ -14,7 +14,7 @@ describe("family and architect plan image", () => {
     project.name = 'Home <script> & "family"';
     project.floors[0].rooms[0].name = '<img onerror="x">&';
     project.floors[0].rooms[0].id = 'room" onload="x';
-    const svg = buildPlanSvg(project, "ft", "en");
+    const svg = buildPlanSvg(project, "ft");
     expect(svg).not.toContain("<script>");
     expect(svg).not.toContain("<img");
     expect(svg).toContain("Home &lt;script&gt; &amp; &quot;family&quot;");
@@ -22,21 +22,21 @@ describe("family and architect plan image", () => {
     expect(svg).toContain('data-room="room&quot; onload=&quot;x"');
   });
 
-  it("shows both plot dimensions, selected units, translated road and total rooms/floors", () => {
+  it("shows both plot dimensions, selected units, road position and total rooms/floors", () => {
     const project = createPreset("family");
     project.plot.road = "east";
     project.plot.north = 90;
-    const svg = buildPlanSvg(project, "ft", "hi");
-    expect(svg).toContain(`${length(project.plot.width, "ft")} फ़ीट</text>`);
-    expect(svg).toContain(`${length(project.plot.depth, "ft")} फ़ीट</text>`);
+    const svg = buildPlanSvg(project, "ft");
+    expect(svg).toContain(`${length(project.plot.width, "ft")} ft</text>`);
+    expect(svg).toContain(`${length(project.plot.depth, "ft")} ft</text>`);
     expect(svg).toContain('data-dimension="depth"');
     expect(svg).toContain('data-road="east"');
-    expect(svg).toContain("रास्ते की दिशा: दाईं ओर");
-    expect(svg).toContain("उत्तर 90°");
+    expect(svg).toContain("Road side: Right");
+    expect(svg).toContain("North 90°");
     expect(svg).toContain(`rotate(90)`);
-    expect(svg).toContain(`${projectStats(project).bedrooms} बेडरूम`);
-    expect(svg).toContain(`${project.floors.length} मंज़िलें`);
-    const metric = buildPlanSvg(project, "m", "en");
+    expect(svg).toContain(`${projectStats(project).bedrooms} bedrooms`);
+    expect(svg).toContain(`${project.floors.length} floors`);
+    const metric = buildPlanSvg(project, "m");
     expect(metric).toContain(`${length(project.plot.depth, "m")} m</text>`);
     expect(metric).toContain("not a verified legal setback");
   });
@@ -56,7 +56,7 @@ describe("family and architect plan image", () => {
         ),
       })),
     }));
-    const svg = buildPlanSvg(project, "ft", "en");
+    const svg = buildPlanSvg(project, "ft");
     const panels = [
       ...svg.matchAll(
         /data-floor="(\d+)" data-start="(\d+)" data-end="(\d+)"/g,
@@ -101,7 +101,7 @@ describe("family and architect plan image", () => {
     project.plot.road = "east";
     project.floors[1].balcony = true;
     const bounds = balconyBounds(project.floors[1]);
-    const svg = buildPlanSvg(project, "m", "en");
+    const svg = buildPlanSvg(project, "m");
     expect(svg).toContain(
       `data-balcony="true" x="${bounds.x}" y="${bounds.z}" width="${bounds.w}" height="${bounds.d}"`,
     );

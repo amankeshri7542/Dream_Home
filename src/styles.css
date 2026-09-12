@@ -149,13 +149,7 @@ button:hover:not(:disabled) {
 .round-button:hover:not(:disabled) {
   background: #edf2e9;
 }
-.language-button {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 7px;
-  font-size: 13px;
-  font-weight: 600;
-}
+
 .share-button {
   height: 42px;
   min-width: 42px;
@@ -1692,33 +1686,7 @@ button:hover:not(:disabled) {
   color: #9aaa87;
   margin-top: 4px;
 }
-html[lang="hi"] h1,
-html[lang="hi"] h2 {
-  font-family: "Kohinoor Devanagari", "Nirmala UI", sans-serif;
-  letter-spacing: 0;
-  font-weight: 500;
-}
-html[lang="hi"] .section-kicker {
-  letter-spacing: 0.1px;
-  font-size: 10px;
-}
-html[lang="hi"] .scene-heading h1 {
-  font-size: 24px;
-}
-html[lang="hi"] .welcome-card h2 {
-  font-size: 16px;
-  line-height: 1.5;
-}
-html[lang="hi"] .step-progress > span {
-  font-size: 11px;
-}
-html[lang="hi"] .guided-body h2 {
-  font-size: 27px;
-  line-height: 1.4;
-}
-html[lang="hi"] .recommendation-copy h3 {
-  line-height: 1.6;
-}
+
 @media (min-width: 700px) {
   .home-app {
     grid-template-rows: 76px minmax(0, 1fr) 76px;
@@ -1753,9 +1721,7 @@ html[lang="hi"] .recommendation-copy h3 {
   .mobile-undo {
     display: none;
   }
-  .language-button {
-    font-size: 12px;
-  }
+
   .scene-heading {
     top: 28px;
     left: 31px;
@@ -2086,9 +2052,7 @@ html[lang="hi"] .recommendation-copy h3 {
     font-size: 10px;
     color: #9bae89;
   }
-  html[lang="hi"] .bottom-nav:after {
-    content: "आर्किटेक्ट से चर्चा के लिए शुरुआती विचार। इंजीनियरिंग की जाँच नहीं।";
-  }
+
   .bottom-nav > button svg {
     width: 18px;
   }
@@ -2214,10 +2178,7 @@ html[lang="hi"] .recommendation-copy h3 {
   .topbar-actions {
     gap: 0;
   }
-  .language-button {
-    font-size: 12px;
-    padding: 0 4px;
-  }
+
   .topbar-actions > .round-button {
     width: 40px;
   }

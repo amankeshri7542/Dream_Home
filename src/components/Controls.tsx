@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import { X, Minus, Plus } from "lucide-react";
 import type { Language, Unit } from "../domain/display";
-import { fromDisplay, text, toDisplay, unitLabel } from "../domain/display";
+import { fromDisplay, toDisplay, unitLabel } from "../domain/display";
 
 export function Dialog({
   children,
@@ -33,7 +33,6 @@ export function Dialog({
 export function DialogHeading({
   title,
   onClose,
-  language,
 }: {
   title: string;
   onClose: () => void;
@@ -44,7 +43,7 @@ export function DialogHeading({
       <h2>{title}</h2>
       <button
         className="round-button"
-        aria-label={text(language, "Close dialog", "बंद करें")}
+        aria-label={"Close dialog"}
         onClick={onClose}
       >
         <X size={21} />
@@ -56,10 +55,10 @@ export function Dimension({
   label,
   cm,
   unit,
-  language,
   onChange,
   min = 0,
   max = 10000,
+  stepper = false,
 }: {
   label: string;
   cm: number;
@@ -68,7 +67,9 @@ export function Dimension({
   onChange: (cm: number) => void;
   min?: number;
   max?: number;
+  stepper?: boolean;
 }) {
+  const inputId = useId();
   const formatted = String(Number(toDisplay(cm, unit).toFixed(1)));
   const [draft, setDraft] = useState(formatted);
   const [invalid, setInvalid] = useState(false);
@@ -77,6 +78,11 @@ export function Dimension({
     setInvalid(false);
   }, [formatted]);
   function save() {
+    // Display rounding must never invalidate an untouched exact measurement.
+    if (draft === formatted) {
+      setInvalid(false);
+      return;
+    }
     const value = fromDisplay(Number(draft), unit);
     if (draft === "" || !Number.isFinite(value) || value < min || value > max) {
       setInvalid(true);
@@ -87,10 +93,12 @@ export function Dimension({
     setDraft(formatted);
   }
   return (
-    <label className="big-field">
-      {label}
+    <div className="big-field">
+      <label htmlFor={inputId}>{label}</label>
       <div>
         <input
+          id={inputId}
+          aria-describedby={invalid ? `${inputId}-error` : undefined}
           type="number"
           inputMode="decimal"
           aria-label={label}
@@ -106,18 +114,36 @@ export function Dimension({
             if (e.key === "Enter") e.currentTarget.blur();
           }}
         />
-        <span>{unitLabel(unit, language)}</span>
+        <span>{unitLabel(unit)}</span>
       </div>
+      {stepper && (
+        <div className="dimension-steps">
+          <button
+            type="button"
+            aria-label={`Decrease ${label.toLowerCase()}`}
+            disabled={cm - (unit === "ft" ? 30 : 10) < min}
+            onClick={() => onChange(cm - (unit === "ft" ? 30 : 10))}
+          >
+            <Minus size={20} />
+            Smaller
+          </button>
+          <button
+            type="button"
+            aria-label={`Increase ${label.toLowerCase()}`}
+            disabled={cm + (unit === "ft" ? 30 : 10) > max}
+            onClick={() => onChange(cm + (unit === "ft" ? 30 : 10))}
+          >
+            <Plus size={20} />
+            Bigger
+          </button>
+        </div>
+      )}
       {invalid && (
-        <small className="input-error">
-          {text(
-            language,
-            "Enter a size within the plot.",
-            "प्लॉट के अंदर का सही माप भरें।",
-          )}
+        <small id={`${inputId}-error`} className="input-error">
+          {"Enter a size within the plot."}
         </small>
       )}
-    </label>
+    </div>
   );
 }
 export function Switch({

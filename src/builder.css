@@ -1,0 +1,846 @@
+/* Direct-building layer: the model remains central; controls read like actions. */
+:root {
+  --muted: #56685e;
+}
+.home-app {
+  font-size: 16px;
+  color: #294c3f;
+}
+button,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+.home-app button:focus-visible {
+  outline: 3px solid #b37818;
+  outline-offset: 3px;
+}
+.home-app .supporting,
+.home-app .field-note,
+.home-app .privacy-note {
+  color: #52675b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.home-app .section-kicker {
+  color: #527164;
+  font-size: 11px;
+}
+.home-app .round-button,
+.home-app .share-button {
+  min-width: 48px;
+  min-height: 48px;
+}
+.home-app .topbar {
+  padding: 0 14px;
+}
+.home-app .brand {
+  font-size: 22px;
+  gap: 8px;
+}
+.home-app .brand-mark {
+  width: 34px;
+  height: 38px;
+}
+.home-app .topbar-actions {
+  gap: 8px;
+}
+.home-app .topbar-actions > .round-button {
+  width: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  justify-content: center;
+}
+.button-word {
+  font-size: 11px;
+  line-height: 1.1;
+}
+.home-app .share-button {
+  padding: 0 12px;
+  gap: 6px;
+}
+.home-app .share-button span {
+  display: inline;
+  font-size: 13px;
+}
+.home-app .view-switch button {
+  min-height: 48px;
+  font-size: 14px;
+}
+.desktop-only {
+  display: none !important;
+}
+.home-app .nav-item,
+.home-app .bottom-nav button {
+  min-height: 56px;
+  font-size: 14px;
+}
+.home-app .primary-button,
+.home-app .secondary-button {
+  min-height: 52px;
+  font-size: 15px;
+}
+.home-app .big-field {
+  font-size: 15px;
+  font-weight: 600;
+}
+.home-app .big-field input {
+  font-size: 19px;
+  min-height: 52px;
+  font-weight: 500;
+}
+.home-app .switch-row {
+  min-height: 68px;
+}
+.home-app .switch-row strong {
+  font-size: 16px;
+}
+.home-app .switch-row small {
+  font-size: 13px;
+  color: #556b5d;
+}
+.home-app .plain-details > summary {
+  font-size: 15px;
+  min-height: 52px;
+}
+.home-app .panel-heading h2 {
+  font-size: 25px;
+}
+.home-app .panel-body {
+  padding: 18px 20px 28px;
+}
+.home-app .room-card {
+  min-height: 78px;
+  padding: 13px;
+}
+.home-app .room-card strong {
+  font-size: 16px;
+}
+.home-app .room-card small {
+  font-size: 13px;
+  color: #506459;
+}
+.home-app .room-list {
+  gap: 10px;
+}
+.home-app .floor-control > span {
+  color: #516b5c;
+  font-size: 13px;
+}
+.home-app .scene-heading p {
+  font-size: 13px;
+  color: #526d66;
+}
+.model-canvas .scene-pane,
+.model-canvas .plan-pane {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+}
+.home-app .model-canvas {
+  top: 159px;
+  bottom: 156px;
+}
+.home-app .with-welcome .model-canvas {
+  top: 158px;
+  bottom: 224px;
+}
+.home-app.panel-open .model-canvas {
+  top: 110px;
+  bottom: 85px;
+}
+.home-app .scene-footnote {
+  display: none;
+}
+.home-app .welcome-card {
+  bottom: 16px;
+}
+.home-app .welcome-card p {
+  color: #54675a;
+  font-size: 14px;
+}
+.home-app .welcome-card .text-link {
+  font-size: 14px;
+  min-height: 48px;
+}
+.build-toolbar {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid #d1ded4;
+  border-radius: 20px;
+  background: #fffefa;
+  box-shadow: 0 5px 20px #2a493d14;
+  z-index: 5;
+}
+.build-toolbar button {
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #395a4a;
+}
+.build-toolbar button:first-child {
+  background: #e7efe1;
+  color: #294f37;
+}
+.build-toolbar button[aria-pressed="true"] {
+  background: #365f4b;
+  color: white;
+}
+.build-toolbar button:disabled {
+  opacity: 0.45;
+}
+.camera-actions {
+  position: absolute;
+  right: 15px;
+  bottom: 151px;
+  z-index: 4;
+  display: flex;
+  gap: 5px;
+}
+.camera-actions button {
+  background: #fffefaeb;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d5dfd7;
+  border-radius: 13px;
+  font-size: 12px;
+}
+.with-welcome .camera-actions {
+  bottom: 231px;
+}
+.panel-open .camera-actions {
+  bottom: 89px;
+}
+.scene-area:has(.mode-2d) .camera-actions {
+  display: none;
+}
+.next-step {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 88px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f6f8f0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  z-index: 3;
+}
+.next-step > div {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.next-step strong {
+  font-size: 13px;
+}
+.next-step span {
+  font-size: 12px;
+  color: #546656;
+}
+.next-step button {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+}
+.selected-chip {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 119px;
+  z-index: 4;
+  background: #365f4b;
+  color: white;
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-height: 48px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+.selected-chip span {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+.scene-area:has(.selected-chip) .model-canvas {
+  top: 171px;
+}
+.scene-area:has(.selected-chip) .next-step {
+  display: none;
+}
+.room-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 20px;
+}
+.room-quick-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 54px;
+  background: #eff3e9;
+  border: 1px solid #d5dfcf;
+  border-radius: 12px;
+  font-size: 14px;
+}
+.home-app .dimension-steps {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.dimension-steps button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 48px;
+  flex: 1;
+  font-size: 11px;
+  background: #edf2e7;
+  border-radius: 10px;
+}
+.home-app .nudge-control {
+  margin-top: 18px;
+}
+.home-app .nudge-control button {
+  min-width: 50px;
+  min-height: 50px;
+}
+.home-app .nudge-control small {
+  color: #536558;
+  font-size: 12px;
+}
+.home-app .stepper-row button {
+  min-height: 48px;
+  min-width: 48px;
+}
+.view-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 20px;
+}
+.view-presets button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 82px;
+  justify-content: center;
+  border: 1px solid #cfdbcd;
+  background: #eef3e8;
+  border-radius: 14px;
+  font-size: 13px;
+}
+.finish-choices {
+  border: 0;
+  padding: 0;
+  margin: 0 0 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.finish-choices legend {
+  padding: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.finish-choices button {
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  border: 2px solid transparent;
+  background: #f1f2ec;
+  border-radius: 12px;
+}
+.finish-choices button[aria-pressed="true"] {
+  border-color: #365f4b;
+  background: #e4eddc;
+}
+.finish-choices i {
+  width: 34px;
+  height: 28px;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px #0002;
+}
+.finish-ivory {
+  background: #e8ddc9;
+}
+.finish-brick {
+  background: #a66849;
+}
+.finish-sand {
+  background: #c7aa7e;
+}
+.catalog-body {
+  padding: 0 20px 18px;
+}
+.catalog-body > p {
+  font-size: 15px;
+  color: #536958;
+  margin-bottom: 18px;
+}
+.size-choices {
+  display: flex;
+  gap: 5px;
+  background: #edf1e8;
+  padding: 4px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+.size-choices button {
+  flex: 1;
+  min-height: 48px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+.size-choices button[aria-pressed="true"] {
+  background: white;
+  box-shadow: 0 2px 5px #24342b16;
+  font-weight: 600;
+}
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.catalog-card {
+  padding: 14px 12px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  text-align: left;
+  gap: 7px;
+  border: 2px solid #dfe5d9;
+  border-radius: 15px;
+  min-height: 157px;
+  background: #fffefa;
+}
+.catalog-card.selected {
+  border-color: #365f4b;
+  background: #f0f5e9;
+}
+.catalog-card strong {
+  font-size: 16px;
+}
+.catalog-card small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #526359;
+}
+.catalog-card > span {
+  margin-top: auto;
+  font-size: 11px;
+  font-weight: 600;
+}
+.catalog-card .fits {
+  color: #32634b;
+}
+.catalog-card .needs-space {
+  color: #8a552c;
+}
+.catalog-footer {
+  position: sticky;
+  bottom: 0;
+  background: #fffefa;
+  border-top: 1px solid #dfe5d9;
+  padding: 16px 20px;
+  z-index: 3;
+  box-shadow: 0 -5px 15px #23372908;
+}
+.catalog-footer p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.catalog-footer button {
+  width: 100%;
+}
+.home-app .scene-loading {
+  font-size: 16px;
+}
+.home-app .toast {
+  font-size: 14px;
+  color: #294c3f;
+}
+.home-app .inline-error {
+  font-size: 14px;
+}
+.home-app .sheet-heading h2 {
+  font-size: 28px;
+}
+.home-app .guided .supporting {
+  font-size: 15px;
+}
+@media (min-width: 700px) and (max-width: 1049px) {
+  .build-toolbar {
+    max-width: 470px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 24px);
+  }
+  .next-step {
+    max-width: 446px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 36px);
+  }
+}
+@media (max-width: 390px) {
+  .home-app .brand {
+    font-size: 19px;
+  }
+  .home-app .brand-mark {
+    width: 31px;
+    height: 35px;
+  }
+  .home-app .topbar {
+    padding: 0 10px;
+  }
+  .home-app .topbar-actions {
+    gap: 5px;
+  }
+  .home-app .share-button {
+    padding: 0 9px;
+  }
+  .home-app .share-button span {
+    font-size: 12px;
+  }
+}
+@media (max-width: 699px) and (max-height: 760px) {
+  .home-app .scene-heading {
+    top: 12px;
+  }
+  .home-app .scene-heading h1 {
+    font-size: 25px;
+  }
+  .home-app .view-switch {
+    top: 90px;
+  }
+  .home-app .model-canvas {
+    top: 145px;
+    bottom: 152px;
+  }
+  .home-app .with-welcome .model-canvas {
+    top: 143px;
+    bottom: 204px;
+  }
+  .home-app .welcome-card {
+    padding: 12px 16px;
+  }
+  .home-app .welcome-card h2 {
+    font-size: 16px;
+  }
+  .home-app .with-welcome .camera-actions {
+    bottom: 206px;
+  }
+  .home-app.panel-open .view-switch {
+    top: 60px;
+  }
+  .home-app.panel-open .model-canvas {
+    top: 103px;
+    bottom: 84px;
+  }
+  .home-app.panel-open .scene-area {
+    min-height: 280px;
+  }
+  .home-app .controls-panel.visible {
+    min-height: 210px;
+  }
+  .next-step {
+    padding: 6px 10px;
+  }
+  .next-step span {
+    font-size: 11px;
+  }
+}
+@media (min-width: 1050px) {
+  .desktop-only {
+    display: flex !important;
+  }
+  .home-app .topbar {
+    padding: 0 28px;
+  }
+  .home-app .brand {
+    font-size: 29px;
+  }
+  .home-app .brand-mark {
+    width: 41px;
+    height: 43px;
+  }
+  .home-app .topbar-actions > .round-button {
+    width: 58px;
+  }
+  .button-word {
+    font-size: 12px;
+  }
+  .home-app .controls-panel {
+    flex-basis: 345px;
+  }
+  .home-app .panel-body {
+    padding: 20px 24px 30px;
+  }
+  .home-app .model-canvas,
+  .home-app .with-welcome .model-canvas,
+  .home-app.panel-open .model-canvas {
+    inset: 153px 16px 130px;
+  }
+  .model-canvas.mode-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .model-canvas.mode-split .scene-pane,
+  .model-canvas.mode-split .plan-pane {
+    position: relative;
+    inset: auto;
+    border: 1px solid #ced9d5;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .model-canvas.mode-split .plan-pane {
+    background: #eff2e9;
+  }
+  .home-app .view-switch button {
+    font-size: 15px;
+  }
+  .build-toolbar {
+    width: 430px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: 22px;
+    padding: 6px;
+  }
+  .build-toolbar button {
+    min-height: 64px;
+    font-size: 13px;
+  }
+  .camera-actions,
+  .panel-open .camera-actions,
+  .with-welcome .camera-actions {
+    bottom: 140px;
+    right: 25px;
+  }
+  .next-step {
+    left: 30px;
+    right: auto;
+    bottom: 122px;
+    max-width: 410px;
+  }
+  .selected-chip {
+    top: auto;
+    bottom: 117px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    max-width: 500px;
+  }
+  .scene-area:has(.selected-chip) .model-canvas {
+    top: 153px;
+    bottom: 182px;
+  }
+  .home-app .scene-footnote {
+    display: none;
+  }
+  .with-welcome .model-canvas {
+    bottom: 45px;
+  }
+  .catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .app-dialog:has(.catalog-body) {
+    width: 720px;
+  }
+}
+.home-app .scene-area {
+  background: #dce5e4;
+}
+.home-app .selected-chip {
+  top: 177px;
+}
+.home-app .scene-area:has(.selected-chip) .model-canvas {
+  top: 235px;
+  bottom: 84px;
+}
+.home-app
+  .scene-area:has(.build-toolbar button[aria-pressed="true"])
+  .model-canvas {
+  bottom: 84px;
+}
+.home-app .scene-area:has(.floating-floors) .model-canvas {
+  top: 222px;
+}
+.home-app .scene-area:has(.floating-floors) .selected-chip {
+  top: 226px;
+}
+.home-app .scene-area:has(.floating-floors):has(.selected-chip) .model-canvas {
+  top: 282px;
+}
+.home-app.panel-open .scene-area:has(.floating-floors) .model-canvas {
+  top: 166px;
+}
+.home-app .floating-floors {
+  top: 174px;
+}
+.home-app.panel-open .floating-floors {
+  top: 116px;
+}
+.home-app .toast {
+  position: fixed;
+  bottom: calc(160px + env(safe-area-inset-bottom));
+  left: 14px;
+  right: 14px;
+  max-width: 470px;
+  margin: auto;
+  z-index: 12;
+}
+.home-app .toast button {
+  min-width: 44px;
+  min-height: 44px;
+}
+@media (min-width: 1050px) {
+  .home-app .selected-chip {
+    top: auto;
+  }
+  .home-app .scene-area:has(.selected-chip) .model-canvas {
+    top: 153px;
+    bottom: 182px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"])
+    .model-canvas {
+    bottom: 182px;
+  }
+  .home-app .scene-area:has(.floating-floors) .model-canvas,
+  .home-app.panel-open .scene-area:has(.floating-floors) .model-canvas {
+    top: 153px;
+  }
+  .home-app .floating-floors,
+  .home-app.panel-open .floating-floors {
+    top: 98px;
+  }
+  .home-app .scene-area:has(.floating-floors) .selected-chip {
+    top: auto;
+  }
+  .home-app
+    .scene-area:has(.floating-floors):has(.selected-chip)
+    .model-canvas {
+    top: 153px;
+  }
+  .home-app .toast {
+    bottom: 183px;
+    left: auto;
+    right: 28px;
+  }
+}
+
+.home-app .toast {
+  background: #fffefa;
+  border: 1px solid #cedace;
+  color: #294c3f;
+}
+.home-app .toast.error {
+  background: #fff1ed;
+  color: #8b352d;
+  border-color: #dbaba1;
+}
+@media (min-width: 1050px) {
+  .scene-area:has(.mode-split) .camera-actions {
+    right: calc(50% + 24px);
+  }
+}
+/* Direct manipulation gets the canvas space previously used by the home title. */
+@media (max-width: 1049px) {
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"])
+    .scene-heading {
+    display: none;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"])
+    .view-switch {
+    top: 12px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"])
+    .model-canvas {
+    top: 76px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"])
+    .selected-chip {
+    top: 76px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"]):has(
+      .selected-chip
+    )
+    .model-canvas {
+    top: 134px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"])
+    .floating-floors {
+    top: 74px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"]):has(
+      .floating-floors
+    )
+    .model-canvas {
+    top: 132px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"]):has(
+      .floating-floors
+    )
+    .selected-chip {
+    top: 132px;
+  }
+  .home-app
+    .scene-area:has(.build-toolbar button[aria-pressed="true"]):has(
+      .floating-floors
+    ):has(.selected-chip)
+    .model-canvas {
+    top: 190px;
+  }
+}
+.dimension-steps button {
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 2px;
+}
