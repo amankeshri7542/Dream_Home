@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "name": "Room to Grow",
+  "plot": {
+    "width": 1800,
+    "depth": 2400,
+    "north": 0,
+    "road": "south",
+    "setback": 200
+  },
+  "floors": [
+    {
+      "id": "floor-0",
+      "name": "Ground floor",
+      "elevation": 0,
+      "height": 300,
+      "footprint": {
+        "x": 300,
+        "z": 500,
+        "w": 1200,
+        "d": 1400
+      },
+      "rooms": [
+        {
+          "id": "floor-0-living",
+          "name": "Living room",
+          "kind": "living",
+          "bounds": {
+            "x": 300,
+            "z": 500,
+            "w": 450,
+            "d": 470
+          }
+        },
+        {
+          "id": "floor-0-kitchen",
+          "name": "Kitchen",
+          "kind": "kitchen",
+          "bounds": {
+            "x": 1100,
+            "z": 500,
+            "w": 400,
+            "d": 360
+          }
+        },
+        {
+          "id": "floor-0-dining",
+          "name": "Dining room",
+          "kind": "dining",
+          "bounds": {
+            "x": 1100,
+            "z": 900,
+            "w": 400,
+            "d": 430
+          }
+        },
+        {
+          "id": "floor-0-bedroom",
+          "name": "Bedroom 1",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 300,
+            "z": 1370,
+            "w": 470,
+            "d": 530
+          }
+        },
+        {
+          "id": "floor-0-bathroom",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 300,
+            "z": 1030,
+            "w": 280,
+            "d": 280
+          }
+        }
+      ],
+      "voids": [
+        {
+          "id": "floor-0-stairs",
+          "kind": "stairs",
+          "bounds": {
+            "x": 1240,
+            "z": 1500,
+            "w": 260,
+            "d": 400
+          }
+        }
+      ],
+      "balcony": false
+    },
+    {
+      "id": "floor-1",
+      "name": "First floor",
+      "elevation": 300,
+      "height": 300,
+      "footprint": {
+        "x": 300,
+        "z": 500,
+        "w": 1200,
+        "d": 1400
+      },
+      "rooms": [
+        {
+          "id": "floor-1-living",
+          "name": "Bedroom 2",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 300,
+            "z": 500,
+            "w": 450,
+            "d": 470
+          }
+        },
+        {
+          "id": "floor-1-kitchen",
+          "name": "Studio",
+          "kind": "utility",
+          "bounds": {
+            "x": 1100,
+            "z": 500,
+            "w": 400,
+            "d": 360
+          }
+        },
+        {
+          "id": "floor-1-dining",
+          "name": "Family lounge",
+          "kind": "living",
+          "bounds": {
+            "x": 1100,
+            "z": 900,
+            "w": 400,
+            "d": 430
+          }
+        },
+        {
+          "id": "floor-1-bedroom",
+          "name": "Bedroom 3",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 300,
+            "z": 1370,
+            "w": 470,
+            "d": 530
+          }
+        },
+        {
+          "id": "floor-1-bathroom",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 300,
+            "z": 1030,
+            "w": 280,
+            "d": 280
+          }
+        }
+      ],
+      "voids": [
+        {
+          "id": "floor-1-stairs",
+          "kind": "stairs",
+          "bounds": {
+            "x": 1240,
+            "z": 1500,
+            "w": 260,
+            "d": 400
+          }
+        }
+      ],
+      "balcony": true
+    }
+  ],
+  "garden": true,
+  "parking": true
+}

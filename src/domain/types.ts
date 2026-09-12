@@ -1,8 +1,32 @@
 export type Rect = { x: number; z: number; w: number; d: number };
+export type EdgeSide = "north" | "south" | "east" | "west";
 export type RoomKind =
-  "living" | "kitchen" | "bedroom" | "bathroom" | "dining" | "utility";
-export type Room = { id: string; name: string; kind: RoomKind; bounds: Rect };
+  "living" | "kitchen" | "bedroom" | "bathroom" | "dining" | "utility" | "shop";
+export type Room = {
+  id: string;
+  name: string;
+  kind: RoomKind;
+  bounds: Rect;
+  unitId: string | null;
+};
 export type Void = { id: string; kind: "courtyard" | "stairs"; bounds: Rect };
+export type Balcony = {
+  id: string;
+  edge: EdgeSide;
+  offset: number;
+  width: number;
+  depth: number;
+};
+export type Unit = {
+  id: string;
+  name: string;
+  use: "residential" | "commercial";
+};
+export type UnitArea = { unitId: string; bounds: Rect };
+export type VerticalSpace = Void & {
+  floorIds: string[];
+  unitId: string | null;
+};
 export type Floor = {
   id: string;
   name: string;
@@ -10,20 +34,23 @@ export type Floor = {
   height: number;
   footprint: Rect;
   rooms: Room[];
-  voids: Void[];
-  balcony: boolean;
+  balconies: Balcony[];
+  unitAreas: UnitArea[];
 };
+export type GeometryFloor = Floor & { voids: Void[] };
 export type Project = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   name: string;
   plot: {
     width: number;
     depth: number;
     north: number;
-    road: "south" | "north" | "east" | "west";
+    road: EdgeSide;
     setback: number;
   };
   floors: Floor[];
+  units: Unit[];
+  verticalSpaces: VerticalSpace[];
   garden: boolean;
   parking: boolean;
   finish?: "ivory" | "brick" | "sand";
@@ -57,6 +84,7 @@ export type ViewSettings = {
   resetKey: number;
 };
 export const ROOM_META: Record<RoomKind, { label: string; color: string }> = {
+  shop: { label: "Shop", color: "#c7b5cb" },
   living: { label: "Living room", color: "#d9b493" },
   kitchen: { label: "Kitchen", color: "#9ab8aa" },
   bedroom: { label: "Bedroom", color: "#a8b9cc" },

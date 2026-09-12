@@ -1,9 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
-import { createPreset } from "../src/domain/model";
+import { createPreset, migrateV1 } from "../src/domain/model";
 import type { Project } from "../src/domain/types";
 
-const KEY = "dream-home.project.v1";
+const KEY = "dream-home.project.v2";
 const mobile = { width: 390, height: 844 };
 const stored = (page: Page) =>
   page.evaluate(
@@ -272,8 +272,11 @@ test("legacy version-one JSON imports and backup roundtrips; malformed files pre
   page,
 }) => {
   await page.goto("/");
-  const legacy = createPreset("compact");
-  await importFixture(page, legacy);
+  const source = JSON.parse(
+    await readFile("tests/fixtures/legacy-v1-compact.json", "utf8"),
+  );
+  const legacy = migrateV1(source);
+  await importFixture(page, source);
   expect(await stored(page)).toEqual(legacy);
   await page.getByRole("button", { name: "More options", exact: true }).click();
   const downloading = page.waitForEvent("download");
@@ -505,11 +508,11 @@ test("PNG export is a real image and native sharing is safely mocked", async ({
     .getByRole("button", { name: "Share home plan", exact: true })
     .click();
   await expect(
-    page.getByRole("img", { name: "Preview of the exported home plans" }),
+    page.getByRole("img", { name: "Preview of Ground floor plan" }),
   ).toBeVisible();
   const downloading = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Download plan image", exact: true })
+    .getByRole("button", { name: "Download floor image", exact: true })
     .click();
   const file = await readFile((await (await downloading).path())!);
   await writeFile("test-results/review-plan.png", file);
@@ -518,7 +521,9 @@ test("PNG export is a real image and native sharing is safely mocked", async ({
   ).toBe(true);
   expect(file.readUInt32BE(16)).toBeGreaterThan(500);
   expect(file.readUInt32BE(20)).toBeGreaterThan(500);
-  await page.getByRole("button", { name: "Share plan", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Share this floor", exact: true })
+    .click();
   expect(
     await page.evaluate(
       () => (window as unknown as { sharedPlan: unknown }).sharedPlan,
@@ -530,7 +535,7 @@ test("corrupt storage stays intact and storage failures leave editing available"
   page,
 }) => {
   await page.addInitScript(() =>
-    localStorage.setItem("dream-home.project.v1", "invalid-saved-data"),
+    localStorage.setItem("dream-home.project.v2", "invalid-saved-data"),
   );
   await page.goto("/");
   await expect(page.getByRole("status")).toContainText(
@@ -598,18 +603,21 @@ test("WebGL fallback leaves the 2D plan editable", async ({ page }) => {
 function sparseHome() {
   const project = createPreset("compact");
   project.name = "Builder interaction test";
-  project.floors[0].voids = [];
+  project.verticalSpaces = [];
+  const unitId = project.units[0].id;
   project.floors[0].rooms = [
     {
       id: "room-a",
+      unitId,
       name: "Test bedroom",
       kind: "bedroom",
       bounds: { x: 300, z: 500, w: 250, d: 300 },
     },
     {
       id: "room-b",
-      name: "Other bedroom",
-      kind: "bedroom",
+      unitId,
+      name: "Other kitchen",
+      kind: "kitchen",
       bounds: { x: 650, z: 500, w: 250, d: 300 },
     },
   ];
@@ -644,20 +652,16 @@ test("real plan dragging previews valid moves and swaps; invalid drops and cance
   await expect(page.locator(".plan-hint")).toContainText("release to place");
   expect(await stored(page)).toEqual(fixture);
   // A second finger being cancelled must not discard the captured primary drag.
-  await page
-    .locator(".plan-svg")
-    .dispatchEvent("pointercancel", {
-      pointerId: 2,
-      pointerType: "touch",
-      isPrimary: false,
-    });
-  await page
-    .locator(".plan-svg")
-    .dispatchEvent("lostpointercapture", {
-      pointerId: 2,
-      pointerType: "touch",
-      isPrimary: false,
-    });
+  await page.locator(".plan-svg").dispatchEvent("pointercancel", {
+    pointerId: 2,
+    pointerType: "touch",
+    isPrimary: false,
+  });
+  await page.locator(".plan-svg").dispatchEvent("lostpointercapture", {
+    pointerId: 2,
+    pointerType: "touch",
+    isPrimary: false,
+  });
   await expect(page.locator(".plan-hint")).toContainText("release to place");
   await page.mouse.up();
   await expect
@@ -669,9 +673,18 @@ test("real plan dragging previews valid moves and swaps; invalid drops and cance
   await page.mouse.up();
   await expect
     .poll(async () =>
-      (await stored(page)).floors[0].rooms.map((r) => r.bounds.x),
+      (await stored(page)).floors[0].rooms.map((r) => ({
+        name: r.name,
+        kind: r.kind,
+      })),
     )
-    .toEqual([650, 300]);
+    .toEqual([
+      { name: "Other kitchen", kind: "kitchen" },
+      { name: "Test bedroom", kind: "bedroom" },
+    ]);
+  expect((await stored(page)).floors[0].rooms.map((r) => r.bounds)).toEqual(
+    fixture.floors[0].rooms.map((r) => r.bounds),
+  );
   await builderTool(page, "Undo last change").click();
   await roomPointer(page, -200, 0);
   await expect(page.locator(".plan-hint.is-invalid")).toBeVisible();
@@ -687,13 +700,21 @@ test("real plan dragging previews valid moves and swaps; invalid drops and cance
   expect(await stored(page)).toEqual(fixture);
   await expect(builderTool(page, "Undo last change")).toBeDisabled();
   await page.getByRole("button", { name: /Edit details/ }).click();
-  await page.getByText("Name & exact position", { exact: true }).click();
-  await page.getByLabel("Swap positions with").selectOption("room-b");
+  await page.getByLabel("Swap room uses with").selectOption("room-b");
   await expect
     .poll(async () =>
-      (await stored(page)).floors[0].rooms.map((r) => r.bounds.x),
+      (await stored(page)).floors[0].rooms.map((r) => ({
+        name: r.name,
+        kind: r.kind,
+      })),
     )
-    .toEqual([650, 300]);
+    .toEqual([
+      { name: "Other kitchen", kind: "kitchen" },
+      { name: "Test bedroom", kind: "bedroom" },
+    ]);
+  expect((await stored(page)).floors[0].rooms.map((r) => r.bounds)).toEqual(
+    fixture.floors[0].rooms.map((r) => r.bounds),
+  );
   await undo(page);
   expect(await stored(page)).toEqual(fixture);
 });
@@ -751,8 +772,8 @@ test("catalog, rotation, duplication, building expansion and exterior finish per
   page,
 }) => {
   await seed(page, sparseHome(), "m");
-  await builderTool(page, "Add room").click();
-  const dialog = page.getByRole("dialog", { name: "Add a room", exact: true });
+  await builderTool(page, "Add space").click();
+  const dialog = page.getByRole("dialog", { name: "Add space", exact: true });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Compact", exact: true }).click();
   await dialog.getByRole("button", { name: /^Study / }).click();
@@ -881,7 +902,9 @@ test("available plot space preserves upper balconies and undo", async ({
         original.floors[0].footprint.z -
         150,
     );
-  expect((await stored(page)).floors[1].balcony).toBe(true);
+  expect((await stored(page)).floors[1].balconies).toHaveLength(
+    original.floors[1].balconies.length,
+  );
   await undo(page);
   expect(await stored(page)).toEqual(original);
 });
@@ -953,3 +976,107 @@ test("inspecting a minimum-sized room does not invalidate rounded feet", async (
   await expect(width).toHaveAttribute("aria-invalid", "false");
   expect(await stored(page)).toEqual(original);
 });
+
+for (const scenario of [
+  {
+    kind: "Home",
+    width: "60",
+    depth: "80",
+    floors: "3",
+    bedrooms: 5,
+    units: 1,
+    shops: 0,
+  },
+  {
+    kind: "Apartments",
+    width: "80",
+    depth: "100",
+    floors: "3",
+    bedrooms: 12,
+    units: 6,
+    shops: 0,
+  },
+  {
+    kind: "Shops & market",
+    width: "40",
+    depth: "60",
+    floors: "4",
+    bedrooms: 0,
+    units: 16,
+    shops: 16,
+  },
+]) {
+  test(`guided ${scenario.kind} preserves its full building program`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(mobile);
+    await page.goto("/");
+    await start(page);
+    const dialog = page.getByRole("dialog", {
+      name: "Start your home",
+      exact: true,
+    });
+    await dialog
+      .getByRole("spinbutton", { name: "Plot width", exact: true })
+      .fill(scenario.width);
+    await dialog
+      .getByRole("spinbutton", { name: "Plot depth", exact: true })
+      .fill(scenario.depth);
+    await dialog
+      .getByRole("button", { name: "Next: my needs", exact: true })
+      .click();
+    await dialog
+      .locator(".blueprint-kinds button")
+      .filter({ has: page.getByText(scenario.kind, { exact: true }) })
+      .click();
+    await dialog
+      .getByRole("spinbutton", { name: "Floors", exact: true })
+      .fill(scenario.floors);
+    if (scenario.kind === "Home")
+      await dialog
+        .getByRole("spinbutton", {
+          name: "Bedrooms in the whole home",
+          exact: true,
+        })
+        .fill("5");
+    if (scenario.kind === "Apartments") {
+      await dialog
+        .getByRole("spinbutton", { name: "Flats on each floor", exact: true })
+        .fill("2");
+      await dialog
+        .getByRole("spinbutton", { name: "Bedrooms in each flat", exact: true })
+        .fill("2");
+    }
+    if (scenario.shops) {
+      await dialog
+        .getByRole("spinbutton", { name: "Shops on each floor", exact: true })
+        .fill("4");
+      await expect(
+        dialog.getByRole("spinbutton", { name: /bedroom/i }),
+      ).toHaveCount(0);
+    }
+    await dialog
+      .getByRole("button", { name: "See my options", exact: true })
+      .click();
+    await dialog.locator(".recommendation:not([disabled])").first().click();
+    await dialog
+      .getByRole("button", { name: "Make this my starting home", exact: true })
+      .click();
+    await expect(dialog).toHaveCount(0);
+    const result = await stored(page);
+    expect(result.floors).toHaveLength(Number(scenario.floors));
+    expect(result.units).toHaveLength(scenario.units);
+    expect(
+      result.floors.flatMap((f) => f.rooms).filter((r) => r.kind === "bedroom"),
+    ).toHaveLength(scenario.bedrooms);
+    expect(
+      result.floors.flatMap((f) => f.rooms).filter((r) => r.kind === "shop"),
+    ).toHaveLength(scenario.shops);
+    await noOverflow(page);
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: result.name, exact: true }),
+    ).toBeVisible();
+    expect(await stored(page)).toEqual(result);
+  });
+}

@@ -2,12 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { createPreset, parseProject } from "./domain/model";
 import { createStarter } from "./domain/starters";
 import type { EditResult, Project } from "./domain/types";
-const KEY = "dream-home.project.v1";
+const KEY = "dream-home.project.v2";
+const LEGACY_KEY = "dream-home.project.v1";
 function load() {
   let stored: string | null = null;
   try {
-    stored = localStorage.getItem(KEY);
-    if (stored)
+    // A damaged current save must never be replaced by an older, stale project.
+    // The original v1 file stays untouched as a recovery copy after migration.
+    stored = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY);
+    if (stored !== null)
       return {
         project: parseProject(stored),
         saved: true,

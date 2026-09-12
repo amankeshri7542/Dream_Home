@@ -9,8 +9,14 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import { recommendHomes } from "../domain/starters";
-import type { HomeStyle, StarterRequest } from "../domain/starters";
+import {
+  BLUEPRINTS,
+  recommendBlueprints,
+  type BlueprintKind,
+  type BlueprintRequest,
+  type HomeFlavor,
+} from "../domain/blueprints";
+import "./GuidedStart.css";
 import type { Project } from "../domain/types";
 import { ROOM_META } from "../domain/types";
 import {
@@ -59,18 +65,33 @@ export function MiniPlan({ project }: { project: Project }) {
           strokeWidth="10"
         />
       ))}
-      {f.voids.map((v) => (
-        <rect
-          key={v.id}
-          x={v.bounds.x}
-          y={v.bounds.z}
-          width={v.bounds.w}
-          height={v.bounds.d}
-          fill={v.kind === "courtyard" ? "#84a477" : "#d3d7ce"}
-          stroke="#748c7b"
-          strokeWidth="7"
-        />
-      ))}
+      {f.unitAreas.length > 1 &&
+        f.unitAreas.map((a) => (
+          <rect
+            key={a.unitId}
+            x={a.bounds.x}
+            y={a.bounds.z}
+            width={a.bounds.w}
+            height={a.bounds.d}
+            fill="none"
+            stroke="#56785c"
+            strokeWidth="14"
+          />
+        ))}
+      {project.verticalSpaces
+        .filter((v) => v.floorIds.includes(f.id))
+        .map((v) => (
+          <rect
+            key={v.id}
+            x={v.bounds.x}
+            y={v.bounds.z}
+            width={v.bounds.w}
+            height={v.bounds.d}
+            fill={v.kind === "courtyard" ? "#84a477" : "#d3d7ce"}
+            stroke="#748c7b"
+            strokeWidth="7"
+          />
+        ))}
     </svg>
   );
 }
@@ -98,15 +119,19 @@ export default function GuidedStart({
   const [margin, setMargin] = useState(
     String(Number(toDisplay(project.plot.setback, "ft").toFixed(1))),
   );
-  const [bedrooms, setBedrooms] = useState<1 | 2 | 3>(
-    Math.min(3, Math.max(1, projectStats(project).bedrooms)) as 1 | 2 | 3,
+  const [kind, setKind] = useState<BlueprintKind>("home");
+  const [flavor, setFlavor] = useState<HomeFlavor>("bungalow");
+  const [bedrooms, setBedrooms] = useState(
+    Math.min(12, projectStats(project).bedrooms),
   );
-  const [floors, setFloors] = useState<1 | 2>(
-    project.floors.length > 1 ? 2 : 1,
-  );
+  const [floors, setFloors] = useState(Math.min(8, project.floors.length));
+  const [unitsPerFloor, setUnitsPerFloor] = useState(2);
+  const [bedroomsPerUnit, setBedroomsPerUnit] = useState(2);
+  const [shopsPerFloor, setShopsPerFloor] = useState(2);
   const [preferCourtyard, setPreferCourtyard] = useState(false);
-  const [road, setRoad] = useState<Project["plot"]["road"]>("south");
-  const [chosen, setChosen] = useState<HomeStyle | null>(null);
+  const [road, setRoad] = useState<Project["plot"]["road"]>(project.plot.road);
+  const [north, setNorth] = useState(project.plot.north);
+  const [chosen, setChosen] = useState<string | null>(null);
   const w = fromDisplay(Number(width), unit),
     d = fromDisplay(Number(depth), unit);
   const marginCm = Math.round(fromDisplay(Number(margin), "ft") / 10) * 10;
@@ -123,25 +148,89 @@ export default function GuidedStart({
     Number.isFinite(marginCm) &&
     marginCm >= 0 &&
     marginCm <= 500;
-  const request: StarterRequest = useMemo(
-    () => ({ widthCm: w, depthCm: d, road, marginCm, bedrooms, floors }),
-    [w, d, road, marginCm, bedrooms, floors],
+  const request: BlueprintRequest = useMemo(
+    () => ({
+      widthCm: w,
+      depthCm: d,
+      road,
+      north,
+      marginCm,
+      kind,
+      flavor,
+      bedrooms,
+      floors,
+      unitsPerFloor,
+      bedroomsPerUnit,
+      shopsPerFloor,
+      courtyard: preferCourtyard,
+    }),
+    [
+      w,
+      d,
+      road,
+      north,
+      marginCm,
+      kind,
+      flavor,
+      bedrooms,
+      floors,
+      unitsPerFloor,
+      bedroomsPerUnit,
+      shopsPerFloor,
+      preferCourtyard,
+    ],
   );
   const options = useMemo(
-    () => (valid ? recommendHomes(request) : []),
+    () => (valid ? recommendBlueprints(request) : []),
     [request, valid],
   );
-  const preferred = preferCourtyard ? "courtyard" : "family";
-  const recommended =
-    options.find((o) => o.id === preferred && o.project) ??
-    options.find((o) => o.project);
+  const recommended = options.find((o) => o.project);
   const selected = options.find((o) => o.id === (chosen ?? recommended?.id));
-  const styleName = (id: HomeStyle) =>
-    id === "family"
-      ? "Everyday family home"
-      : id === "courtyard"
-        ? "A home with an aangan"
-        : "A little more open space";
+  const countField = (
+    label: string,
+    value: number,
+    min: number,
+    max: number,
+    set: (n: number) => void,
+  ) => (
+    <label className="blueprint-count">
+      <span>{label}</span>
+      <div>
+        <button
+          type="button"
+          aria-label={`Fewer ${label.toLowerCase()}`}
+          disabled={value <= min}
+          onClick={() => set(value - 1)}
+        >
+          −
+        </button>
+        <input
+          type="number"
+          aria-label={label}
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isInteger(n) && n >= min && n <= max) set(n);
+          }}
+        />
+        <button
+          type="button"
+          aria-label={`More ${label.toLowerCase()}`}
+          disabled={value >= max}
+          onClick={() => set(value + 1)}
+        >
+          +
+        </button>
+      </div>
+    </label>
+  );
+  function chooseKind(next: BlueprintKind) {
+    setKind(next);
+    setChosen(null);
+    if (next === "mixed" && floors === 1) setFloors(2);
+  }
   function switchUnit(next: Unit) {
     if (next === unit) return;
     setWidth(String(Number(toDisplay(w, next).toFixed(1))));
@@ -149,7 +238,7 @@ export default function GuidedStart({
     setUnit(next);
   }
   return (
-    <div className="guided-content">
+    <div className="guided-content blueprint-setup">
       <div className="sheet-heading">
         <button
           className="round-button"
@@ -168,7 +257,7 @@ export default function GuidedStart({
         </button>
       </div>
       <div className="step-progress" aria-label={`Step ${step + 1} of 3`}>
-        {["Your plot", "Your needs", "Your options"].map((s, i) => (
+        {["Your plot", "Your building", "Your options"].map((s, i) => (
           <span key={i} className={step >= i ? "done" : ""}>
             <i>{step > i ? <Check size={12} /> : i + 1}</i>
             {s}
@@ -298,6 +387,17 @@ export default function GuidedStart({
                 </select>
               </label>
               <label className="big-field">
+                North direction (degrees)
+                <input
+                  type="number"
+                  aria-label="North direction"
+                  value={north}
+                  min="0"
+                  max="359"
+                  onChange={(e) => setNorth(Number(e.target.value))}
+                />
+              </label>
+              <label className="big-field">
                 {"Open margin on each side (ft)"}
                 <input
                   type="number"
@@ -328,50 +428,146 @@ export default function GuidedStart({
         )}
         {step === 1 && (
           <>
-            <div className="section-kicker">{"ROOM FOR YOUR EVERYDAY"}</div>
-            <h2>{"What feels like home?"}</h2>
+            <div className="section-kicker">ONE PLOT. YOUR POSSIBILITIES.</div>
+            <h2>What would you like to build?</h2>
             <p className="supporting">
-              {"Just the essentials for now. You can change things later."}
+              Choose a starting arrangement. Every floor and room stays
+              editable.
             </p>
-            <div className="choice-section">
-              <h3>{"Bedrooms in the whole home"}</h3>
-              <div className="number-options">
-                {([1, 2, 3] as const).map((n) => (
-                  <button
-                    key={n}
-                    aria-pressed={bedrooms === n}
-                    onClick={() => setBedrooms(n)}
-                  >
-                    <strong>{n}</strong>
-                    <span>{n === 1 ? "bedroom" : "bedrooms"}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="blueprint-kinds" aria-label="Building type">
+              {BLUEPRINTS.map((item) => (
+                <button
+                  key={item.id}
+                  aria-pressed={kind === item.id}
+                  onClick={() => chooseKind(item.id)}
+                >
+                  <House size={23} />
+                  <strong>{item.name}</strong>
+                  <span>{item.description}</span>
+                </button>
+              ))}
             </div>
-            <div className="choice-section">
-              <h3>{"How many floors?"}</h3>
-              <div className="floor-options">
-                {([1, 2] as const).map((n) => (
+            {kind === "home" && (
+              <div
+                className="blueprint-flavors"
+                aria-label="Home starting style"
+              >
+                {(["bungalow", "villa", "duplex"] as const).map((value) => (
                   <button
-                    key={n}
-                    aria-pressed={floors === n}
-                    onClick={() => setFloors(n)}
+                    key={value}
+                    aria-pressed={flavor === value}
+                    onClick={() => {
+                      setFlavor(value);
+                      setFloors(value === "duplex" ? 2 : 1);
+                    }}
                   >
-                    <span className={`floor-picture floor-picture-${n}`}>
-                      <i />
-                      {n === 2 && <i />}
-                    </span>
                     <strong>
-                      {n === 1 ? "Ground floor only" : "Ground + one"}
+                      {value === "bungalow"
+                        ? "Bungalow"
+                        : value === "villa"
+                          ? "Villa"
+                          : "Duplex"}
                     </strong>
                     <small>
-                      {n === 1
-                        ? "Everything on one level"
-                        : "More room upstairs"}
+                      {value === "duplex"
+                        ? "Start with two floors"
+                        : value === "villa"
+                          ? "Start with more open land"
+                          : "Start on one floor"}
                     </small>
                   </button>
                 ))}
               </div>
+            )}
+            <div className="blueprint-program">
+              {countField("Floors", floors, 1, 8, setFloors)}
+              {kind === "home" &&
+                countField(
+                  "Bedrooms in the whole home",
+                  bedrooms,
+                  0,
+                  12,
+                  setBedrooms,
+                )}
+              {(kind === "apartments" || kind === "mixed") && (
+                <>
+                  {(kind !== "mixed" || floors > 1) &&
+                    countField(
+                      kind === "mixed"
+                        ? "Flats on each upper floor"
+                        : "Flats on each floor",
+                      unitsPerFloor,
+                      1,
+                      4,
+                      setUnitsPerFloor,
+                    )}
+                  {countField(
+                    kind === "mixed" && floors === 1
+                      ? "Bedrooms in the home"
+                      : "Bedrooms in each flat",
+                    bedroomsPerUnit,
+                    1,
+                    4,
+                    setBedroomsPerUnit,
+                  )}
+                </>
+              )}
+              {(kind === "market" || kind === "mixed") &&
+                countField(
+                  kind === "mixed"
+                    ? "Shops on the ground floor"
+                    : "Shops on each floor",
+                  shopsPerFloor,
+                  1,
+                  8,
+                  setShopsPerFloor,
+                )}
+            </div>
+            {kind === "home" && (
+              <div className="blueprint-quick">
+                <span>Quick choices</span>
+                <div>
+                  {[1, 2, 3].map((n) => (
+                    <button
+                      key={n}
+                      aria-pressed={bedrooms === n}
+                      onClick={() => setBedrooms(n)}
+                    >
+                      {n} {n === 1 ? "bedroom" : "bedrooms"}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  {[1, 2].map((n) => (
+                    <button
+                      key={n}
+                      aria-pressed={floors === n}
+                      onClick={() => setFloors(n)}
+                    >
+                      {n === 1 ? "Ground floor only" : "Ground + one"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="blueprint-stack" aria-label="Building arrangement">
+              {Array.from({ length: floors }, (_, n) => floors - 1 - n).map(
+                (n) => (
+                  <div key={n}>
+                    <span>{n === 0 ? "Ground" : `Floor ${n}`}</span>
+                    <strong>
+                      {kind === "blank"
+                        ? "Open floor"
+                        : kind === "market" || (kind === "mixed" && n === 0)
+                          ? `${shopsPerFloor} shops${kind === "mixed" && floors === 1 ? " + 1 home" : ""}`
+                          : kind === "apartments" || kind === "mixed"
+                            ? `${unitsPerFloor} flats · ${bedroomsPerUnit} bedrooms each`
+                            : "Your home"}
+                    </strong>
+                    {floors > 1 && <small>Shared stairs</small>}
+                  </div>
+                ),
+              )}
             </div>
             <button
               className="wish-option"
@@ -381,17 +577,19 @@ export default function GuidedStart({
             >
               <Sun size={24} />
               <span>
-                <strong>{"I’d love a small aangan"}</strong>
-                <small>{"An open-to-sky space, if it fits"}</small>
+                <strong>Include an open-to-sky courtyard</strong>
+                <small>
+                  One aligned opening through the building, if it fits.
+                </small>
               </span>
               <i className={`toggle ${preferCourtyard ? "on" : ""}`} />
             </button>
             <div className="advice-note">
               <Leaf size={19} />
               <p>
-                {
-                  "Every option keeps a bedroom on the ground floor. A helpful starting point for family members who prefer fewer stairs."
-                }
+                {kind === "blank"
+                  ? "Begin with an outline. Multi-floor buildings include shared stairs so you can arrange the rest."
+                  : "Requested counts stay exactly as chosen. If the arrangement cannot fit, we’ll explain what needs more space."}
               </p>
             </div>
           </>
@@ -404,18 +602,10 @@ export default function GuidedStart({
             <h2>{"Start with a possibility."}</h2>
             <p className="supporting">
               {length(w, unit)} × {length(d, unit)} {unitLabel(unit)}{" "}
-              <span>·</span> {bedrooms} {"bedrooms"} <span>·</span> {floors}{" "}
-              {floors === 1 ? "floor" : "floors"}.{" "}
+              <span>·</span> {BLUEPRINTS.find((b) => b.id === kind)?.name}{" "}
+              <span>·</span> {floors} {floors === 1 ? "floor" : "floors"}.{" "}
               {"Each available option fits these choices."}
             </p>
-            {preferCourtyard &&
-              !options.find((o) => o.id === "courtyard")?.project && (
-                <p className="inline-error">
-                  {
-                    "An aangan does not fit this starter arrangement. Other options keep your bedroom and floor choices."
-                  }
-                </p>
-              )}
             <div className="recommendations">
               {options.map((o) => (
                 <button
@@ -436,16 +626,8 @@ export default function GuidedStart({
                     {recommended?.id === o.id && (
                       <span className="recommended-tag">{"A GOOD START"}</span>
                     )}
-                    <h3>{styleName(o.id)}</h3>
-                    <p>
-                      {!o.project
-                        ? "This arrangement needs more space. Try fewer bedrooms, another floor or a larger plot."
-                        : o.id === "family"
-                          ? "A simple layout for everyday family life."
-                          : o.id === "courtyard"
-                            ? "Rooms beside a small open-to-sky courtyard."
-                            : "A deeper open strip beside the house."}
-                    </p>
+                    <h3>{o.name}</h3>
+                    <p>{o.reason}</p>
                     {o.project && (
                       <small>
                         {area(projectStats(o.project).builtArea, unit)}{" "}

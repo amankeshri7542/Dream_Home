@@ -62,12 +62,17 @@ describe("bounded starter generation", () => {
             );
             for (const floor of p.floors) {
               expect(floor.rooms.some((r) => r.kind === "bathroom")).toBe(true);
-              expect(floor.balcony).toBe(false);
+              expect(floor.balconies).toEqual([]);
               expect(
-                floor.voids.filter((v) => v.kind === "stairs"),
+                p.verticalSpaces.filter(
+                  (v) => v.kind === "stairs" && v.floorIds.includes(floor.id),
+                ),
               ).toHaveLength(floors === 1 ? 0 : 1);
               expect(
-                floor.voids.filter((v) => v.kind === "courtyard"),
+                p.verticalSpaces.filter(
+                  (v) =>
+                    v.kind === "courtyard" && v.floorIds.includes(floor.id),
+                ),
               ).toHaveLength(style === "courtyard" ? 1 : 0);
               for (const room of floor.rooms.filter(
                 (r) => r.kind === "bedroom",
@@ -93,33 +98,55 @@ describe("bounded starter generation", () => {
     expect(recommendations[0].project).not.toBeNull();
     expect(recommendations.every((r) => r.reason.length > 0)).toBe(true);
   });
-  it('uses generous rooms and leaves excess land outside the default floorplate', () => {
-    const result = createStarter(request(), 'family');
+  it("uses generous rooms and leaves excess land outside the default floorplate", () => {
+    const result = createStarter(request(), "family");
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const floor = result.project.floors[0];
     const plateArea = floor.footprint.w * floor.footprint.d;
-    const assigned = [...floor.rooms, ...floor.voids].reduce((sum, space) => sum + space.bounds.w * space.bounds.d, 0);
+    const assigned = [
+      ...floor.rooms,
+      ...result.project.verticalSpaces.filter((v) =>
+        v.floorIds.includes(floor.id),
+      ),
+    ].reduce((sum, space) => sum + space.bounds.w * space.bounds.d, 0);
     expect(1 - assigned / plateArea).toBeLessThanOrEqual(0.4);
-    expect(floor.rooms.find(r => r.kind === 'living')!.bounds.d).toBeGreaterThanOrEqual(300);
-    expect(floor.rooms.filter(r => r.kind === 'bedroom').every(r => r.bounds.d >= 300 && r.bounds.d <= 400)).toBe(true);
-    expect(floor.footprint.d).toBeLessThan(result.project.plot.depth - 2 * result.project.plot.setback - 200);
+    expect(
+      floor.rooms.find((r) => r.kind === "living")!.bounds.d,
+    ).toBeGreaterThanOrEqual(300);
+    expect(
+      floor.rooms
+        .filter((r) => r.kind === "bedroom")
+        .every((r) => r.bounds.d >= 300 && r.bounds.d <= 400),
+    ).toBe(true);
+    expect(floor.footprint.d).toBeLessThan(
+      result.project.plot.depth - 2 * result.project.plot.setback - 200,
+    );
   });
-  it('caps oversized plots rather than producing a huge blank interior', () => {
-    const result = createStarter({ ...request(), widthCm: 10000, depthCm: 10000 }, 'family');
+  it("caps oversized plots rather than producing a huge blank interior", () => {
+    const result = createStarter(
+      { ...request(), widthCm: 10000, depthCm: 10000 },
+      "family",
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const floor = result.project.floors[0];
-    const roomArea = floor.rooms.reduce((sum, r) => sum + r.bounds.w * r.bounds.d, 0);
-    expect(1 - roomArea / (floor.footprint.w * floor.footprint.d)).toBeLessThan(0.4);
+    const roomArea = floor.rooms.reduce(
+      (sum, r) => sum + r.bounds.w * r.bounds.d,
+      0,
+    );
+    expect(1 - roomArea / (floor.footprint.w * floor.footprint.d)).toBeLessThan(
+      0.4,
+    );
     expect(floor.footprint.d).toBeLessThanOrEqual(1100);
   });
-  it('the open option keeps a meaningfully larger front yard after footprint capping', () => {
-    const family = createStarter(request(), 'family');
-    const open = createStarter(request(), 'open');
+  it("the open option keeps a meaningfully larger front yard after footprint capping", () => {
+    const family = createStarter(request(), "family");
+    const open = createStarter(request(), "open");
     expect(family.ok && open.ok).toBe(true);
     if (!family.ok || !open.ok) return;
-    const a = family.project.floors[0].footprint, b = open.project.floors[0].footprint;
+    const a = family.project.floors[0].footprint,
+      b = open.project.floors[0].footprint;
     expect(a.z + a.d - b.z - b.d).toBeGreaterThanOrEqual(240);
   });
   it("supports narrow 20 ft frontage without reducing exact requested needs", () => {

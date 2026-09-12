@@ -6,6 +6,7 @@ import {
   resizeBuilding,
   ROOM_CATALOG,
   rotateRoom,
+  swapRoomPositions,
 } from "./builder";
 import { createPreset, parseProject, validateProject } from "./model";
 import type { Project, Rect, Room } from "./types";
@@ -13,13 +14,16 @@ import type { Project, Rect, Room } from "./types";
 function empty(): Project {
   const project = createPreset("compact");
   project.floors[0].rooms = [];
-  project.floors[0].voids = [];
+  project.verticalSpaces = [];
+  project.units = [];
+  project.floors[0].unitAreas = [];
   return project;
 }
 const room = (id: string, bounds: Rect): Room => ({
   id,
   name: id,
   kind: "bedroom",
+  unitId: null,
   bounds,
 });
 const sourceBounds = { x: 250, z: 450, w: 300, d: 300 };
@@ -218,15 +222,14 @@ describe("copy, rotation and smart movement", () => {
       room("b", { x: 650, z: 450, w: 200, d: 300 }),
     ];
     const before = JSON.stringify(project);
-    const target = { ...sourceBounds, x: 600 };
-    const swapped = moveRoomSmart(project, "floor-0", "a", target);
+    const swapped = swapRoomPositions(project, "floor-0", "a", "b");
     expect(swapped.ok).toBe(true);
     if (!swapped.ok) return;
     expect(swapped.project.floors[0].rooms).toEqual([
       room("a", { ...sourceBounds, x: 650 }),
       room("b", { x: 250, z: 450, w: 200, d: 300 }),
     ]);
-    expect(moveRoomSmart(project, "floor-0", "a", target)).toEqual(swapped);
+    expect(swapRoomPositions(project, "floor-0", "a", "b")).toEqual(swapped);
     expect(JSON.stringify(project)).toBe(before);
   });
   it("rejects an overlapping move when its center is outside the other room", () => {
@@ -250,10 +253,7 @@ describe("copy, rotation and smart movement", () => {
       room("b", { x: 900, z: 450, w: 200, d: 300 }),
     ];
     const before = JSON.stringify(project);
-    expect(
-      moveRoomSmart(project, "floor-0", "a", { x: 800, z: 450, w: 400, d: 400 })
-        .ok,
-    ).toBe(false);
+    expect(swapRoomPositions(project, "floor-0", "a", "b").ok).toBe(false);
     expect(
       moveRoomSmart(project, "floor-0", "a", { x: 850, z: 450, w: 300, d: 400 })
         .ok,
@@ -292,7 +292,7 @@ describe("building dimensions and finish persistence", () => {
           d: 1450,
         });
         expect(floor.rooms).toEqual(project.floors[i].rooms);
-        expect(floor.voids).toEqual(project.floors[i].voids);
+        expect(result.project.verticalSpaces).toEqual(project.verticalSpaces);
       }
     expect(JSON.stringify(project)).toBe(before);
   });

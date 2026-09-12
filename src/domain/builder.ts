@@ -1,6 +1,13 @@
-import { updateRoom, validateProject } from "./model";
-import type { EditResult, Floor, Project, Rect, Room, RoomKind } from "./types";
-
+import {
+  defaultRoomUnit,
+  findRoomPosition,
+  getLimits,
+  updateRoom,
+  validateProject,
+} from "./model";
+import { allocateId, componentIds, sameRect, snap } from "./geometry";
+import type { EditResult, Floor, Project, Room, RoomKind } from "./types";
+export { moveRoomSmart, swapRoomUses } from "./model";
 export type RoomSize = "small" | "regular" | "large";
 export type CatalogId =
   | "bedroom"
@@ -11,7 +18,8 @@ export type CatalogId =
   | "utility"
   | "study"
   | "prayer"
-  | "guest";
+  | "guest"
+  | "shop";
 export const ROOM_CATALOG: ReadonlyArray<{
   id: CatalogId;
   label: string;
@@ -92,13 +100,16 @@ export const ROOM_CATALOG: ReadonlyArray<{
     width: 300,
     depth: 340,
   },
+  {
+    id: "shop",
+    label: "Shop",
+    kind: "shop",
+    description: "An open commercial space.",
+    width: 400,
+    depth: 400,
+  },
 ];
 
-const snap = (n: number) => Math.round(n / 10) * 10;
-const overlaps = (a: Rect, b: Rect) =>
-  a.x < b.x + b.w && a.x + a.w > b.x && a.z < b.z + b.d && a.z + a.d > b.z;
-const contains = (a: Rect, b: Rect) =>
-  b.x >= a.x && b.z >= a.z && b.x + b.w <= a.x + a.w && b.z + b.d <= a.z + a.d;
 const checked = (project: Project): EditResult => {
   const errors = validateProject(project);
   return errors.length
@@ -109,47 +120,6 @@ const replaceFloor = (project: Project, floor: Floor): Project => ({
   ...project,
   floors: project.floors.map((f) => (f.id === floor.id ? floor : f)),
 });
-function nextRoomId(project: Project, seed: string): string {
-  const used = new Set(
-    project.floors.flatMap((f) => [
-      f.id,
-      ...f.rooms.map((r) => r.id),
-      ...f.voids.map((v) => v.id),
-    ]),
-  );
-  let id = seed,
-    suffix = 2;
-  while (used.has(id)) id = `${seed}-${suffix++}`;
-  return id;
-}
-
-/** At a first available grid position, each axis is against the plate or an
- * obstacle's far edge. Testing those edges is complete for axis-aligned rooms
- * and bounded by component count, independent of a plot's area. */
-function freePosition(
-  floor: Floor,
-  w: number,
-  d: number,
-): { x: number; z: number } | undefined {
-  const obstacles = [...floor.rooms, ...floor.voids].map((r) => r.bounds);
-  const xs = [
-    ...new Set([floor.footprint.x, ...obstacles.map((r) => r.x + r.w)]),
-  ].sort((a, b) => a - b);
-  const zs = [
-    ...new Set([floor.footprint.z, ...obstacles.map((r) => r.z + r.d)]),
-  ].sort((a, b) => a - b);
-  for (const z of zs)
-    for (const x of xs) {
-      const candidate = { x, z, w, d };
-      if (
-        contains(floor.footprint, candidate) &&
-        !obstacles.some((r) => overlaps(r, candidate))
-      )
-        return { x, z };
-    }
-  return undefined;
-}
-
 function insertRoom(
   project: Project,
   floorId: string,
@@ -159,59 +129,74 @@ function insertRoom(
 ): EditResult {
   const floor = project.floors.find((f) => f.id === floorId);
   if (!floor) return { ok: false, error: "Floor not found." };
-  if (floor.rooms.length >= 24)
-    return { ok: false, error: "This floor already has the maximum 24 rooms." };
-  const target = position
-    ? { x: snap(position.x), z: snap(position.z) }
-    : freePosition(floor, dimensions.w, dimensions.d);
-  if (!target)
+  if (floor.rooms.length >= getLimits().roomsPerFloor)
+    return { ok: false, error: "This floor already has the maximum 48 rooms." };
+  const bounds = position
+    ? { x: snap(position.x), z: snap(position.z), ...dimensions }
+    : findRoomPosition(
+        project,
+        floorId,
+        dimensions.w,
+        dimensions.d,
+        room.unitId,
+      );
+  if (!bounds)
     return {
       ok: false,
       error:
-        "There is no free space for this room. Try a smaller size, move a room or enlarge the building.",
+        "There is no free space for this room in the selected unit. Try a smaller size or enlarge its area.",
     };
   return checked(
     replaceFloor(project, {
       ...floor,
-      rooms: [
-        ...floor.rooms,
-        { ...room, bounds: { ...target, ...dimensions } },
-      ],
+      rooms: [...floor.rooms, { ...room, bounds }],
     }),
   );
 }
-
 export function addCatalogRoom(
   project: Project,
   floorId: string,
   catalogId: string,
   size: RoomSize,
-  position?: { x: number; z: number },
+  positionOrUnit?: { x: number; z: number } | string | null,
+  unitId?: string | null,
 ): EditResult {
-  const item = ROOM_CATALOG.find((r) => r.id === catalogId);
-  const scale =
-    size === "small"
-      ? 0.8
-      : size === "regular"
-        ? 1
-        : size === "large"
-          ? 1.2
-          : undefined;
+  const item = ROOM_CATALOG.find((r) => r.id === catalogId),
+    scale =
+      size === "small"
+        ? 0.8
+        : size === "regular"
+          ? 1
+          : size === "large"
+            ? 1.2
+            : undefined;
   if (!item || scale === undefined)
     return { ok: false, error: "Choose a valid room and size." };
+  const floor = project.floors.find((f) => f.id === floorId);
+  if (!floor) return { ok: false, error: "Floor not found." };
+  const position =
+    typeof positionOrUnit === "object" && positionOrUnit !== null
+      ? positionOrUnit
+      : undefined;
+  const requestedUnit =
+    typeof positionOrUnit === "string" || positionOrUnit === null
+      ? positionOrUnit
+      : unitId;
+  const owner =
+    requestedUnit === undefined ? defaultRoomUnit(floor) : requestedUnit;
   return insertRoom(
     project,
     floorId,
     {
-      id: nextRoomId(project, `room-${item.id}`),
+      id: allocateId(`room-${item.id}`, componentIds(project)),
       name: item.label,
       kind: item.kind,
+      unitId: owner,
     },
     { w: snap(item.width * scale), d: snap(item.depth * scale) },
     position,
   );
 }
-
 export function duplicateRoom(
   project: Project,
   floorId: string,
@@ -225,15 +210,14 @@ export function duplicateRoom(
     project,
     floorId,
     {
-      id: nextRoomId(project, `room-${source.kind}`),
+      id: allocateId(`room-${source.kind}`, componentIds(project)),
       name: `${source.name.slice(0, 75)} copy`,
       kind: source.kind,
+      unitId: source.unitId,
     },
     { w: source.bounds.w, d: source.bounds.d },
   );
 }
-
-/** Rotate in place around the existing top-left origin, preserving its grid. */
 export function rotateRoom(
   project: Project,
   floorId: string,
@@ -247,64 +231,34 @@ export function rotateRoom(
     bounds: { ...room.bounds, w: room.bounds.d, d: room.bounds.w },
   });
 }
-
-export function moveRoomSmart(
+export function swapRoomPositions(
   project: Project,
   floorId: string,
-  roomId: string,
-  bounds: Rect,
+  sourceId: string,
+  targetId: string,
 ): EditResult {
-  const regular = updateRoom(project, floorId, roomId, { bounds });
-  if (regular.ok) return regular;
-  const floor = project.floors.find((f) => f.id === floorId);
-  const source = floor?.rooms.find((r) => r.id === roomId);
-  if (!floor || !source) return regular;
-  const target = {
-    x: snap(bounds.x),
-    z: snap(bounds.z),
-    w: snap(bounds.w),
-    d: snap(bounds.d),
-  };
-  // A resize never turns into a swap; only position changes are eligible.
-  if (
-    target.w !== source.bounds.w ||
-    target.d !== source.bounds.d ||
-    !Object.values(target).every(Number.isFinite)
-  )
-    return regular;
-  const center = { x: target.x + target.w / 2, z: target.z + target.d / 2 };
-  const receivers = floor.rooms.filter(
-    (r) =>
-      r.id !== roomId &&
-      center.x > r.bounds.x &&
-      center.x < r.bounds.x + r.bounds.w &&
-      center.z > r.bounds.z &&
-      center.z < r.bounds.z + r.bounds.d,
-  );
-  if (receivers.length !== 1) return regular;
-  const other = receivers[0];
-  const swap = checked(
+  const floor = project.floors.find((f) => f.id === floorId),
+    a = floor?.rooms.find((r) => r.id === sourceId),
+    b = floor?.rooms.find((r) => r.id === targetId);
+  if (!floor || !a || !b) return { ok: false, error: "Room not found." };
+  if (a.unitId !== b.unitId)
+    return {
+      ok: false,
+      error: "Physical position swaps must stay within the same unit.",
+    };
+  return checked(
     replaceFloor(project, {
       ...floor,
       rooms: floor.rooms.map((r) =>
-        r.id === source.id
-          ? {
-              ...r,
-              bounds: { ...r.bounds, x: other.bounds.x, z: other.bounds.z },
-            }
-          : r.id === other.id
-            ? {
-                ...r,
-                bounds: { ...r.bounds, x: source.bounds.x, z: source.bounds.z },
-              }
+        r.id === a.id
+          ? { ...r, bounds: { ...r.bounds, x: b.bounds.x, z: b.bounds.z } }
+          : r.id === b.id
+            ? { ...r, bounds: { ...r.bounds, x: a.bounds.x, z: a.bounds.z } }
             : r,
       ),
     }),
   );
-  return swap.ok ? swap : regular;
 }
-
-/** The schema keeps floorplates aligned, so building dimensions change together. */
 export function resizeBuilding(
   project: Project,
   floorId: string,
@@ -314,9 +268,17 @@ export function resizeBuilding(
     return { ok: false, error: "Floor not found." };
   return checked({
     ...project,
-    floors: project.floors.map((f) => ({
-      ...f,
-      footprint: { ...f.footprint, w: snap(size.w), d: snap(size.d) },
-    })),
+    floors: project.floors.map((f) => {
+      const footprint = { ...f.footprint, w: snap(size.w), d: snap(size.d) };
+      return {
+        ...f,
+        footprint,
+        unitAreas: f.unitAreas.map((a) =>
+          sameRect(a.bounds, f.footprint)
+            ? { ...a, bounds: { ...footprint } }
+            : a,
+        ),
+      };
+    }),
   });
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, Share2, Check } from "lucide-react";
 import type { Project } from "../domain/types";
-import type { Language, Unit } from "../domain/display";
+import { floorName, type Language, type Unit } from "../domain/display";
 import { download, planImage } from "../domain/export";
 import { DialogHeading } from "./Controls";
 export default function SharePlan({
@@ -15,30 +15,48 @@ export default function SharePlan({
   language: Language;
   onClose: () => void;
 }) {
-  const [file, setFile] = useState<File | null>(null),
-    [preview, setPreview] = useState(""),
-    [message, setMessage] = useState("");
+  const [floorId, setFloorId] = useState(project.floors[0].id);
+  const [prepared, setPrepared] = useState<{
+    project: Project;
+    unit: Unit;
+    floorId: string;
+    file: File;
+    url: string;
+  } | null>(null);
+  const [message, setMessage] = useState("");
+  const activeFloor = project.floors.some((floor) => floor.id === floorId)
+    ? floorId
+    : project.floors[0].id;
+  const current =
+    prepared?.project === project &&
+    prepared.unit === unit &&
+    prepared.floorId === activeFloor
+      ? prepared
+      : null;
+  const file = current?.file ?? null,
+    preview = current?.url ?? "";
   useEffect(() => {
-    let cancelled = false,
-      url = "";
-    planImage(project, unit)
-      .then((result) => {
-        if (cancelled) return;
-        url = URL.createObjectURL(result);
-        setFile(result);
-        setPreview(url);
+    const controller = new AbortController();
+    let url = "";
+    planImage(project, unit, activeFloor, controller.signal)
+      .then((file) => {
+        if (controller.signal.aborted) return;
+        url = URL.createObjectURL(file);
+        setPrepared({ project, unit, floorId: activeFloor, file, url });
       })
-      .catch(() => {
-        if (!cancelled)
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
           setMessage(
-            "The image could not be prepared. You can still download your project file.",
+            error instanceof Error
+              ? error.message
+              : "The image could not be prepared. Download the editable project file instead.",
           );
       });
     return () => {
-      cancelled = true;
+      controller.abort();
       if (url) URL.revokeObjectURL(url);
     };
-  }, [project, unit, language]);
+  }, [project, unit, activeFloor]);
   const canShare =
     !!file && !!navigator.canShare && navigator.canShare({ files: [file] });
   async function share() {
@@ -67,21 +85,42 @@ export default function SharePlan({
       <div className="share-body">
         <p className="supporting">
           {
-            "Take the idea to your family or architect. The image includes every floor and room sizes."
+            "Take the idea to your family or architect. Each floor gets a clear image with room sizes, homes and shared spaces."
           }
         </p>
+        {project.floors.length > 1 && (
+          <label className="select-label">
+            Floor to share
+            <select
+              value={activeFloor}
+              onChange={(event) => {
+                setFloorId(event.target.value);
+                setMessage("");
+              }}
+            >
+              {project.floors.map((floor, index) => (
+                <option key={floor.id} value={floor.id}>
+                  {floorName(index)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="share-preview">
           {preview ? (
-            <img src={preview} alt={"Preview of the exported home plans"} />
+            <img
+              src={preview}
+              alt={`Preview of ${floorName(project.floors.findIndex((floor) => floor.id === activeFloor))} plan`}
+            />
           ) : (
-            <span>{"Preparing your floor plans…"}</span>
+            <span>{"Preparing this floor…"}</span>
           )}
         </div>
         <div className="share-actions">
           {canShare && (
             <button className="primary-button" onClick={() => void share()}>
               <Share2 size={18} />
-              {"Share plan"}
+              {"Share this floor"}
             </button>
           )}
           <button
@@ -97,7 +136,7 @@ export default function SharePlan({
             }}
           >
             <Download size={18} />
-            {"Download plan image"}
+            {"Download floor image"}
           </button>
         </div>
         {message && (
@@ -117,7 +156,7 @@ export default function SharePlan({
             )
           }
         >
-          {"Download editable project file (.json)"}
+          {"Download all floors as an editable project (.json)"}
         </button>
         <p className="field-note">
           {

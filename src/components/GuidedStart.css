@@ -1,0 +1,195 @@
+.blueprint-setup .blueprint-kinds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 22px 0;
+}
+.blueprint-setup .blueprint-kinds button {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 7px 10px;
+  text-align: left;
+  min-height: 108px;
+  padding: 16px;
+  border: 1px solid #d5dfd0;
+  border-radius: 17px;
+  background: #fbfcf6;
+  color: #335a46;
+}
+.blueprint-setup .blueprint-kinds button span {
+  grid-column: 2;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #5c7262;
+}
+.blueprint-setup .blueprint-kinds button[aria-pressed="true"] {
+  background: #e7eedc;
+  border-color: #426952;
+  box-shadow: inset 0 0 0 1px #426952;
+}
+.blueprint-setup .blueprint-flavors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 24px;
+}
+.blueprint-setup .blueprint-flavors button {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 86px;
+  padding: 12px 8px;
+  border: 1px solid #d5dfd0;
+  border-radius: 12px;
+  background: #fffdf6;
+  color: #335a46;
+}
+.blueprint-setup .blueprint-flavors button[aria-pressed="true"] {
+  background: #e7eedc;
+  border-color: #426952;
+}
+.blueprint-setup .blueprint-flavors small {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.blueprint-setup .blueprint-program {
+  display: grid;
+  gap: 12px;
+}
+.blueprint-setup .blueprint-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e6da;
+  color: #335a46;
+  font-weight: 600;
+}
+.blueprint-setup .blueprint-count > span {
+  max-width: 52%;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.blueprint-setup .blueprint-count > div {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #cfdbc7;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fffdf7;
+}
+.blueprint-setup .blueprint-count button {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: #ecf1e5;
+  color: #335a46;
+  font-size: 24px;
+}
+.blueprint-setup .blueprint-count input {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  padding: 0;
+  color: #335a46;
+  font-size: 18px;
+  appearance: textfield;
+}
+.blueprint-setup .blueprint-count input::-webkit-inner-spin-button {
+  appearance: none;
+}
+.blueprint-setup .blueprint-quick {
+  margin: 20px 0;
+  font-size: 12px;
+  color: #5c7262;
+}
+.blueprint-setup .blueprint-quick > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.blueprint-setup .blueprint-quick button {
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid #d5dfd0;
+  border-radius: 12px;
+  color: #335a46;
+  background: #fffdf6;
+}
+.blueprint-setup .blueprint-quick button[aria-pressed="true"] {
+  background: #e7eedc;
+  border-color: #426952;
+}
+.blueprint-setup .blueprint-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 24px 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: #edf1e6;
+}
+.blueprint-setup .blueprint-stack > div {
+  display: grid;
+  grid-template-columns: 65px 1fr;
+  gap: 4px 10px;
+  padding: 11px 12px;
+  border: 1px solid #c7d4bf;
+  border-radius: 8px;
+  background: #fffdf6;
+  color: #335a46;
+  font-size: 12px;
+}
+.blueprint-setup .blueprint-stack small {
+  grid-column: 2;
+  font-size: 10px;
+  color: #758369;
+}
+.blueprint-setup .blueprint-stack strong {
+  line-height: 1.4;
+}
+.blueprint-setup .blueprint-kinds button:last-child {
+  grid-column: 1/-1;
+}
+.blueprint-setup button:focus-visible,
+.blueprint-setup input:focus-visible {
+  outline: 3px solid #c4944e;
+  outline-offset: 3px;
+}
+.blueprint-setup button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+@media (max-width: 480px) {
+  .blueprint-setup .blueprint-kinds {
+    gap: 8px;
+  }
+  .blueprint-setup .blueprint-kinds button {
+    padding: 12px;
+    grid-template-columns: 1fr;
+    min-height: 136px;
+  }
+  .blueprint-setup .blueprint-kinds button span {
+    grid-column: 1;
+  }
+  .blueprint-setup .blueprint-count > span {
+    font-size: 12px;
+  }
+  .blueprint-setup .blueprint-count > div {
+    flex-shrink: 0;
+  }
+  .blueprint-setup .blueprint-flavors button {
+    font-size: 12px;
+  }
+  .blueprint-setup .blueprint-kinds button:last-child {
+    min-height: 110px;
+  }
+  .blueprint-setup .recommendation-copy h3 {
+    font-size: 17px;
+  }
+}

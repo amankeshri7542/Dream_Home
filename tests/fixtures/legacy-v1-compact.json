@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "name": "A Little Sanctuary",
+  "plot": {
+    "width": 1400,
+    "depth": 1900,
+    "north": 0,
+    "road": "south",
+    "setback": 200
+  },
+  "floors": [
+    {
+      "id": "floor-0",
+      "name": "Ground floor",
+      "elevation": 0,
+      "height": 300,
+      "footprint": {
+        "x": 250,
+        "z": 450,
+        "w": 900,
+        "d": 1100
+      },
+      "rooms": [
+        {
+          "id": "floor-0-living",
+          "name": "Living room",
+          "kind": "living",
+          "bounds": {
+            "x": 250,
+            "z": 450,
+            "w": 400,
+            "d": 380
+          }
+        },
+        {
+          "id": "floor-0-kitchen",
+          "name": "Kitchen",
+          "kind": "kitchen",
+          "bounds": {
+            "x": 850,
+            "z": 450,
+            "w": 300,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-bedroom",
+          "name": "Bedroom 1",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 250,
+            "z": 1150,
+            "w": 400,
+            "d": 400
+          }
+        },
+        {
+          "id": "floor-0-bathroom",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 910,
+            "z": 820,
+            "w": 240,
+            "d": 240
+          }
+        }
+      ],
+      "voids": [
+        {
+          "id": "floor-0-stairs",
+          "kind": "stairs",
+          "bounds": {
+            "x": 890,
+            "z": 1150,
+            "w": 260,
+            "d": 400
+          }
+        }
+      ],
+      "balcony": false
+    }
+  ],
+  "garden": true,
+  "parking": true
+}

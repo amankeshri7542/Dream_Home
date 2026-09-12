@@ -40,12 +40,10 @@ import Plan from "./components/Plan";
 import GuidedStart from "./components/GuidedStart";
 import SharePlan from "./components/SharePlan";
 import RoomCatalog from "./components/RoomCatalog";
-import {
-  duplicateRoom,
-  rotateRoom,
-  moveRoomSmart,
-  resizeBuilding,
-} from "./domain/builder";
+import SpaceInspector from "./components/SpaceInspector";
+import UnitEditor from "./components/UnitEditor";
+import { planItems, selectionFloor } from "./domain/selection";
+import { duplicateRoom, rotateRoom, resizeBuilding } from "./domain/builder";
 import {
   Dialog,
   DialogHeading,
@@ -54,14 +52,16 @@ import {
 } from "./components/Controls";
 import { useProject } from "./useProject";
 import {
-  balconyBounds,
+  deriveFloorVoids,
+  moveRoomToUnit,
+  swapRoomUses,
+  transformComponent,
   parseProject,
   projectStats,
   removeRoom,
   setFloorCount,
   updatePlot,
   updateRoom,
-  validateProject,
 } from "./domain/model";
 import { download } from "./domain/export";
 import {
@@ -97,8 +97,6 @@ function friendlyError(error: string) {
     return "Your saved file could not be opened. It has been kept safe. Use “Recover saved file” in More before making changes.";
   if (error === "storage-unavailable")
     return "Saving is unavailable on this device. Download your project file to keep your changes.";
-  if (/overlap/i.test(error))
-    return "That space is already used. Try a clear area or make the room smaller.";
   if (/No free space/i.test(error))
     return "This room needs more space. Try a smaller size or expand the building area.";
   return error;
@@ -140,6 +138,11 @@ export default function App() {
     resetKey: 0,
   });
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(""), 5000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
   const [cameraView, setCameraView] = useState<"orbit" | "front" | "top">(
     "orbit",
   );
@@ -159,10 +162,11 @@ export default function App() {
   const stats = projectStats(project),
     activeFloor =
       project.floors.find((f) => f.id === view.floor) ?? project.floors[0];
-  const chosenFloor = project.floors.find((f) =>
-      f.rooms.some((r) => r.id === selected),
-    ),
-    room = chosenFloor?.rooms.find((r) => r.id === selected);
+  const chosenFloor = selectionFloor(project, selected, activeFloor),
+    room = chosenFloor?.rooms.find((r) => r.id === selected),
+    selectedItem =
+      chosenFloor &&
+      planItems(project, chosenFloor).find((item) => item.id === selected);
   const title = project.name;
   const setViewing = (patch: Partial<ViewSettings>) =>
     setView((v) => ({ ...v, ...patch }));
@@ -183,12 +187,9 @@ export default function App() {
       !project.floors.some((f) => f.id === view.floor)
     )
       setView((v) => ({ ...v, floor: "all" }));
-    if (
-      selected &&
-      !project.floors.some((f) => f.rooms.some((r) => r.id === selected))
-    )
+    if (selected && !selectionFloor(project, selected, activeFloor))
       setSelected(null);
-  }, [project, view.floor, selected]);
+  }, [project, view.floor, selected, activeFloor]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -214,9 +215,7 @@ export default function App() {
     if (id) {
       setWelcome(false);
       if (tool === "select") setPanel("rooms");
-      const floor = project.floors.find((f) =>
-        f.rooms.some((r) => r.id === id),
-      );
+      const floor = selectionFloor(project, id, activeFloor);
       if (floor) setViewing({ floor: floor.id });
     }
   }
@@ -247,13 +246,13 @@ export default function App() {
       roof: false,
       resetKey: view.resetKey + 1,
     });
-    setMessage("Your starting home is ready. Tap a room or choose Add room.");
+    setMessage("Your starting home is ready. Tap a space or choose Add space.");
   }
   async function openFile(file?: File) {
     if (!file) return;
     try {
-      if (file.size > 200000)
-        throw new Error("Choose a project file smaller than 200 KB.");
+      if (file.size > 1000000)
+        throw new Error("Choose a project file smaller than 1 MB.");
       const next = parseProject(await file.text());
       commit(next);
       setOverlay(null);
@@ -266,17 +265,6 @@ export default function App() {
       setError(e instanceof Error ? e.message : "Could not read this file.");
     }
     if (fileInput.current) fileInput.current.value = "";
-  }
-  function toggleBalcony() {
-    const next = {
-      ...project,
-      floors: project.floors.map((f) =>
-        f.id === activeFloor.id ? { ...f, balcony: !f.balcony } : f,
-      ),
-    };
-    const errors = validateProject(next);
-    if (errors.length) setError(errors[0]);
-    else commit(next);
   }
   function nudge(x: number, z: number) {
     if (room && chosenFloor)
@@ -299,22 +287,25 @@ export default function App() {
     setViewing({ floor: activeFloor.id });
     setMessage(
       next === "resize"
-        ? "Tap a room, then drag its round corner to resize."
+        ? "Tap a space, then drag its round corner to resize."
         : next === "move"
-          ? "Drag a room to a clear space. Drop on a compatible room to swap."
-          : "Tap any room to see its size and options.",
+          ? "Drag a space. Drop a room onto another to exchange uses and keep the walls."
+          : "Tap any room, balcony or courtyard to see its options.",
     );
   }
   function changeRoomOnPlan(id: string, bounds: Rect) {
-    const result =
-      tool === "move"
-        ? moveRoomSmart(project, activeFloor.id, id, bounds)
-        : updateRoom(project, activeFloor.id, id, { bounds });
+    const result = transformComponent(
+      project,
+      activeFloor.id,
+      id,
+      bounds,
+      tool === "resize" ? "resize" : "move",
+    );
     if (apply(result))
       setMessage(
         tool === "resize"
-          ? "Room resized. Undo is always here."
-          : "Room moved. Undo is always here.",
+          ? "Space resized. Undo is always here."
+          : "Space updated. Undo is always here.",
       );
   }
   function showOutside() {
@@ -342,8 +333,8 @@ export default function App() {
     panel === "plot"
       ? "Your plot"
       : panel === "rooms"
-        ? room
-          ? roomName(room)
+        ? selectedItem
+          ? selectedItem.name
           : "Make room for everyone"
         : "See your home differently";
   const instructions = "Drag to turn · pinch to zoom";
@@ -410,7 +401,10 @@ export default function App() {
             <p>
               {length(project.plot.width, unit)} ×{" "}
               {length(project.plot.depth, unit)} {unitLabel(unit)}
-              <i /> {stats.bedrooms} {"bedrooms"}
+              <i />{" "}
+              {project.units.some((u) => u.use === "commercial")
+                ? `${project.floors.reduce((n, f) => n + f.rooms.filter((r) => r.kind === "shop").length, 0)} shops`
+                : `${stats.bedrooms} bedrooms`}
               <i />
               {project.floors.length === 1
                 ? "Ground floor"
@@ -445,6 +439,12 @@ export default function App() {
                 setMode("split");
                 setWelcome(false);
                 setTool("select");
+                setViewing({
+                  floor: activeFloor.id,
+                  stage: 4,
+                  cutaway: true,
+                  roof: false,
+                });
               }}
             >
               <Columns2 size={18} />
@@ -506,7 +506,7 @@ export default function App() {
                   }}
                 >
                   <Plus size={23} />
-                  <span>Add room</span>
+                  <span>Add space</span>
                 </button>
                 <button
                   aria-pressed={tool === "move"}
@@ -537,16 +537,17 @@ export default function App() {
                   <span>Help</span>
                 </button>
               </div>
-              {room && editing && (
+              {selectedItem && editing && (
                 <button
                   className="selected-chip"
                   onClick={() => {
                     setTool("select");
                     setPanel("rooms");
+                    setMessage("");
                   }}
                 >
                   <MousePointer2 size={17} />
-                  {room.name}
+                  {selectedItem.name}
                   <span>Edit details</span>
                   <ChevronRight size={17} />
                 </button>
@@ -555,7 +556,7 @@ export default function App() {
                 <div className="next-step">
                   <div>
                     <strong>Make it yours</strong>
-                    <span>Use Move or Resize, or add a new room.</span>
+                    <span>Use Move or Resize, or add a new space.</span>
                   </div>
                   <button
                     aria-label="Dismiss building tip"
@@ -646,7 +647,9 @@ export default function App() {
                 {saved ? "Saved on this device" : "Not saved—download a copy"}
               </span>
               <small>
-                {mode === "3d" ? instructions : "Tap a room to see its size"}
+                {mode === "3d"
+                  ? instructions
+                  : "Tap a space to see its options"}
               </small>
             </div>
           )}
@@ -658,7 +661,7 @@ export default function App() {
           {panel ? (
             <>
               <div className="panel-heading">
-                {room && panel === "rooms" && (
+                {selectedItem && panel === "rooms" && (
                   <button
                     className="round-button"
                     aria-label={"Back to rooms"}
@@ -835,7 +838,12 @@ export default function App() {
                                       Math.max(
                                         0,
                                         ...project.floors.map((f) =>
-                                          f.balcony ? balconyBounds(f).d : 0,
+                                          Math.max(
+                                            0,
+                                            ...f.balconies
+                                              .filter((b) => b.edge === "south")
+                                              .map((b) => b.depth),
+                                          ),
                                         ),
                                       )) /
                                       10,
@@ -900,10 +908,12 @@ export default function App() {
                     </p>
                   </>
                 )}
-                {panel === "rooms" && !room && (
+                {panel === "rooms" && !selectedItem && (
                   <>
                     <p className="supporting">
-                      {"Tap a room. Give it a little more space."}
+                      {
+                        "Choose a space to move it, resize it or change its use."
+                      }
                     </p>
                     <div className="floor-control">
                       <select
@@ -918,9 +928,15 @@ export default function App() {
                         ))}
                       </select>
                       <span>
-                        {activeFloor.rooms.length} {"spaces"}
+                        {planItems(project, activeFloor).length} {"spaces"}
                       </span>
                     </div>
+                    <UnitEditor
+                      project={project}
+                      floor={activeFloor}
+                      unit={unit}
+                      onApply={apply}
+                    />
                     <div className="room-list">
                       {activeFloor.rooms.map((r) => (
                         <button
@@ -939,25 +955,50 @@ export default function App() {
                             <small>
                               {length(r.bounds.w, unit)} ×{" "}
                               {length(r.bounds.d, unit)} {unitLabel(unit)}
+                              {r.unitId &&
+                                ` · ${project.units.find((u) => u.id === r.unitId)?.name ?? ""}`}
                             </small>
                           </span>
                           <ChevronRight size={17} />
                         </button>
                       ))}
+                      {planItems(project, activeFloor)
+                        .filter((item) => item.kind !== "room")
+                        .map((item) => (
+                          <button
+                            className="room-card"
+                            key={item.id}
+                            onClick={() => selectRoom(item.id)}
+                          >
+                            <span className="room-color">
+                              <Sun size={18} />
+                            </span>
+                            <span>
+                              <strong>{item.name}</strong>
+                              <small>
+                                {length(item.bounds.w, unit)} ×{" "}
+                                {length(item.bounds.d, unit)} {unitLabel(unit)}
+                              </small>
+                            </span>
+                            <ChevronRight size={17} />
+                          </button>
+                        ))}
                     </div>
                     <button
                       className="primary-button full"
                       onClick={() => setOverlay("catalog")}
                     >
                       <Plus size={20} />
-                      Add a room
+                      Add a space
                     </button>
-                    {activeFloor.voids.some((v) => v.kind === "courtyard") && (
+                    {deriveFloorVoids(project, activeFloor.id).some(
+                      (v) => v.kind === "courtyard",
+                    ) && (
                       <div className="advice-note">
                         <Sun size={20} />
                         <p>
                           {
-                            "Your aangan is open to the sky. Its position stays aligned across floors in this version."
+                            "Your courtyard is open to the sky. Tap it to move or resize it across all connected floors."
                           }
                         </p>
                       </div>
@@ -987,7 +1028,7 @@ export default function App() {
                           <strong>{project.floors.length}</strong>
                           <button
                             aria-label={"Add a floor"}
-                            disabled={project.floors.length >= 3}
+                            disabled={project.floors.length >= 8}
                             onClick={() =>
                               apply(
                                 setFloorCount(
@@ -1003,16 +1044,16 @@ export default function App() {
                       </div>
                       <p className="field-note">
                         {
-                          "An upper floor needs space for stairs. If they do not fit, try a two-floor starting layout. This is an idea, not a structural check."
+                          "Adding a floor copies the top floor's rooms and extends its stairs and courtyard. You can then edit it separately. Remove takes away the top floor; Undo brings it back."
                         }
                       </p>
-                      {activeFloor.elevation > 0 && (
-                        <Switch
-                          label={"Front balcony"}
-                          checked={activeFloor.balcony}
-                          onChange={toggleBalcony}
-                        />
-                      )}
+                      <button
+                        className="secondary-button full"
+                        onClick={() => setOverlay("catalog")}
+                      >
+                        <Plus size={18} />
+                        Add balcony, courtyard or stairs
+                      </button>
                     </details>
                   </>
                 )}
@@ -1166,56 +1207,105 @@ export default function App() {
                       <Move size={17} />
                       {"Move it on the floor plan"}
                     </button>
+                    <label className="select-label">
+                      Swap room uses with
+                      <select
+                        aria-label="Swap room uses with"
+                        value=""
+                        onChange={(event) => {
+                          const other = chosenFloor.rooms.find(
+                            (r) => r.id === event.target.value,
+                          );
+                          if (!other) return;
+                          if (
+                            apply(
+                              swapRoomUses(
+                                project,
+                                chosenFloor.id,
+                                room.id,
+                                other.id,
+                              ),
+                            )
+                          ) {
+                            setMode("2d");
+                            setMessage(
+                              "Room uses exchanged. Walls and sizes stay in place.",
+                            );
+                          }
+                        }}
+                      >
+                        <option value="">Choose another room</option>
+                        {chosenFloor.rooms
+                          .filter((r) => r.id !== room.id)
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <p className="field-note">
+                      Swap what two rooms are used for. Their walls and
+                      dimensions stay in place.
+                    </p>
+                    <label className="select-label">
+                      Use this room as
+                      <select
+                        aria-label="Room use"
+                        value={room.kind}
+                        onChange={(event) => {
+                          const kind = event.target.value as typeof room.kind;
+                          apply(
+                            updateRoom(project, chosenFloor.id, room.id, {
+                              kind,
+                              name: ROOM_META[kind].label,
+                            }),
+                          );
+                        }}
+                      >
+                        {Object.entries(ROOM_META).map(([kind, meta]) => (
+                          <option key={kind} value={kind}>
+                            {meta.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {project.units.length > 0 && (
+                      <label className="select-label">
+                        Move room to group
+                        <select
+                          aria-label="Move room to group"
+                          value={room.unitId ?? ""}
+                          onChange={(event) =>
+                            apply(
+                              moveRoomToUnit(
+                                project,
+                                chosenFloor.id,
+                                room.id,
+                                event.target.value || null,
+                              ),
+                            )
+                          }
+                        >
+                          <option value="">Shared space</option>
+                          {chosenFloor.unitAreas.map((area) => {
+                            const owner = project.units.find(
+                              (u) => u.id === area.unitId,
+                            )!;
+                            return (
+                              <option key={owner.id} value={owner.id}>
+                                {owner.name}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
+                    )}
                     <details className="plain-details">
                       <summary>
                         {"Name & exact position"}
                         <ChevronDown size={17} />
                       </summary>
-                      <label className="select-label">
-                        Swap positions with
-                        <select
-                          aria-label="Swap positions with"
-                          value=""
-                          onChange={(event) => {
-                            const other = chosenFloor.rooms.find(
-                              (r) => r.id === event.target.value,
-                            );
-                            if (!other) return;
-                            if (
-                              apply(
-                                moveRoomSmart(
-                                  project,
-                                  chosenFloor.id,
-                                  room.id,
-                                  {
-                                    ...room.bounds,
-                                    x:
-                                      other.bounds.x +
-                                      (other.bounds.w - room.bounds.w) / 2,
-                                    z:
-                                      other.bounds.z +
-                                      (other.bounds.d - room.bounds.d) / 2,
-                                  },
-                                ),
-                              )
-                            ) {
-                              setMode("2d");
-                              setMessage(
-                                "Rooms swapped. Their sizes stay the same.",
-                              );
-                            }
-                          }}
-                        >
-                          <option value="">Choose another room</option>
-                          {chosenFloor.rooms
-                            .filter((r) => r.id !== room.id)
-                            .map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
                       <label className="select-label">
                         {"Room name"}
                         <input
@@ -1285,6 +1375,17 @@ export default function App() {
                       {"Remove room"}
                     </button>
                   </>
+                )}
+                {panel === "rooms" && selectedItem && !room && chosenFloor && (
+                  <SpaceInspector
+                    project={project}
+                    floor={chosenFloor}
+                    item={selectedItem}
+                    unit={unit}
+                    onApply={apply}
+                    onTool={beginTool}
+                    onRemove={() => setSelected(null)}
+                  />
                 )}
                 {panel === "view" && (
                   <>
@@ -1486,7 +1587,7 @@ export default function App() {
                       <Sun size={21} />
                       <p>
                         {
-                          "An aangan, shade and openings can be part of the conversation about light and air. Ask your architect what suits your site."
+                          "A courtyard, shade and openings can be part of the conversation about light and air. Ask your architect what suits your site."
                         }
                       </p>
                     </div>
@@ -1605,7 +1706,7 @@ export default function App() {
         onChange={(e) => void openFile(e.target.files?.[0])}
       />
       {overlay === "catalog" && (
-        <Dialog label="Add a room" onClose={() => setOverlay(null)}>
+        <Dialog label="Add space" onClose={() => setOverlay(null)}>
           <RoomCatalog
             project={project}
             floorId={activeFloor.id}
@@ -1630,7 +1731,7 @@ export default function App() {
               setSelected(id);
               setViewing({ floor: activeFloor.id });
               setMessage(
-                "Room added. Drag it to adjust its position, or tap Edit details.",
+                "Space added. Drag it to adjust its position, or tap Edit details.",
               );
             }}
           />
@@ -1784,12 +1885,12 @@ export default function App() {
               {
                 icon: Move,
                 title: "Tap first, then change",
-                body: "Tap a room or find it under Rooms. Change its size or use the arrows. Use Move to drag a room or swap compatible rooms. Use Resize to drag its round corner. Green fits; red needs another spot.",
+                body: "Tap a room or find it under Rooms. Change its size or use the arrows. Use Move to drag a space or exchange room uses. Walls stay in place when swapping. Use Resize to drag its round corner. Green fits; red needs another spot.",
               },
               {
                 icon: Leaf,
                 title: "Think about the everyday",
-                body: "An aangan, a bedroom downstairs and room for visitors are options to discuss with your family. Every household is different.",
+                body: "A courtyard, a bedroom downstairs and room for visitors are options to discuss with your family. Every household is different.",
               },
               {
                 icon: Share2,

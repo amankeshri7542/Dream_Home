@@ -1,14 +1,54 @@
 import { validateProject } from "./model";
 import type {
   EditResult,
-  Floor,
+  Floor as CanonicalFloor,
   Project,
   Rect,
-  Room,
+  Room as CanonicalRoom,
   RoomKind,
   Void,
 } from "./types";
 
+type Room = Omit<CanonicalRoom, "unitId">;
+type Floor = Omit<CanonicalFloor, "unitAreas" | "balconies" | "rooms"> & {
+  rooms: Room[];
+  voids: Void[];
+  balcony: boolean;
+};
+type LegacyProject = Omit<
+  Project,
+  "schemaVersion" | "floors" | "units" | "verticalSpaces"
+> & { schemaVersion: 1; floors: Floor[] };
+function canonicalHome(old: LegacyProject): Project {
+  const verticalSpaces: Project["verticalSpaces"] = [];
+  for (const floor of old.floors)
+    for (const space of floor.voids) {
+      const match = verticalSpaces.find(
+        (v) =>
+          v.kind === space.kind &&
+          JSON.stringify(v.bounds) === JSON.stringify(space.bounds),
+      );
+      if (match) match.floorIds.push(floor.id);
+      else
+        verticalSpaces.push({ ...space, unitId: "home", floorIds: [floor.id] });
+    }
+  return {
+    ...old,
+    schemaVersion: 2,
+    units: [{ id: "home", name: "Our home", use: "residential" }],
+    verticalSpaces,
+    floors: old.floors.map((floor) => ({
+      id: floor.id,
+      name: floor.name,
+      elevation: floor.elevation,
+      height: floor.height,
+      footprint: { ...floor.footprint },
+      rooms: floor.rooms.map((room) => ({ ...room, unitId: "home" })),
+      unitAreas: [{ unitId: "home", bounds: { ...floor.footprint } }],
+      balconies: [],
+    })),
+  };
+}
 export type HomeStyle = "family" | "courtyard" | "open";
 export type StarterRequest = {
   widthCm: number;
@@ -65,9 +105,7 @@ export function createStarter(
   const availableFrontage = down(
     (horizontal ? widthCm : depthCm) - 2 * marginCm,
   );
-  const availableRun = down(
-    (horizontal ? depthCm : widthCm) - 2 * marginCm,
-  );
+  const availableRun = down((horizontal ? depthCm : widthCm) - 2 * marginCm);
   // Larger plots should leave real outdoor space rather than stretch a bedroom
   // across tens of metres. The same bounded arrangement serves every plot.
   const frontage = Math.min(1000, availableFrontage);
@@ -75,7 +113,7 @@ export function createStarter(
   // intentionally stronger than the free editor's generic geometry minimum.
   const passage = 100;
   const roomWidth = frontage - passage;
-  const fitError = `This ${style === "courtyard" ? "aangan" : style === "open" ? "front-yard" : "family"} arrangement cannot fit ${bedrooms} bedroom${bedrooms > 1 ? "s" : ""} on ${floors} floor${floors > 1 ? "s" : ""} inside your plot and planning margin. Try fewer bedrooms, a larger plot or another style.`;
+  const fitError = `This ${style === "courtyard" ? "courtyard" : style === "open" ? "front-yard" : "family"} arrangement cannot fit ${bedrooms} bedroom${bedrooms > 1 ? "s" : ""} on ${floors} floor${floors > 1 ? "s" : ""} inside your plot and planning margin. Try fewer bedrooms, a larger plot or another style.`;
   if (frontage < 400 || availableRun < 400 || roomWidth < 390)
     return { ok: false, error: fitError };
 
@@ -87,13 +125,23 @@ export function createStarter(
     Math.ceil(groundBeds / columns),
     Math.ceil(Math.max(0, upperBeds - columns) / columns),
   );
-  const courtDepth = style === 'courtyard' ? 200 : 0;
+  const courtDepth = style === "courtyard" ? 200 : 0;
   let livingDepth = 260;
   let kitchenDepth = multilevel ? 220 : 0;
   let serviceDepth = multilevel ? 340 : 240;
   let bedroomDepth = 270;
-  const usedDepth = () => livingDepth + kitchenDepth + serviceDepth + courtDepth + rearRows * bedroomDepth;
-  const generousDepth = 380 + (multilevel ? 280 : 0) + (multilevel ? 340 : 280) + courtDepth + rearRows * 400;
+  const usedDepth = () =>
+    livingDepth +
+    kitchenDepth +
+    serviceDepth +
+    courtDepth +
+    rearRows * bedroomDepth;
+  const generousDepth =
+    380 +
+    (multilevel ? 280 : 0) +
+    (multilevel ? 340 : 280) +
+    courtDepth +
+    rearRows * 400;
   // First choose useful indoor dimensions; do not fill the plot with an empty
   // slab. The open style trades a further 2.4 m of depth for its front yard.
   const depthBudget = Math.min(1700, availableRun, generousDepth) - frontStrip;
@@ -101,10 +149,22 @@ export function createStarter(
   let grew = true;
   while (grew) {
     grew = false;
-    if (livingDepth < 380 && usedDepth() + 10 <= depthBudget) { livingDepth += 10; grew = true; }
-    if (bedroomDepth < 400 && usedDepth() + 10 * rearRows <= depthBudget) { bedroomDepth += 10; grew = true; }
-    if (!multilevel && serviceDepth < 280 && usedDepth() + 10 <= depthBudget) { serviceDepth += 10; grew = true; }
-    if (multilevel && kitchenDepth < 280 && usedDepth() + 10 <= depthBudget) { kitchenDepth += 10; grew = true; }
+    if (livingDepth < 380 && usedDepth() + 10 <= depthBudget) {
+      livingDepth += 10;
+      grew = true;
+    }
+    if (bedroomDepth < 400 && usedDepth() + 10 * rearRows <= depthBudget) {
+      bedroomDepth += 10;
+      grew = true;
+    }
+    if (!multilevel && serviceDepth < 280 && usedDepth() + 10 <= depthBudget) {
+      serviceDepth += 10;
+      grew = true;
+    }
+    if (multilevel && kitchenDepth < 280 && usedDepth() + 10 <= depthBudget) {
+      kitchenDepth += 10;
+      grew = true;
+    }
   }
   const run = usedDepth();
 
@@ -147,9 +207,19 @@ export function createStarter(
       rooms.push({ id: `${id}-${key}`, name, kind, bounds: transform(bounds) });
     const floorBeds = index === 0 ? groundBeds : bedrooms - groundBeds;
     if (index === 0) {
-      add("living", "Living / dining", "living", rect(0, 0, roomWidth, livingDepth));
+      add(
+        "living",
+        "Living / dining",
+        "living",
+        rect(0, 0, roomWidth, livingDepth),
+      );
       if (multilevel)
-        add("kitchen", "Kitchen", "kitchen", rect(0, livingDepth, roomWidth, kitchenDepth));
+        add(
+          "kitchen",
+          "Kitchen",
+          "kitchen",
+          rect(0, livingDepth, roomWidth, kitchenDepth),
+        );
       else
         add(
           "kitchen",
@@ -158,7 +228,12 @@ export function createStarter(
           rect(0, serviceStart, roomWidth - 170, serviceDepth),
         );
     } else if (!floorBeds) {
-      add("lounge", "Family lounge", "living", rect(0, 0, roomWidth, livingDepth));
+      add(
+        "lounge",
+        "Family lounge",
+        "living",
+        rect(0, 0, roomWidth, livingDepth),
+      );
     }
     if (multilevel) {
       voids.push({
@@ -200,7 +275,9 @@ export function createStarter(
     for (let i = 0; i < floorBeds; i++) {
       const isFront = i < frontBeds;
       const slot = isFront ? i : i - frontBeds;
-      const z = isFront ? 0 : rearStart + Math.floor(slot / columns) * bedroomDepth;
+      const z = isFront
+        ? 0
+        : rearStart + Math.floor(slot / columns) * bedroomDepth;
       const x = (slot % columns) * bedroomWidth;
       bedroomNumber++;
       add(
@@ -237,11 +314,11 @@ export function createStarter(
       balcony: false,
     });
   }
-  const project: Project = {
+  const legacy: LegacyProject = {
     schemaVersion: 1,
     name:
       style === "courtyard"
-        ? "Our Aangan Home"
+        ? "Our Courtyard Home"
         : style === "open"
           ? "Our Home with a Front Yard"
           : "Our Family Home",
@@ -250,6 +327,7 @@ export function createStarter(
     garden: style === "open",
     parking: false,
   };
+  const project = canonicalHome(legacy);
   const errors = validateProject(project);
   return errors.length ? { ok: false, error: fitError } : { ok: true, project };
 }
@@ -265,7 +343,7 @@ export function recommendHomes(
           project: result.project,
           reason:
             id === "courtyard"
-              ? "Matches your room and floor choices, with an aligned open-to-sky aangan."
+              ? "Matches your room and floor choices, with an aligned open-to-sky courtyard."
               : id === "open"
                 ? "Matches your room and floor choices, with additional open space at the road-facing front."
                 : "Matches your room and floor choices, with a bedroom on the ground floor and a simple shared passage.",

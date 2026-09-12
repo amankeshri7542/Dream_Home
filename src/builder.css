@@ -844,3 +844,77 @@ summary {
   gap: 1px;
   padding: 4px 2px;
 }
+
+/* Blueprint controls stay beside the game board and reveal detail on demand. */
+.edge-choices {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 16px 0;
+}
+.edge-choices button {
+  min-height: 48px;
+  border: 1px solid #c8d4c7;
+  border-radius: 12px;
+  font-weight: 650;
+}
+.edge-choices button[aria-pressed="true"] {
+  color: #fff;
+  background: #285f4b;
+  border-color: #285f4b;
+}
+.unit-boundary {
+  border: 1px solid #d7dfd4;
+  border-radius: 14px;
+  margin: 10px 0;
+  padding: 12px;
+}
+.unit-boundary > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 650;
+}
+.unit-boundary > summary span {
+  font-size: 12px;
+  font-weight: 400;
+  color: #63786a;
+}
+.catalog-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.catalog-tabs button {
+  min-height: 48px;
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #c8d4c7;
+  border-radius: 12px;
+  font-weight: 650;
+}
+.catalog-tabs button[aria-pressed="true"] {
+  background: #285f4b;
+  color: white;
+}
+.open-space-card {
+  padding: 16px;
+  background: #edf2e7;
+  border-radius: 16px;
+  margin: 12px 0;
+}
+.open-space-card > p {
+  line-height: 1.5;
+}
+.open-space-card .field-note {
+  font-size: 13px;
+}
+.plan-space {
+  cursor: pointer;
+}
+.tool-move .plan-space {
+  cursor: grab;
+}

@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { Maximize2, Minus, Plus } from "lucide-react";
-import type { Floor, Project, Rect, Room, ViewSettings } from "../domain/types";
+import type {
+  Floor,
+  Project,
+  Rect,
+  GeometryFloor,
+  ViewSettings,
+} from "../domain/types";
 import { ROOM_META } from "../domain/types";
-import { balconyBounds, deriveWalls, updateRoom } from "../domain/model";
-import { moveRoomSmart } from "../domain/builder";
+import { balconyBounds, deriveWalls, floorForGeometry } from "../domain/model";
+import { transformComponent as editPlanItem } from "../domain/model";
+import { planItems, type PlanItem } from "../domain/selection";
 import {
   floorName,
   length,
@@ -36,13 +43,14 @@ type Gesture = {
   client: { x: number; y: number };
   start: { x: number; z: number };
   kind: Tool | "pan";
-  room?: Room;
+  room?: PlanItem;
   pan: { x: number; z: number };
 };
 type Preview = {
   id: string;
   bounds: Rect;
-  floor: Floor;
+  floor: GeometryFloor;
+  project: Project;
   valid: boolean;
   message: string;
 };
@@ -75,13 +83,13 @@ export default function Plan({
   const scale =
     Math.min(viewport.width / viewWidth, viewport.height / viewHeight) || 0.2;
   const pixel = 1 / scale;
-  const displayFloor = preview?.floor ?? floor;
+  const displayProject = preview?.project ?? project;
+  const displayFloor = preview?.floor ?? floorForGeometry(project, floor.id);
   const highlighted = preview?.id ?? selected;
-  const selectedRoom = displayFloor.rooms.find(
+  const selectedRoom = planItems(displayProject, displayFloor).find(
     (room) => room.id === highlighted,
   );
   const road = project.plot.road;
-  const balcony = balconyBounds(floor);
 
   useEffect(() => {
     const element = svg.current;
@@ -121,7 +129,11 @@ export default function Plan({
     );
     return { x: point.x, z: point.y };
   }
-  function begin(event: ReactPointerEvent, kind: Gesture["kind"], room?: Room) {
+  function begin(
+    event: ReactPointerEvent,
+    kind: Gesture["kind"],
+    room?: PlanItem,
+  ) {
     if (!event.isPrimary || event.button !== 0 || gesture.current) return;
     const matrix = svg.current?.getScreenCTM();
     if (!matrix) return;
@@ -140,6 +152,20 @@ export default function Plan({
     };
     setFeedback(null);
   }
+  function resizeItemBounds(item: PlanItem, dx: number, dz: number): Rect {
+    const edge = floor.balconies.find(
+      (balcony) => balcony.id === item.id,
+    )?.edge;
+    const b = item.bounds;
+    const w = Math.max(90, snap(b.w + (edge === "west" ? -dx : dx)));
+    const d = Math.max(90, snap(b.d + (edge === "north" ? -dz : dz)));
+    return {
+      x: edge === "west" ? b.x + b.w - w : b.x,
+      z: edge === "north" ? b.z + b.d - d : b.z,
+      w,
+      d,
+    };
+  }
   function candidate(event: ReactPointerEvent, start: Gesture): Preview | null {
     if (!start.room) return null;
     const point = coordinates(event, start.inverse);
@@ -148,47 +174,42 @@ export default function Plan({
     const original = start.room.bounds;
     const bounds =
       start.kind === "resize"
-        ? {
-            ...original,
-            w: Math.max(120, snap(original.w + dx)),
-            d: Math.max(120, snap(original.d + dz)),
-          }
+        ? resizeItemBounds(start.room, dx, dz)
         : { ...original, x: snap(original.x + dx), z: snap(original.z + dz) };
-    const result =
-      start.kind === "resize"
-        ? updateRoom(project, floor.id, start.room.id, { bounds })
-        : moveRoomSmart(project, floor.id, start.room.id, bounds);
+    const result = editPlanItem(
+      project,
+      floor.id,
+      start.room.id,
+      bounds,
+      start.kind === "resize" ? "resize" : "move",
+    );
     if (!result.ok)
       return {
         id: start.room.id,
         bounds,
-        floor: {
-          ...floor,
-          rooms: floor.rooms.map((room) =>
-            room.id === start.room!.id ? { ...room, bounds } : room,
-          ),
-        },
+        floor: floorForGeometry(project, floor.id),
+        project,
         valid: false,
         message: result.error,
       };
-    const nextFloor = result.project.floors.find((f) => f.id === floor.id)!;
+    const nextFloor = floorForGeometry(result.project, floor.id);
     const other = nextFloor.rooms.find(
       (room) =>
         room.id !== start.room!.id &&
         floor.rooms.some(
           (before) =>
             before.id === room.id &&
-            (before.bounds.x !== room.bounds.x ||
-              before.bounds.z !== room.bounds.z),
+            (before.kind !== room.kind || before.name !== room.name),
         ),
     );
     return {
       id: start.room.id,
       bounds,
       floor: nextFloor,
+      project: result.project,
       valid: true,
       message: other
-        ? `Release to swap with ${other.name}`
+        ? `Release to swap room uses · walls stay in place`
         : start.kind === "resize"
           ? "Fits here · release to resize"
           : "Fits here · release to place",
@@ -252,7 +273,7 @@ export default function Plan({
       onMove(next.id, next.bounds);
       report({
         valid: true,
-        message: start.kind === "resize" ? "Room resized" : "Room placed",
+        message: start.kind === "resize" ? "Space resized" : "Space updated",
       });
     } else if (next) report(next);
     if (start.room && (!moved || start.kind !== "select"))
@@ -266,12 +287,14 @@ export default function Plan({
   }
   function keyboardResize(dx: number, dz: number) {
     if (!selectedRoom) return;
-    const bounds = {
-      ...selectedRoom.bounds,
-      w: selectedRoom.bounds.w + dx,
-      d: selectedRoom.bounds.d + dz,
-    };
-    const result = updateRoom(project, floor.id, selectedRoom.id, { bounds });
+    const bounds = resizeItemBounds(selectedRoom, dx, dz);
+    const result = editPlanItem(
+      project,
+      floor.id,
+      selectedRoom.id,
+      bounds,
+      "resize",
+    );
     if (result.ok) {
       onMove(selectedRoom.id, bounds);
       report({ valid: true, message: "Room resized" });
@@ -279,10 +302,10 @@ export default function Plan({
   }
   const hint =
     activeTool === "move"
-      ? "Drag a room · drop on another to swap"
+      ? "Drag a space · drop on a room to swap uses"
       : activeTool === "resize"
-        ? "Select a room · drag its corner to resize"
-        : "Tap a room to choose it";
+        ? "Select a space · drag its corner to resize"
+        : "Tap a room, balcony or courtyard";
   return (
     <div
       className={`plan-wrap direct-plan tool-${activeTool}${preview ? " has-preview" : ""}`}
@@ -357,6 +380,20 @@ export default function Plan({
           stroke="#66746f"
           strokeWidth="12"
         />
+        {displayFloor.unitAreas.map((area) => (
+          <rect
+            key={area.unitId}
+            x={area.bounds.x}
+            y={area.bounds.z}
+            width={area.bounds.w}
+            height={area.bounds.d}
+            fill="none"
+            stroke="#74618c"
+            strokeWidth={2 * pixel}
+            strokeDasharray={`${6 * pixel} ${4 * pixel}`}
+            pointerEvents="none"
+          />
+        ))}
         {displayFloor.rooms.map((room) => {
           const b = room.bounds,
             active = room.id === highlighted;
@@ -375,7 +412,9 @@ export default function Plan({
                 begin(
                   event,
                   activeTool === "move" ? "move" : "select",
-                  floor.rooms.find((original) => original.id === room.id),
+                  planItems(project, floor).find(
+                    (original) => original.id === room.id,
+                  ),
                 )
               }
             >
@@ -405,6 +444,15 @@ export default function Plan({
                   style={{ fontSize: 12 * pixel }}
                 >
                   <strong>{room.name}</strong>
+                  {active && room.unitId && (
+                    <span>
+                      {
+                        displayProject.units.find(
+                          (owner) => owner.id === room.unitId,
+                        )?.name
+                      }
+                    </span>
+                  )}
                   {active && (
                     <span>
                       {length(b.w, unit)} × {length(b.d, unit)}{" "}
@@ -416,16 +464,27 @@ export default function Plan({
             </g>
           );
         })}
-        {floor.voids.map((space) => (
-          <g key={space.id} pointerEvents="none">
+        {displayFloor.voids.map((space) => (
+          <g
+            key={space.id}
+            className="plan-space"
+            onPointerDown={(event) =>
+              begin(
+                event,
+                activeTool === "move" ? "move" : "select",
+                planItems(project, floor).find((item) => item.id === space.id),
+              )
+            }
+          >
+            <title>{space.kind === "courtyard" ? "Courtyard" : "Stairs"}</title>
             <rect
               x={space.bounds.x}
               y={space.bounds.z}
               width={space.bounds.w}
               height={space.bounds.d}
               fill={space.kind === "courtyard" ? "#b9c9a5" : "#e5e3d9"}
-              stroke="#849783"
-              strokeWidth="6"
+              stroke={space.id === highlighted ? "#285f4b" : "#849783"}
+              strokeWidth={space.id === highlighted ? 3 * pixel : 6}
             />
             {space.kind === "stairs" &&
               Array.from({ length: 12 }, (_, i) => (
@@ -446,7 +505,7 @@ export default function Plan({
               fontSize={11 * pixel}
               fill="#45634f"
             >
-              {space.kind === "stairs" ? "Stairs ↑" : "Aangan"}
+              {space.kind === "stairs" ? "Stairs ↑" : "Courtyard"}
             </text>
           </g>
         ))}
@@ -493,15 +552,58 @@ export default function Plan({
               )}
             </g>
           ))}
-        {floor.balcony && (
+        {displayFloor.balconies.map((balcony, index) => {
+          const b = balconyBounds(displayFloor, balcony);
+          return (
+            <g
+              key={balcony.id}
+              className="plan-space"
+              onPointerDown={(event) =>
+                begin(
+                  event,
+                  activeTool === "move" ? "move" : "select",
+                  planItems(project, floor).find(
+                    (item) => item.id === balcony.id,
+                  ),
+                )
+              }
+            >
+              <title>
+                {floor.elevation > 0 ? "Balcony" : "Veranda"} {index + 1}
+              </title>
+              <rect
+                x={b.x}
+                y={b.z}
+                width={b.w}
+                height={b.d}
+                fill="#cdb796"
+                stroke={balcony.id === highlighted ? "#285f4b" : "#73847c"}
+                strokeWidth={balcony.id === highlighted ? 3 * pixel : 7}
+              />
+              <text
+                x={b.x + b.w / 2}
+                y={b.z + b.d / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={10 * pixel}
+                fill="#40584a"
+                pointerEvents="none"
+              >
+                {floor.elevation > 0 ? "Balcony" : "Veranda"}
+              </text>
+            </g>
+          );
+        })}
+        {preview && !preview.valid && (
           <rect
-            x={balcony.x}
-            y={balcony.z}
-            width={balcony.w}
-            height={balcony.d}
-            fill="#cdb796"
-            stroke="#73847c"
-            strokeWidth="7"
+            x={preview.bounds.x}
+            y={preview.bounds.z}
+            width={preview.bounds.w}
+            height={preview.bounds.d}
+            fill="#cb494225"
+            stroke="#cb4942"
+            strokeWidth={3 * pixel}
+            strokeDasharray={`${8 * pixel} ${5 * pixel}`}
             pointerEvents="none"
           />
         )}
@@ -541,12 +643,14 @@ export default function Plan({
             role="button"
             tabIndex={0}
             aria-label={`Resize ${selectedRoom.name}; drag the corner or use arrow keys`}
-            transform={`translate(${selectedRoom.bounds.x + selectedRoom.bounds.w} ${selectedRoom.bounds.z + selectedRoom.bounds.d})`}
+            transform={`translate(${selectedRoom.bounds.x + (displayFloor.balconies.find((b) => b.id === selectedRoom.id)?.edge === "west" ? 0 : selectedRoom.bounds.w)} ${selectedRoom.bounds.z + (displayFloor.balconies.find((b) => b.id === selectedRoom.id)?.edge === "north" ? 0 : selectedRoom.bounds.d)})`}
             onPointerDown={(event) =>
               begin(
                 event,
                 "resize",
-                floor.rooms.find((room) => room.id === selectedRoom.id),
+                planItems(project, floor).find(
+                  (room) => room.id === selectedRoom.id,
+                ),
               )
             }
             onKeyDown={(event) => {

@@ -8,9 +8,28 @@ import {
 } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Html, Line, OrbitControls } from "@react-three/drei";
-import { OrthographicCamera, Vector3 } from "three";
+import {
+  BoxGeometry,
+  OrthographicCamera,
+  Vector3,
+  type MeshStandardMaterial,
+} from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import {
+  UNIT_BOX,
+  WINDOW_GLASS,
+  setMetreUvs,
+  solidMaterial,
+  surfaceMaterial,
+  type SurfaceFinish,
+} from "./sceneMaterials";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { balconyBounds, deriveWalls, slabTiles } from "../domain/model";
+import {
+  balconyBounds,
+  deriveWalls,
+  floorForGeometry,
+  slabTiles,
+} from "../domain/model";
 import {
   length,
   roomName,
@@ -19,7 +38,9 @@ import {
   type Unit,
 } from "../domain/display";
 import {
-  type Floor,
+  type GeometryFloor,
+  type Balcony as BalconyModel,
+  type Void,
   type Project,
   type Rect,
   type ViewSettings,
@@ -50,6 +71,7 @@ const ROOM_FLOORS = {
   bathroom: "#bbc9ca",
   dining: "#d6ceb9",
   utility: "#c6c3ba",
+  shop: "#d1c2ce",
 };
 
 type BoxProps = {
@@ -62,10 +84,16 @@ type BoxProps = {
 
 function Box({ position, size, color, roughness = 0.8, onClick }: BoxProps) {
   return (
-    <mesh position={position} castShadow receiveShadow onClick={onClick}>
-      <boxGeometry args={size} />
-      <meshStandardMaterial color={color} roughness={roughness} />
-    </mesh>
+    <mesh
+      position={position}
+      scale={size}
+      geometry={UNIT_BOX}
+      material={solidMaterial(color, roughness)}
+      dispose={null}
+      castShadow
+      receiveShadow
+      onClick={onClick}
+    />
   );
 }
 
@@ -151,6 +179,7 @@ function CameraControls({
                 ? extent * 1.5
                 : extent * 0.95 + buildingHeight * 0.9),
           );
+    if (size.width < 600 && cameraView === "orbit") camera.zoom *= 1.1;
     camera.near = 0.1;
     camera.far = extent * 15;
     camera.lookAt(target);
@@ -283,9 +312,10 @@ function Plot({
         : project.plot.road === "east"
           ? width - footprint.x - footprint.w
           : footprint.x) / 100;
-  const exteriorDoor = deriveWalls(project.floors[0], project.plot.road).find(
-    (wall) => wall.exterior && wall.opening?.kind === "door",
-  );
+  const exteriorDoor = deriveWalls(
+    floorForGeometry(project, project.floors[0].id),
+    project.plot.road,
+  ).find((wall) => wall.exterior && wall.opening?.kind === "door");
   const entryAlong = exteriorDoor
     ? (horizontal
         ? exteriorDoor.x + exteriorDoor.length / 2
@@ -425,183 +455,280 @@ function Plot({
   );
 }
 
-function WallGeometry({
-  wall,
+function WallBatches({
+  walls,
+  floor,
   base,
   height,
   openings,
   cut,
   finish,
-  outward,
-  entry,
+  finishId,
+  ground,
 }: {
-  wall: Wall;
+  walls: Wall[];
+  floor: GeometryFloor;
   base: number;
   height: number;
   openings: boolean;
   cut: boolean;
   finish: Finish;
-  outward: number;
-  entry: boolean;
+  finishId: SurfaceFinish;
+  ground: boolean;
 }) {
-  const length = wall.length / 100;
-  const thickness = wall.exterior ? 0.17 : 0.12;
-  const opening = wall.opening;
-  const pieces: {
-    start: number;
-    length: number;
-    bottom: number;
-    height: number;
-  }[] = [];
-  const openingWidth = opening
-    ? Math.min(opening.width / 100, length - 0.12)
-    : 0;
-  const sill = opening ? opening.sill / 100 : 0;
-  const lintel = opening ? (opening.sill + opening.height) / 100 : 0;
-  if (opening && openingWidth > 0) {
-    const side = (length - openingWidth) / 2;
-    pieces.push(
-      { start: 0, length: side, bottom: 0, height },
-      { start: side + openingWidth, length: side, bottom: 0, height },
-    );
-    if (sill > 0)
-      pieces.push({
-        start: side,
-        length: openingWidth,
-        bottom: 0,
-        height: Math.min(sill, height),
-      });
-    if (height > lintel)
-      pieces.push({
-        start: side,
-        length: openingWidth,
-        bottom: lintel,
-        height: height - lintel,
-      });
-  } else pieces.push({ start: 0, length, bottom: 0, height });
-  const glassHeight = Math.min(lintel, height) - sill;
-  return (
-    <group
-      position={[wall.x / 100, base, wall.z / 100]}
-      rotation={[0, wall.axis === "z" ? -Math.PI / 2 : 0, 0]}
-    >
-      {pieces.map((piece, i) => (
-        <group key={i}>
-          <Box
-            position={[
+  const batches = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        material: MeshStandardMaterial;
+        geometries: BoxGeometry[];
+        shadow: boolean;
+      }
+    >();
+    for (const wall of walls) {
+      const span = wall.length / 100,
+        thickness = wall.exterior ? 0.17 : 0.12;
+      const opening = wall.opening,
+        openingWidth = opening ? Math.min(opening.width / 100, span - 0.12) : 0;
+      const sill = opening ? opening.sill / 100 : 0,
+        lintel = opening ? (opening.sill + opening.height) / 100 : 0;
+      const courtyard = floor.voids.find(
+        (space) =>
+          space.kind === "courtyard" &&
+          (wall.axis === "x"
+            ? (wall.z === space.bounds.z ||
+                wall.z === space.bounds.z + space.bounds.d) &&
+              wall.x >= space.bounds.x &&
+              wall.x + wall.length <= space.bounds.x + space.bounds.w
+            : (wall.x === space.bounds.x ||
+                wall.x === space.bounds.x + space.bounds.w) &&
+              wall.z >= space.bounds.z &&
+              wall.z + wall.length <= space.bounds.z + space.bounds.d),
+      );
+      const outward = courtyard
+        ? wall.axis === "x"
+          ? wall.z === courtyard.bounds.z
+            ? 1
+            : -1
+          : wall.x === courtyard.bounds.x
+            ? -1
+            : 1
+        : wall.axis === "x"
+          ? wall.z <= floor.footprint.z
+            ? -1
+            : 1
+          : wall.x <= floor.footprint.x
+            ? 1
+            : -1;
+      const add = (
+        position: [number, number, number],
+        size: [number, number, number],
+        color: string,
+        textured = false,
+        rotation = 0,
+      ) => {
+        if (size.some((dimension) => dimension <= 0)) return;
+        const key = textured ? "surface" : color;
+        const geometry = new BoxGeometry(...size);
+        if (textured)
+          setMetreUvs(
+            geometry,
+            (wall.axis === "x" ? wall.x : wall.z) / 100 + position[0],
+            base + position[1],
+          );
+        geometry.rotateY(rotation);
+        geometry.translate(...position);
+        geometry.rotateY(wall.axis === "z" ? -Math.PI / 2 : 0);
+        geometry.translate(wall.x / 100, base, wall.z / 100);
+        let group = groups.get(key);
+        if (!group) {
+          group = {
+            material: textured
+              ? surfaceMaterial(finishId)
+              : color === "glass"
+                ? WINDOW_GLASS
+                : solidMaterial(color),
+            geometries: [],
+            shadow: textured || color === "#e3ded1" || color === "#846448",
+          };
+          groups.set(key, group);
+        }
+        group.geometries.push(geometry);
+      };
+      const pieces =
+        opening && openingWidth > 0
+          ? [
+              {
+                start: 0,
+                length: (span - openingWidth) / 2,
+                bottom: 0,
+                height,
+              },
+              {
+                start: (span + openingWidth) / 2,
+                length: (span - openingWidth) / 2,
+                bottom: 0,
+                height,
+              },
+              ...(sill > 0
+                ? [
+                    {
+                      start: (span - openingWidth) / 2,
+                      length: openingWidth,
+                      bottom: 0,
+                      height: Math.min(sill, height),
+                    },
+                  ]
+                : []),
+              ...(height > lintel
+                ? [
+                    {
+                      start: (span - openingWidth) / 2,
+                      length: openingWidth,
+                      bottom: lintel,
+                      height: height - lintel,
+                    },
+                  ]
+                : []),
+            ]
+          : [{ start: 0, length: span, bottom: 0, height }];
+      for (const piece of pieces) {
+        add(
+          [piece.start + piece.length / 2, piece.bottom + piece.height / 2, 0],
+          [piece.length, piece.height, thickness],
+          "#e3ded1",
+          wall.exterior,
+        );
+        if (wall.exterior)
+          add(
+            [
               piece.start + piece.length / 2,
               piece.bottom + piece.height / 2,
-              0,
-            ]}
-            size={[piece.length, piece.height, thickness]}
-            color={wall.exterior ? finish.wall : "#e3ded1"}
-          />
-          {cut && piece.bottom + piece.height >= height - 0.001 && (
-            <Box
-              position={[piece.start + piece.length / 2, height + 0.005, 0]}
-              size={[piece.length, 0.018, thickness + 0.016]}
-              color={finish.trim}
-            />
-          )}
-        </group>
-      ))}
-      {entry && !cut && openings && opening?.kind === "door" && (
-        <>
-          <Box
-            position={[length / 2, lintel + 0.18, outward * 0.36]}
-            size={[openingWidth + 0.55, 0.13, 0.95]}
-            color={finish.trim}
-          />
-          <Box
-            position={[length / 2, -0.05, outward * 0.32]}
-            size={[openingWidth + 0.3, 0.1, 0.7]}
-            color="#adab9d"
-          />
-          {[-1, 1].map((side) => (
-            <Box
-              key={side}
-              position={[
-                length / 2 + side * (openingWidth / 2 + 0.045),
+              -outward * (thickness / 2 + 0.002),
+            ],
+            [piece.length, piece.height, 0.003],
+            "#e3ded1",
+          );
+        if (cut && piece.bottom + piece.height >= height - 0.001)
+          add(
+            [piece.start + piece.length / 2, height + 0.005, 0],
+            [piece.length, 0.018, thickness + 0.016],
+            finish.trim,
+          );
+      }
+      const glassHeight = Math.min(lintel, height) - sill;
+      if (!openings || !opening || openingWidth <= 0 || glassHeight <= 0)
+        continue;
+      if (opening.kind === "window") {
+        add(
+          [span / 2, sill + glassHeight / 2, -outward * 0.035],
+          [openingWidth, glassHeight, 0.018],
+          "glass",
+        );
+        for (const offset of [
+          -openingWidth / 2 + 0.025,
+          0,
+          openingWidth / 2 - 0.025,
+        ])
+          add(
+            [span / 2 + offset, sill + glassHeight / 2, -outward * 0.015],
+            [0.05, glassHeight, 0.11],
+            "#394b4a",
+          );
+        add(
+          [span / 2, sill, outward * 0.045],
+          [openingWidth + 0.12, 0.055, 0.28],
+          finish.trim,
+        );
+        if (!cut) {
+          add(
+            [span / 2, lintel, 0],
+            [openingWidth + 0.06, 0.05, 0.11],
+            "#394b4a",
+          );
+          if (wall.exterior)
+            add(
+              [span / 2, lintel + 0.12, outward * 0.2],
+              [openingWidth + 0.24, 0.07, 0.65],
+              finish.trim,
+            );
+        }
+      } else {
+        const angle = -Math.PI / 3.5,
+          half = (openingWidth - 0.04) / 2;
+        add(
+          [
+            (span - openingWidth) / 2 + Math.cos(angle) * half,
+            Math.min(lintel, height) / 2,
+            -Math.sin(angle) * half,
+          ],
+          [openingWidth - 0.04, Math.min(lintel, height), 0.045],
+          "#846448",
+          false,
+          angle,
+        );
+        if (ground && wall.exterior && !cut) {
+          add(
+            [span / 2, lintel + 0.18, outward * 0.36],
+            [openingWidth + 0.55, 0.13, 0.95],
+            finish.trim,
+          );
+          add(
+            [span / 2, -0.05, outward * 0.32],
+            [openingWidth + 0.3, 0.1, 0.7],
+            "#adab9d",
+          );
+          for (const side of [-1, 1])
+            add(
+              [
+                span / 2 + side * (openingWidth / 2 + 0.045),
                 lintel / 2,
                 outward * 0.035,
-              ]}
-              size={[0.08, lintel, thickness + 0.06]}
-              color="#846448"
-            />
-          ))}
-        </>
-      )}
-      {openings && opening && openingWidth > 0 && glassHeight > 0 && (
-        <>
-          {opening.kind === "window" ? (
-            <>
-              <mesh position={[length / 2, sill + glassHeight / 2, 0]}>
-                <boxGeometry args={[openingWidth, glassHeight, 0.035]} />
-                <meshStandardMaterial
-                  color="#557d88"
-                  transparent
-                  opacity={0.64}
-                  roughness={0.12}
-                  depthWrite={false}
-                />
-              </mesh>
-              <Box
-                position={[length / 2, sill + glassHeight / 2, 0]}
-                size={[0.045, glassHeight, 0.09]}
-                color="#394b4a"
-              />
-              <Box
-                position={[length / 2, sill, 0]}
-                size={[openingWidth + 0.06, 0.045, 0.23]}
-                color={finish.trim}
-              />
-              {[-1, 1].map((side) => (
-                <Box
-                  key={side}
-                  position={[
-                    length / 2 + side * (openingWidth / 2 - 0.025),
-                    sill + glassHeight / 2,
-                    0,
-                  ]}
-                  size={[0.055, glassHeight, 0.11]}
-                  color="#394b4a"
-                  roughness={0.4}
-                />
-              ))}
-              {!cut && wall.exterior && (
-                <Box
-                  position={[length / 2, lintel + 0.12, outward * 0.2]}
-                  size={[openingWidth + 0.24, 0.07, 0.65]}
-                  color={finish.trim}
-                />
-              )}
-              {!cut && (
-                <Box
-                  position={[length / 2, lintel, 0]}
-                  size={[openingWidth + 0.06, 0.045, 0.09]}
-                  color="#394b4a"
-                />
-              )}
-            </>
-          ) : (
-            <group
-              position={[(length - openingWidth) / 2, 0, 0]}
-              rotation={[0, -Math.PI / 3.5, 0]}
-            >
-              <Box
-                position={[openingWidth / 2, Math.min(lintel, height) / 2, 0]}
-                size={[openingWidth - 0.04, Math.min(lintel, height), 0.045]}
-                color="#846448"
-              />
-            </group>
-          )}
-        </>
-      )}
+              ],
+              [0.08, lintel, thickness + 0.06],
+              "#846448",
+            );
+        }
+      }
+    }
+    return [...groups].map(([key, group]) => {
+      const geometry = mergeGeometries(group.geometries)!;
+      group.geometries.forEach((part) => part.dispose());
+      return { key, geometry, material: group.material, shadow: group.shadow };
+    });
+  }, [
+    walls,
+    floor.footprint,
+    floor.voids,
+    base,
+    height,
+    openings,
+    cut,
+    finish,
+    finishId,
+    ground,
+  ]);
+  useEffect(
+    () => () => batches.forEach((batch) => batch.geometry.dispose()),
+    [batches],
+  );
+  return (
+    <group>
+      {batches.map((batch) => (
+        <mesh
+          key={batch.key}
+          geometry={batch.geometry}
+          material={batch.material}
+          castShadow={batch.shadow}
+          receiveShadow={batch.key !== "glass"}
+          dispose={null}
+        />
+      ))}
     </group>
   );
 }
 
-function StructuralFrame({ floor }: { floor: Floor }) {
+function StructuralFrame({ floor }: { floor: GeometryFloor }) {
   const points = new Map<string, [number, number]>();
   const { footprint } = floor;
   // A perimeter-only schematic keeps both the courtyard and stair shaft clear.
@@ -650,9 +777,7 @@ function StructuralFrame({ floor }: { floor: Floor }) {
   );
 }
 
-function Stairs({ floor }: { floor: Floor }) {
-  const stairs = floor.voids.find((v) => v.kind === "stairs");
-  if (!stairs) return null;
+function Stairs({ floor, stairs }: { floor: GeometryFloor; stairs: Void }) {
   const { bounds } = stairs;
   const count = 16;
   const tread = bounds.d / 100 / count;
@@ -681,11 +806,53 @@ function Stairs({ floor }: { floor: Floor }) {
   );
 }
 
-function Balcony({ floor }: { floor: Floor }) {
-  if (!floor.balcony) return null;
-  const bounds = balconyBounds(floor);
-  const width = bounds.w / 100;
-  const depth = bounds.d / 100;
+function Balcony({
+  floor,
+  balcony,
+  selected,
+  onSelect,
+}: {
+  floor: GeometryFloor;
+  balcony: BalconyModel;
+  selected: string | null;
+  onSelect: Props["onSelect"];
+}) {
+  const bounds = balconyBounds(floor, balcony),
+    width = balcony.width / 100,
+    depth = balcony.depth / 100;
+  const angle =
+    balcony.edge === "north"
+      ? Math.PI
+      : balcony.edge === "east"
+        ? Math.PI / 2
+        : balcony.edge === "west"
+          ? -Math.PI / 2
+          : 0;
+  const railing = useMemo(() => {
+    const positions: [number, number, number][] = [];
+    const count = Math.max(3, Math.ceil(width / 0.3));
+    for (let i = 0; i < count; i++)
+      positions.push([
+        -width / 2 + (width * i) / (count - 1),
+        0.54,
+        depth / 2 - 0.03,
+      ]);
+    const sideCount = Math.max(2, Math.ceil(depth / 0.3));
+    for (const side of [-1, 1])
+      for (let i = 0; i < sideCount - 1; i++)
+        positions.push([
+          (side * width) / 2,
+          0.54,
+          -depth / 2 + (depth * i) / (sideCount - 1),
+        ]);
+    const parts = positions.map((position) =>
+      new BoxGeometry(0.035, 0.95, 0.035).translate(...position),
+    );
+    const geometry = mergeGeometries(parts)!;
+    parts.forEach((part) => part.dispose());
+    return geometry;
+  }, [width, depth]);
+  useEffect(() => () => railing.dispose(), [railing]);
   return (
     <group
       position={[
@@ -693,8 +860,17 @@ function Balcony({ floor }: { floor: Floor }) {
         floor.elevation / 100 + 0.15,
         (bounds.z + bounds.d / 2) / 100,
       ]}
+      rotation={[0, angle, 0]}
     >
-      <Box position={[0, 0, 0]} size={[width, 0.18, depth]} color="#e1d8c6" />
+      <Box
+        position={[0, 0, 0]}
+        size={[width, 0.18, depth]}
+        color={selected === balcony.id ? "#e7bb73" : "#d2c6ac"}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(balcony.id);
+        }}
+      />
       <Line
         points={[
           [-width / 2, 1, -depth / 2],
@@ -705,14 +881,11 @@ function Balcony({ floor }: { floor: Floor }) {
         color="#455550"
         lineWidth={2}
       />
-      {Array.from({ length: 10 }, (_, i) => (
-        <Box
-          key={i}
-          position={[-width / 2 + (width * i) / 9, 0.54, depth / 2 - 0.03]}
-          size={[0.035, 0.95, 0.035]}
-          color="#5b655b"
-        />
-      ))}
+      <mesh
+        geometry={railing}
+        material={solidMaterial("#5b655b")}
+        dispose={null}
+      />
     </group>
   );
 }
@@ -722,70 +895,100 @@ function RoofEdge({
   base,
   finish,
 }: {
-  floor: Floor;
+  floor: GeometryFloor;
   base: number;
   finish: Finish;
 }) {
-  const rings = [
-    floor.footprint,
-    ...floor.voids
-      .filter((space) => space.kind === "courtyard")
-      .map((space) => space.bounds),
-  ];
-  return (
-    <group>
-      {rings.flatMap((bounds, ringIndex) => {
-        const x = bounds.x / 100,
-          z = bounds.z / 100,
-          w = bounds.w / 100,
-          d = bounds.d / 100;
-        // Courtyard guards sit on the slab side, leaving the whole opening clear.
-        const offset = ringIndex === 0 ? 0.075 : -0.075;
-        const segments = [
+  const segments = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        axis: "x" | "z";
+        fixed: number;
+        edges: { start: number; end: number; outward: number }[];
+      }
+    >();
+    for (const tile of slabTiles(floor, false)) {
+      const edges = [
+        {
+          axis: "x" as const,
+          fixed: tile.z,
+          start: tile.x,
+          end: tile.x + tile.w,
+          outward: -1,
+        },
+        {
+          axis: "x" as const,
+          fixed: tile.z + tile.d,
+          start: tile.x,
+          end: tile.x + tile.w,
+          outward: 1,
+        },
+        {
+          axis: "z" as const,
+          fixed: tile.x,
+          start: tile.z,
+          end: tile.z + tile.d,
+          outward: -1,
+        },
+        {
+          axis: "z" as const,
+          fixed: tile.x + tile.w,
+          start: tile.z,
+          end: tile.z + tile.d,
+          outward: 1,
+        },
+      ];
+      for (const edge of edges) {
+        const key = `${edge.axis}:${edge.fixed}`;
+        if (!groups.has(key))
+          groups.set(key, { axis: edge.axis, fixed: edge.fixed, edges: [] });
+        groups.get(key)!.edges.push(edge);
+      }
+    }
+    return [...groups.values()].flatMap((group) => {
+      const cuts = [
+        ...new Set(group.edges.flatMap((edge) => [edge.start, edge.end])),
+      ].sort((a, b) => a - b);
+      return cuts.slice(0, -1).flatMap((start, i) => {
+        const end = cuts[i + 1],
+          midpoint = (start + end) / 2;
+        const normal = group.edges
+          .filter((edge) => edge.start < midpoint && edge.end > midpoint)
+          .reduce((sum, edge) => sum + edge.outward, 0);
+        if (!normal) return [];
+        const along = (start + end) / 200,
+          across = group.fixed / 100 - Math.sign(normal) * 0.09,
+          span = (end - start) / 100;
+        return [
           {
-            position: [x + w / 2, base + 0.38, z + offset] as [
-              number,
-              number,
-              number,
-            ],
-            size: [w, 0.55, 0.15] as [number, number, number],
-          },
-          {
-            position: [x + w / 2, base + 0.38, z + d - offset] as [
-              number,
-              number,
-              number,
-            ],
-            size: [w, 0.55, 0.15] as [number, number, number],
-          },
-          {
-            position: [x + offset, base + 0.38, z + d / 2] as [
-              number,
-              number,
-              number,
-            ],
-            size: [0.15, 0.55, d] as [number, number, number],
-          },
-          {
-            position: [x + w - offset, base + 0.38, z + d / 2] as [
-              number,
-              number,
-              number,
-            ],
-            size: [0.15, 0.55, d] as [number, number, number],
+            position: [
+              group.axis === "x" ? along : across,
+              base + 0.38,
+              group.axis === "x" ? across : along,
+            ] as [number, number, number],
+            size: [
+              group.axis === "x" ? span : 0.15,
+              0.55,
+              group.axis === "x" ? 0.15 : span,
+            ] as [number, number, number],
           },
         ];
-        return segments.map((segment, i) => (
-          <group key={`${ringIndex}-${i}`}>
-            <Box {...segment} color={finish.wall} />
-            <Box
-              position={[segment.position[0], base + 0.69, segment.position[2]]}
-              size={[segment.size[0] + 0.035, 0.065, segment.size[2] + 0.035]}
-              color={finish.trim}
-            />
-          </group>
-        ));
-      })}
+      });
+    });
+  }, [floor, base]);
+  return (
+    <group>
+      {segments.map((segment, i) => (
+        <group key={i}>
+          <Box {...segment} color={finish.wall} />
+          <Box
+            position={[segment.position[0], base + 0.69, segment.position[2]]}
+            size={[segment.size[0] + 0.03, 0.065, segment.size[2] + 0.03]}
+            color={finish.trim}
+          />
+        </group>
+      ))}
     </group>
   );
 }
@@ -801,8 +1004,11 @@ function FloorGeometry({
   road,
   unit,
   finish,
+  finishId,
+  exteriorOnly,
+  stairsToNext,
 }: {
-  floor: Floor;
+  floor: GeometryFloor;
   selected: string | null;
   onSelect: Props["onSelect"];
   view: ViewSettings;
@@ -813,10 +1019,14 @@ function FloorGeometry({
   language: Language;
   unit: Unit;
   finish: Finish;
+  finishId: SurfaceFinish;
+  exteriorOnly: boolean;
+  stairsToNext: string[];
 }) {
   const walls = useMemo(
-    () => deriveWalls(floor, ground ? road : "south"),
-    [floor, ground, road],
+    () =>
+      deriveWalls(floor, road).filter((wall) => !exteriorOnly || wall.exterior),
+    [floor, road, exteriorOnly],
   );
   const tiles = useMemo(() => slabTiles(floor, !ground), [floor, ground]);
   const roofTiles = useMemo(() => slabTiles(floor, false), [floor]);
@@ -851,6 +1061,7 @@ function FloorGeometry({
       {view.stage >= 3 && (
         <>
           {view.stage >= 4 &&
+            !exteriorOnly &&
             floor.rooms.map((room) => (
               <group key={room.id}>
                 <mesh
@@ -944,32 +1155,67 @@ function FloorGeometry({
                 )}
               </group>
             ))}
-          {view.walls &&
-            walls.map((wall) => (
-              <WallGeometry
-                key={wall.id}
-                wall={wall}
-                base={base}
-                height={height}
-                openings={view.openings}
-                cut={cut}
-                finish={finish}
-                outward={
-                  wall.axis === "x"
-                    ? wall.z <= floor.footprint.z
-                      ? -1
-                      : 1
-                    : wall.x <= floor.footprint.x
-                      ? 1
-                      : -1
-                }
-                entry={ground && wall.exterior}
+          {view.walls && (
+            <WallBatches
+              walls={walls}
+              floor={floor}
+              base={base}
+              height={height}
+              openings={view.openings}
+              cut={cut}
+              finish={finish}
+              finishId={finishId}
+              ground={ground}
+            />
+          )}
+          {hasAbove &&
+            !exteriorOnly &&
+            floor.voids
+              .filter(
+                (space) =>
+                  space.kind === "stairs" && stairsToNext.includes(space.id),
+              )
+              .map((stairs) => (
+                <Stairs key={stairs.id} floor={floor} stairs={stairs} />
+              ))}
+          {view.stage >= 4 &&
+            floor.balconies.map((balcony) => (
+              <Balcony
+                key={balcony.id}
+                floor={floor}
+                balcony={balcony}
+                selected={selected}
+                onSelect={onSelect}
               />
             ))}
-          {hasAbove && <Stairs floor={floor} />}
-          {view.stage >= 4 && <Balcony floor={floor} />}
         </>
       )}
+      {view.stage >= 3 &&
+        floor.voids.map((space) => (
+          <mesh
+            key={`select-${space.id}`}
+            position={[
+              (space.bounds.x + space.bounds.w / 2) / 100,
+              base - 0.09,
+              (space.bounds.z + space.bounds.d / 2) / 100,
+            ]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(space.id);
+            }}
+          >
+            <planeGeometry
+              args={[space.bounds.w / 100, space.bounds.d / 100]}
+            />
+            <meshBasicMaterial
+              transparent
+              opacity={selected === space.id ? 0.2 : 0}
+              color="#dda749"
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
       {ground &&
         view.landscape &&
         floor.voids
@@ -1019,9 +1265,19 @@ function House({
   zoomStep = 0,
 }: Props) {
   const finish = FINISHES[project.finish ?? "ivory"];
-  const visible = project.floors.filter(
-    (f) => view.floor === "all" || f.id === view.floor,
+  const visible = useMemo(
+    () =>
+      project.floors
+        .filter((floor) => view.floor === "all" || floor.id === view.floor)
+        .map((floor) => floorForGeometry(project, floor.id)),
+    [project, view.floor],
   );
+  const shadowExtent = Math.max(project.plot.width, project.plot.depth) / 100;
+  const buildingHeight =
+    Math.max(...project.floors.map((floor) => floor.elevation + floor.height)) /
+    100;
+  const shadowRadius = Math.hypot(shadowExtent, buildingHeight) * 0.75 + 5;
+  const { size } = useThree();
   const top = visible.reduce(
     (highest, floor) => (floor.elevation > highest ? floor.elevation : highest),
     -Infinity,
@@ -1032,14 +1288,19 @@ function House({
       <ambientLight intensity={0.35} />
       <hemisphereLight args={["#fffaf0", "#859182", 0.8]} />
       <directionalLight
-        position={[-12, 25, 12]}
+        position={[
+          -shadowExtent * 0.7,
+          buildingHeight + shadowExtent * 1.3,
+          shadowExtent * 0.7,
+        ]}
         intensity={2.2}
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-25}
-        shadow-camera-right={25}
-        shadow-camera-top={25}
-        shadow-camera-bottom={-25}
+        shadow-mapSize={size.width < 768 ? [1024, 1024] : [2048, 2048]}
+        shadow-camera-left={-shadowRadius}
+        shadow-camera-right={shadowRadius}
+        shadow-camera-top={shadowRadius}
+        shadow-camera-bottom={-shadowRadius}
+        shadow-camera-far={shadowRadius * 6}
         shadow-normalBias={0.035}
         shadow-bias={-0.0001}
       />
@@ -1068,6 +1329,26 @@ function House({
             language={language}
             unit={unit}
             finish={finish}
+            finishId={project.finish ?? "ivory"}
+            stairsToNext={project.verticalSpaces
+              .filter(
+                (space) =>
+                  space.kind === "stairs" &&
+                  space.floorIds.includes(floor.id) &&
+                  project.floors.some(
+                    (next) =>
+                      next.elevation === floor.elevation + floor.height &&
+                      space.floorIds.includes(next.id),
+                  ),
+              )
+              .map((space) => space.id)}
+            exteriorOnly={
+              view.floor === "all" &&
+              view.roof &&
+              view.walls &&
+              !view.cutaway &&
+              view.stage >= 5
+            }
             hasAbove={project.floors.some(
               (other) => other.elevation === floor.elevation + floor.height,
             )}

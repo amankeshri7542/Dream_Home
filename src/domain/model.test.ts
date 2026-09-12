@@ -1,317 +1,530 @@
 import { describe, expect, it } from "vitest";
+import courtyardFixture from "../../tests/fixtures/legacy-v1-courtyard.json";
+import compactFixture from "../../tests/fixtures/legacy-v1-compact.json";
+import familyFixture from "../../tests/fixtures/legacy-v1-family.json";
+const fixtures = {
+  courtyard: courtyardFixture,
+  compact: compactFixture,
+  family: familyFixture,
+};
 import {
-  addRoom,
+  addBalcony,
+  addUnitArea,
+  addVerticalSpace,
   balconyBounds,
+  componentBounds,
   createPreset,
+  deriveFloorVoids,
   deriveWalls,
+  floorForGeometry,
+  getLimits,
+  migrateV1,
+  moveRoomToUnit,
   parseProject,
   projectStats,
-  removeRoom,
+  removeBalcony,
+  removeVerticalSpace,
+  renameUnit,
   setFloorCount,
   slabTiles,
+  swapRoomUses,
+  transformComponent,
+  updateBalcony,
   updatePlot,
   updateRoom,
+  updateUnitArea,
+  updateVerticalSpace,
   validateProject,
 } from "./model";
-import type { Floor, Rect } from "./types";
-
-const intersects = (a: Rect, b: Rect) =>
+import type { GeometryFloor, Project, Rect, Room } from "./types";
+const area = (tiles: Rect[]) => tiles.reduce((sum, r) => sum + r.w * r.d, 0);
+const overlap = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.z < b.z + b.d && a.z + a.d > b.z;
-const area = (tiles: Rect[]) =>
-  tiles.reduce((sum, tile) => sum + tile.w * tile.d, 0);
+function empty(): Project {
+  return {
+    schemaVersion: 2,
+    name: "Sketch",
+    plot: { width: 2000, depth: 2200, north: 0, road: "south", setback: 100 },
+    floors: [
+      {
+        id: "f0",
+        name: "Ground floor",
+        elevation: 0,
+        height: 300,
+        footprint: { x: 500, z: 500, w: 1000, d: 1000 },
+        rooms: [],
+        balconies: [],
+        unitAreas: [],
+      },
+    ],
+    units: [],
+    verticalSpaces: [],
+    garden: false,
+    parking: false,
+  };
+}
+const room = (
+  id: string,
+  bounds: Rect,
+  kind: Room["kind"] = "bedroom",
+  unitId: string | null = null,
+): Room => ({ id, name: id, kind, bounds, unitId });
+function twoFloors(): Project {
+  const p = empty();
+  p.floors.push({
+    ...p.floors[0],
+    id: "f1",
+    name: "First floor",
+    elevation: 300,
+    rooms: [],
+    balconies: [],
+    unitAreas: [],
+  });
+  p.verticalSpaces = [
+    {
+      id: "stairs",
+      kind: "stairs",
+      bounds: { x: 500, z: 500, w: 220, d: 340 },
+      floorIds: ["f0", "f1"],
+      unitId: null,
+    },
+  ];
+  return p;
+}
 
-describe("presets and persistence", () => {
+describe("canonical documents and legacy migration", () => {
+  it("moves a room between separate unit areas atomically and rejects a full target", () => {
+    const project = empty();
+    project.units = [
+      { id: "home-a", name: "Flat A", use: "residential" },
+      { id: "home-b", name: "Flat B", use: "residential" },
+    ];
+    project.floors[0].unitAreas = [
+      { unitId: "home-a", bounds: { x: 500, z: 500, w: 400, d: 1000 } },
+      { unitId: "home-b", bounds: { x: 1100, z: 500, w: 400, d: 1000 } },
+    ];
+    project.floors[0].rooms = [
+      room("bed", { x: 500, z: 500, w: 300, d: 300 }, "bedroom", "home-a"),
+    ];
+    const before = structuredClone(project);
+    const result = moveRoomToUnit(project, "f0", "bed", "home-b");
+    expect(result.ok).toBe(true);
+    expect(project).toEqual(before);
+    if (result.ok) {
+      const moved = result.project.floors[0].rooms[0];
+      expect(moved).toMatchObject({
+        id: "bed",
+        kind: "bedroom",
+        unitId: "home-b",
+        bounds: { x: 1100, z: 500, w: 300, d: 300 },
+      });
+      expect(validateProject(result.project)).toEqual([]);
+    }
+    project.floors[0].rooms.push(
+      room("full", { x: 1100, z: 500, w: 400, d: 1000 }, "living", "home-b"),
+    );
+    const full = structuredClone(project);
+    expect(moveRoomToUnit(project, "f0", "bed", "home-b")).toMatchObject({
+      ok: false,
+    });
+    expect(project).toEqual(full);
+  });
   it.each(["courtyard", "compact", "family"] as const)(
-    "%s is valid, deterministic and losslessly serializable",
+    "migrates the real %s fixture without changing its layout or room IDs",
     (id) => {
-      const project = createPreset(id);
+      const raw = JSON.parse(JSON.stringify(fixtures[id]));
+      const project = migrateV1(raw);
+      expect(project.schemaVersion).toBe(2);
       expect(validateProject(project)).toEqual([]);
-      expect(createPreset(id)).toEqual(project);
+      expect(project.plot).toEqual(raw.plot);
+      expect(project.name).toBe(raw.name);
+      for (const [i, floor] of project.floors.entries()) {
+        expect(floor.id).toBe(raw.floors[i].id);
+        expect(floor.footprint).toEqual(raw.floors[i].footprint);
+        expect(
+          floor.rooms.map(({ unitId, ...r }) => {
+            expect(unitId).toBe(project.units[0].id);
+            return r;
+          }),
+        ).toEqual(raw.floors[i].rooms);
+        expect(
+          deriveFloorVoids(project, floor.id).map((v) => [v.kind, v.bounds]),
+        ).toEqual(
+          raw.floors[i].voids.map((v: { kind: string; bounds: Rect }) => [
+            v.kind,
+            v.bounds,
+          ]),
+        );
+        expect(floor.balconies.length).toBe(raw.floors[i].balcony ? 1 : 0);
+        expect(floor).not.toHaveProperty("voids");
+        expect(floor).not.toHaveProperty("balcony");
+      }
+      expect(parseProject(JSON.stringify(raw))).toEqual(project);
       expect(parseProject(JSON.stringify(project))).toEqual(project);
-      expect(deriveWalls(project.floors[0])).toEqual(
-        deriveWalls(createPreset(id).floors[0]),
-      );
+      expect(migrateV1(raw)).toEqual(project);
+      expect(createPreset(id)).toEqual(project);
     },
   );
-  it("rejects malformed, unsupported and oversized imports without rendering them", () => {
+  it("preserves explicit finishes and leaves legacy missing finish absent", () => {
+    const raw = JSON.parse(JSON.stringify(compactFixture));
+    delete raw.finish;
+    expect(migrateV1(raw)).not.toHaveProperty("finish");
+    for (const finish of ["ivory", "brick", "sand"] as const) {
+      const p = { ...createPreset("compact"), finish };
+      expect(parseProject(JSON.stringify(p))).toEqual(p);
+    }
+  });
+  it("rejects malformed, nonfinite, oversized, unsupported and invalid ownership imports", () => {
     for (const source of [
       "null",
       "[]",
       "{}",
       "{",
-      JSON.stringify({ ...createPreset("compact"), schemaVersion: 2 }),
-      " ".repeat(200001),
+      " ".repeat(getLimits().importBytes + 1),
+      JSON.stringify({ ...empty(), schemaVersion: 3 }),
     ])
       expect(() => parseProject(source)).toThrow();
-    const project = createPreset("compact");
-    project.floors[0].rooms[0].bounds.w = 1e200;
-    expect(() => parseProject(JSON.stringify(project))).toThrow();
-    const excess = createPreset("compact");
-    excess.floors[0].rooms = Array.from(
-      { length: 25 },
-      () => excess.floors[0].rooms[0],
-    );
-    expect(() => parseProject(JSON.stringify(excess))).toThrow();
+    const p = empty();
+    p.floors[0].rooms = [room("bad", { x: 500, z: 500, w: 1e200, d: 200 })];
+    expect(() => parseProject(JSON.stringify(p))).toThrow();
+    p.floors[0].rooms = [
+      room("bad", { x: 500, z: 500, w: 200, d: 200 }, "bedroom", "missing"),
+    ];
+    expect(() => parseProject(JSON.stringify(p))).toThrow(/unit/);
+    for (const finish of ["wood", null, {}, 1])
+      expect(() =>
+        parseProject(JSON.stringify({ ...empty(), finish })),
+      ).toThrow(/finish/);
   });
-  it("rejects invalid kinds, duplicate IDs, and misaligned floors", () => {
-    const project = createPreset("courtyard");
-    project.floors[0].rooms[0].id = project.floors[0].rooms[1].id;
-    expect(() => parseProject(JSON.stringify(project))).toThrow(/ID/);
-    const wrongKind = JSON.stringify(createPreset("compact")).replace(
-      '"kind":"living"',
-      '"kind":"unknown"',
-    );
-    expect(() => parseProject(wrongKind)).toThrow(/room type/);
-    const shifted = createPreset("courtyard");
-    shifted.floors[1].voids[0].bounds.x += 10;
-    expect(validateProject(shifted).join(" ")).toMatch(/align/);
+  it("rejects legacy void misalignment and duplicate IDs before collapsing them", () => {
+    const raw = JSON.parse(JSON.stringify(courtyardFixture));
+    raw.floors[1].voids[0].bounds.x += 10;
+    expect(() => migrateV1(raw)).toThrow(/align/);
+    raw.floors[1].voids[0].bounds.x -= 10;
+    raw.floors[1].voids[0].id = raw.floors[0].voids[0].id;
+    expect(() => migrateV1(raw)).toThrow(/IDs/);
   });
-  it("strips unknown imported properties", () => {
-    const source = {
-      ...createPreset("compact"),
-      unwanted: { dangerous: true },
-    };
-    expect(parseProject(JSON.stringify(source))).not.toHaveProperty("unwanted");
+  it("accepts 48 rooms but rejects a 49th without increasing resource limits", () => {
+    const p = empty();
+    p.floors[0].rooms = Array.from({ length: 48 }, (_, i) =>
+      room(`r${i}`, {
+        x: 500 + (i % 7) * 120,
+        z: 500 + Math.floor(i / 7) * 120,
+        w: 120,
+        d: 120,
+      }),
+    );
+    expect(validateProject(p)).toEqual([]);
+    expect(parseProject(JSON.stringify(p))).toEqual(p);
+    p.floors[0].rooms.push(
+      room("r48", { x: 500 + 6 * 120, z: 500 + 6 * 120, w: 120, d: 120 }),
+    );
+    expect(() => parseProject(JSON.stringify(p))).toThrow(/floor/);
   });
 });
 
-describe("atomic editing", () => {
-  it("rejects overlaps, void collisions and out-of-bounds moves without changing input", () => {
-    const project = createPreset("courtyard"),
-      before = JSON.stringify(project);
-    const floor = project.floors[0],
-      room = floor.rooms[0];
-    for (const bounds of [
-      floor.rooms[1].bounds,
-      floor.voids[0].bounds,
-      { ...room.bounds, x: -100 },
-    ]) {
-      expect(updateRoom(project, floor.id, room.id, { bounds }).ok).toBe(false);
-      expect(JSON.stringify(project)).toBe(before);
-    }
-  });
-  it("allows a valid resize, snaps centimetres and preserves stable IDs", () => {
-    const project = createPreset("courtyard"),
-      floor = project.floors[0],
-      room = floor.rooms[0];
-    const edited = updateRoom(project, floor.id, room.id, {
-      bounds: { ...room.bounds, w: 407 },
-    });
-    expect(edited.ok).toBe(true);
-    if (edited.ok) {
-      expect(edited.project.floors[0].rooms[0].bounds.w).toBe(410);
-      expect(edited.project.floors[0].rooms[0].id).toBe(room.id);
-      expect(project.floors[0].rooms[0].bounds.w).toBe(450);
-    }
-  });
-  it("accepts shared edges but rejects even a 10 cm overlap", () => {
-    const project = createPreset("compact"),
-      f = project.floors[0];
-    f.rooms = [
-      {
-        id: "a",
-        name: "A",
-        kind: "bedroom",
-        bounds: { x: 250, z: 450, w: 300, d: 300 },
-      },
-      {
-        id: "b",
-        name: "B",
-        kind: "bedroom",
-        bounds: { x: 550, z: 450, w: 300, d: 300 },
-      },
-    ];
-    expect(validateProject(project)).toEqual([]);
-    expect(
-      updateRoom(project, f.id, "a", {
-        bounds: { ...f.rooms[0].bounds, w: 310 },
-      }).ok,
-    ).toBe(false);
-  });
-  it("adds into free circulation and supports removing without renumbering rooms", () => {
-    const project = createPreset("compact"),
-      floor = project.floors[0];
-    const removed = removeRoom(project, floor.id, floor.rooms[0].id);
-    expect(removed.ok).toBe(true);
-    if (!removed.ok) return;
-    const added = addRoom(removed.project, floor.id, "bedroom");
-    expect(added.ok).toBe(true);
-    if (added.ok) {
-      expect(validateProject(added.project)).toEqual([]);
-      expect(added.project.floors[0].rooms[0].id).toBe(floor.rooms[1].id);
-    }
-  });
-  it("rejects plot changes that would violate setbacks", () => {
-    const project = createPreset("courtyard");
-    expect(updatePlot(project, { width: 1400 }).ok).toBe(false);
-    expect(updatePlot(project, { setback: 400 }).ok).toBe(false);
-    expect(updatePlot(project, { north: 90, width: 2000 }).ok).toBe(true);
-  });
-  it("adds floors with aligned independent geometry and unique IDs", () => {
-    const project = createPreset("compact");
-    const added = setFloorCount(project, 3);
+describe("balconies and generic component transforms", () => {
+  it.each(["north", "south", "east", "west"] as const)(
+    "adds and projects a balcony on the %s edge",
+    (edge) => {
+      const p = empty(),
+        result = addBalcony(p, "f0", {
+          edge,
+          offset: 200,
+          width: 300,
+          depth: 150,
+        });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const f = result.project.floors[0],
+        b = f.balconies[0],
+        bounds = balconyBounds(f, b);
+      expect(componentBounds(result.project, "f0", b.id)).toEqual(bounds);
+      expect(validateProject(result.project)).toEqual([]);
+      const walls = deriveWalls(floorForGeometry(result.project, "f0"));
+      expect(
+        walls.some(
+          (w) =>
+            w.exterior &&
+            w.opening?.kind === "door" &&
+            (edge === "north"
+              ? w.z === 500
+              : edge === "south"
+                ? w.z === 1500
+                : edge === "west"
+                  ? w.x === 500
+                  : w.x === 1500),
+        ),
+      ).toBe(true);
+      expect(removeBalcony(result.project, "f0", b.id)).toEqual({
+        ok: true,
+        project: p,
+      });
+    },
+  );
+  it("edits one floor only, rejects overlaps and margin violations atomically", () => {
+    const p = twoFloors(),
+      added = addBalcony(p, "f1", {
+        edge: "south",
+        offset: 200,
+        width: 300,
+        depth: 150,
+      });
     expect(added.ok).toBe(true);
     if (!added.ok) return;
-    expect(validateProject(added.project)).toEqual([]);
-    expect(added.project.floors.map((f) => f.elevation)).toEqual([0, 300, 600]);
-    expect(added.project.floors[2].voids[0].bounds).toEqual(
-      project.floors[0].voids[0].bounds,
+    const id = added.project.floors[1].balconies[0].id,
+      before = JSON.stringify(added.project);
+    expect(updateBalcony(added.project, "f1", id, { depth: 900 }).ok).toBe(
+      false,
     );
-    added.project.floors[2].rooms[0].bounds.w = 120;
-    expect(project.floors[0].rooms[0].bounds.w).toBe(400);
-    expect(setFloorCount(project, 4).ok).toBe(false);
-  });
-  it("allocates floor and child IDs safely after importing custom IDs", () => {
-    const project = createPreset("compact");
-    project.floors[0].id = "floor-1";
-    project.floors[0].rooms[0].id = "floor-1-2-room-0";
-    project.floors[0].voids[0].id = "floor-2";
-    const imported = parseProject(JSON.stringify(project));
-    const added = setFloorCount(imported, 3);
-    expect(added.ok).toBe(true);
-    if (added.ok) {
-      expect(validateProject(added.project)).toEqual([]);
-      expect(added.project.floors[0]).toEqual(imported.floors[0]);
-      expect(added.project.floors[1].id).toBe("floor-1-2");
-      expect(added.project.floors[1].rooms[0].id).toBe("floor-1-2-room-0-2");
+    expect(
+      addBalcony(added.project, "f1", {
+        edge: "south",
+        offset: 210,
+        width: 300,
+        depth: 150,
+      }).ok,
+    ).toBe(false);
+    const moved = transformComponent(
+      added.project,
+      "f1",
+      id,
+      { x: 330, z: 800, w: 150, d: 300 },
+      "move",
+    );
+    expect(moved.ok).toBe(true);
+    if (moved.ok) {
+      expect(moved.project.floors[1].balconies[0].edge).toBe("west");
+      expect(moved.project.floors[0]).toEqual(p.floors[0]);
     }
+    expect(JSON.stringify(added.project)).toBe(before);
   });
-  it("includes balconies in setback validation and rejects clipping atomically", () => {
-    const project = createPreset("courtyard"),
-      before = JSON.stringify(project);
-    expect(balconyBounds(project.floors[1])).toEqual({
-      x: 720,
-      z: 1900,
-      w: 360,
-      d: 150,
+  it("clamps an existing offset when changing to a shorter edge without changing size", () => {
+    const p = empty();
+    p.floors[0].footprint.d = 600;
+    const added = addBalcony(p, "f0", {
+      edge: "south",
+      offset: 700,
+      width: 300,
+      depth: 100,
     });
-    // The plate fits a 2100 cm plot with 200 cm setbacks; its balcony does not.
-    expect(updatePlot(project, { depth: 2100 })).toEqual({
-      ok: false,
-      error: expect.stringContaining("balcony"),
-    });
-    expect(JSON.stringify(project)).toBe(before);
-    expect(updatePlot(project, { depth: 2250 }).ok).toBe(true);
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    const b = added.project.floors[0].balconies[0],
+      changed = updateBalcony(added.project, "f0", b.id, { edge: "west" });
+    expect(changed.ok).toBe(true);
+    if (changed.ok)
+      expect(changed.project.floors[0].balconies[0]).toMatchObject({
+        edge: "west",
+        offset: 300,
+        width: 300,
+        depth: 100,
+      });
   });
 });
 
-describe("procedural geometry", () => {
-  it("deduplicates partially shared walls without overlapping segments", () => {
-    const floor: Floor = {
-      id: "floor",
-      name: "Ground",
-      elevation: 0,
-      height: 300,
-      footprint: { x: 0, z: 0, w: 1000, d: 1000 },
-      balcony: false,
-      voids: [],
-      rooms: [
-        {
-          id: "a",
-          name: "A",
-          kind: "living",
-          bounds: { x: 0, z: 0, w: 400, d: 600 },
-        },
-        {
-          id: "b",
-          name: "B",
-          kind: "kitchen",
-          bounds: { x: 400, z: 200, w: 400, d: 200 },
-        },
-      ],
-    };
-    const walls = deriveWalls(floor);
-    const shared = walls.filter((w) => w.axis === "z" && w.x === 400);
-    expect(
-      shared.map((w) => [w.z, w.length]).sort((a, b) => a[0] - b[0]),
-    ).toEqual([
-      [0, 200],
-      [200, 200],
-      [400, 200],
-    ]);
-    for (const [i, a] of walls.entries())
-      for (const b of walls.slice(i + 1)) {
-        if (a.axis === b.axis && (a.axis === "x" ? a.z === b.z : a.x === b.x)) {
-          const aStart = a.axis === "x" ? a.x : a.z,
-            bStart = b.axis === "x" ? b.x : b.z;
-          expect(aStart < bStart + b.length && aStart + a.length > bStart).toBe(
-            false,
-          );
-        }
-      }
-    for (const wall of walls)
-      if (wall.opening) expect(wall.opening.width).toBeLessThan(wall.length);
+describe("shared vertical spaces and floors", () => {
+  it("reports the named blocking room and floor and preserves every source rectangle", () => {
+    const p = twoFloors();
+    p.floors[1].rooms = [
+      {
+        ...room("guest", { x: 1000, z: 900, w: 300, d: 300 }),
+        name: "Guest room",
+      },
+    ];
+    const before = JSON.stringify(p);
+    const failed = transformComponent(
+      p,
+      "f0",
+      "stairs",
+      { x: 1000, z: 900, w: 220, d: 340 },
+      "move",
+    );
+    expect(failed.ok).toBe(false);
+    if (!failed.ok) expect(failed.error).toMatch(/First floor: Guest room/);
+    expect(JSON.stringify(p)).toBe(before);
+    const moved = updateVerticalSpace(p, "stairs", {
+      bounds: { x: 750, z: 500, w: 220, d: 340 },
+    });
+    expect(moved.ok).toBe(true);
+    if (moved.ok)
+      for (const f of moved.project.floors)
+        expect(deriveFloorVoids(moved.project, f.id)[0].bounds.x).toBe(750);
   });
-  it("subtracts courtyard on ground and staircase only on upper slabs", () => {
-    const floor = createPreset("courtyard").floors[0];
-    const courtyard = floor.voids.find((v) => v.kind === "courtyard")!.bounds;
-    const stairs = floor.voids.find((v) => v.kind === "stairs")!.bounds;
+  it("requires roof-reaching courtyards and connected stairs, but permits removing a courtyard", () => {
+    const p = twoFloors();
+    expect(
+      addVerticalSpace(p, {
+        kind: "courtyard",
+        bounds: { x: 1000, z: 1000, w: 200, d: 200 },
+        floorIds: ["f0"],
+        unitId: null,
+      }).ok,
+    ).toBe(false);
+    const added = addVerticalSpace(p, {
+      kind: "courtyard",
+      bounds: { x: 1000, z: 1000, w: 200, d: 200 },
+      floorIds: ["f0", "f1"],
+      unitId: null,
+    });
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    expect(removeVerticalSpace(added.project, "stairs").ok).toBe(false);
+    const court = added.project.verticalSpaces.find(
+      (v) => v.kind === "courtyard",
+    )!;
+    expect(removeVerticalSpace(added.project, court.id)).toEqual({
+      ok: true,
+      project: p,
+    });
+  });
+  it("adds up to eight aligned floors with unique IDs and connected cores", () => {
+    const p = createPreset("compact"),
+      grown = setFloorCount(p, 8);
+    expect(grown.ok).toBe(true);
+    if (!grown.ok) return;
+    expect(validateProject(grown.project)).toEqual([]);
+    expect(grown.project.floors.map((f) => f.elevation)).toEqual([
+      0, 300, 600, 900, 1200, 1500, 1800, 2100,
+    ]);
+    expect(grown.project.verticalSpaces[0].floorIds).toHaveLength(8);
+    expect(
+      grown.project.floors.slice(1).every((f) => !f.balconies.length),
+    ).toBe(true);
+    expect(setFloorCount(p, 9).ok).toBe(false);
+    const reduced = setFloorCount(grown.project, 2);
+    expect(reduced.ok).toBe(true);
+    if (reduced.ok) expect(validateProject(reduced.project)).toEqual([]);
+    expect(setFloorCount(empty(), 2).ok).toBe(false);
+  });
+  it("rebases copied flat IDs while extending shared stairs", () => {
+    const p = twoFloors();
+    p.units = [{ id: "flat", name: "Flat 1", use: "residential" }];
+    p.floors[1].unitAreas = [
+      { unitId: "flat", bounds: { x: 800, z: 500, w: 700, d: 1000 } },
+    ];
+    p.floors[1].rooms = [
+      room("flat-bed", { x: 800, z: 500, w: 300, d: 300 }, "bedroom", "flat"),
+    ];
+    const grown = setFloorCount(p, 3);
+    expect(grown.ok).toBe(true);
+    if (grown.ok) {
+      expect(grown.project.floors[2].unitAreas[0].unitId).not.toBe("flat");
+      expect(validateProject(grown.project)).toEqual([]);
+    }
+  });
+});
+
+describe("unit ownership, wall topology and room-use swaps", () => {
+  function grouped() {
+    const p = empty();
+    p.units = [
+      { id: "a", name: "Flat A", use: "residential" },
+      { id: "b", name: "Shop B", use: "commercial" },
+    ];
+    p.floors[0].unitAreas = [
+      { unitId: "a", bounds: { x: 500, z: 500, w: 500, d: 1000 } },
+      { unitId: "b", bounds: { x: 1000, z: 500, w: 500, d: 1000 } },
+    ];
+    p.floors[0].rooms = [
+      room("bedroom-a", { x: 500, z: 500, w: 500, d: 400 }, "bedroom", "a"),
+      room("shop-b", { x: 1000, z: 500, w: 500, d: 500 }, "shop", "b"),
+    ];
+    return p;
+  }
+  it("never adds automatic doors through the boundary between private units", () => {
+    const p = grouped();
+    expect(validateProject(p)).toEqual([]);
+    const shared = deriveWalls(floorForGeometry(p, "f0")).filter(
+      (w) => w.axis === "z" && w.x === 1000,
+    );
+    expect(shared.length).toBeGreaterThan(0);
+    expect(shared.every((w) => w.opening === undefined)).toBe(true);
+  });
+  it("swaps use and names while preserving IDs, geometry, unit membership and every wall", () => {
+    const p = grouped(),
+      walls = deriveWalls(floorForGeometry(p, "f0")),
+      swapped = swapRoomUses(p, "f0", "bedroom-a", "shop-b");
+    expect(swapped.ok).toBe(true);
+    if (!swapped.ok) return;
+    expect(swapped.project.floors[0].rooms[0]).toEqual({
+      ...p.floors[0].rooms[0],
+      name: "shop-b",
+      kind: "shop",
+    });
+    expect(deriveWalls(floorForGeometry(swapped.project, "f0"))).toEqual(walls);
+  });
+  it("constrains edits to their unit and validates unit-area changes", () => {
+    const p = grouped();
+    expect(
+      updateRoom(p, "f0", "bedroom-a", {
+        bounds: { x: 950, z: 500, w: 500, d: 400 },
+      }).ok,
+    ).toBe(false);
+    expect(
+      updateUnitArea(p, "f0", "a", { x: 500, z: 500, w: 300, d: 1000 }).ok,
+    ).toBe(false);
+    const renamed = renameUnit(p, "a", "My flat");
+    expect(renamed.ok).toBe(true);
+    if (renamed.ok) expect(renamed.project.units[0].name).toBe("My flat");
+    expect(
+      addUnitArea(
+        p,
+        "f0",
+        { name: "Overlap", use: "commercial" },
+        { x: 500, z: 500, w: 300, d: 300 },
+      ).ok,
+    ).toBe(false);
+  });
+  it("splits partial shared walls into non-overlapping canonical segments", () => {
+    const p = empty();
+    p.floors[0].rooms = [
+      room("a", { x: 500, z: 500, w: 400, d: 600 }),
+      room("b", { x: 900, z: 700, w: 400, d: 200 }),
+    ];
+    const walls = deriveWalls(floorForGeometry(p, "f0"));
+    expect(
+      walls
+        .filter((w) => w.axis === "z" && w.x === 900)
+        .map((w) => [w.z, w.length])
+        .sort((a, b) => a[0] - b[0]),
+    ).toEqual([
+      [500, 200],
+      [700, 200],
+      [900, 200],
+    ]);
+  });
+});
+
+describe("slabs, statistics and plot edits", () => {
+  it("subtracts courtyards on every slab and stairs only when requested", () => {
+    const p = createPreset("courtyard"),
+      floor: GeometryFloor = floorForGeometry(p, p.floors[0].id),
+      court = floor.voids.find((v) => v.kind === "courtyard")!.bounds,
+      stairs = floor.voids.find((v) => v.kind === "stairs")!.bounds;
     const ground = slabTiles(floor, false),
       upper = slabTiles(floor, true);
     expect(area(ground)).toBe(
-      floor.footprint.w * floor.footprint.d - courtyard.w * courtyard.d,
+      floor.footprint.w * floor.footprint.d - court.w * court.d,
     );
     expect(area(upper)).toBe(area(ground) - stairs.w * stairs.d);
-    expect(
-      upper.every((t) => !intersects(t, stairs) && !intersects(t, courtyard)),
-    ).toBe(true);
-    for (const [i, tile] of upper.entries())
-      expect(
-        upper.slice(i + 1).every((other) => !intersects(tile, other)),
-      ).toBe(true);
-  });
-  it.each(["south", "north", "east", "west"] as const)(
-    "places the ground entrance on the %s road side away from stairs",
-    (road) => {
-      const floor = createPreset("courtyard").floors[0],
-        p = floor.footprint;
-      const entrance = deriveWalls(floor, road).find(
-        (w) => w.exterior && w.opening?.kind === "door",
-      )!;
-      expect(entrance).toBeDefined();
-      if (road === "south" || road === "north") {
-        expect(entrance.axis).toBe("x");
-        expect(entrance.z).toBe(road === "south" ? p.z + p.d : p.z);
-      } else {
-        expect(entrance.axis).toBe("z");
-        expect(entrance.x).toBe(road === "east" ? p.x + p.w : p.x);
-      }
-      const x = entrance.x + (entrance.axis === "x" ? entrance.length / 2 : 0),
-        z = entrance.z + (entrance.axis === "z" ? entrance.length / 2 : 0);
-      const landing =
-        entrance.axis === "x"
-          ? { x: x - 55, z: z + (road === "north" ? 0 : -2), w: 110, d: 2 }
-          : { x: x + (road === "west" ? 0 : -2), z: z - 55, w: 2, d: 110 };
-      expect(floor.voids.every((v) => !intersects(v.bounds, landing))).toBe(
-        true,
-      );
-    },
-  );
-  it("keeps upper doors within the south balcony regardless of road orientation", () => {
-    const floor = createPreset("courtyard").floors[1],
-      balcony = balconyBounds(floor);
-    const door = deriveWalls(floor, "north").find(
-      (w) => w.exterior && w.opening?.kind === "door",
-    )!;
-    expect(door).toBeDefined();
-    expect(door.axis).toBe("x");
-    expect(door.z).toBe(balcony.z);
-    expect(door.x + door.length / 2 - 55).toBeGreaterThanOrEqual(balcony.x);
-    expect(door.x + door.length / 2 + 55).toBeLessThanOrEqual(
-      balcony.x + balcony.w,
+    expect(upper.every((t) => !overlap(t, court) && !overlap(t, stairs))).toBe(
+      true,
     );
-    expect(
-      deriveWalls({ ...floor, balcony: false }).filter(
-        (w) => w.exterior && w.opening?.kind === "door",
-      ),
-    ).toHaveLength(0);
+    for (const [i, t] of upper.entries())
+      expect(upper.slice(i + 1).every((o) => !overlap(t, o))).toBe(true);
+    expect(projectStats(p)).toMatchObject({
+      plotArea: 432,
+      builtArea: 320.64,
+      bedrooms: 3,
+    });
   });
-  it("reports area in square metres and coverage independently from floor count", () => {
-    const project = createPreset("courtyard"),
-      stats = projectStats(project);
-    expect(stats.plotArea).toBe(432);
-    expect(stats.builtArea).toBeCloseTo(320.64);
-    expect(stats.bedrooms).toBe(3);
-    expect(stats.coverage).toBeCloseTo((160.32 / 432) * 100);
+  it("rejects plot shrinkage through balconies and preserves centimetre plot precision", () => {
+    const p = createPreset("courtyard");
+    expect(updatePlot(p, { depth: 2100 }).ok).toBe(false);
+    const moved = updatePlot(p, { width: 2003, depth: 2507 });
+    expect(moved.ok).toBe(true);
+    if (moved.ok)
+      expect(moved.project.plot).toMatchObject({ width: 2003, depth: 2507 });
   });
 });

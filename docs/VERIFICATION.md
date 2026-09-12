@@ -1,18 +1,18 @@
 # Verification
 
-Direct-building revision, 12 September 2026.
+Blueprint expansion, 12 September 2026.
 
 - TypeScript and ESLint: passed.
-- Vitest: **138 tests passed** (22 model, 84 starter, 28 builder, 4 export).
-- Playwright: **21 Chrome browser regressions passed**, using isolated browser contexts.
-- Production build: passed. Main JS ~90 KB gzip; lazy Three.js scene ~250 KB gzip; CSS ~10 KB gzip. No new dependencies.
-- Runtime dependency audit: zero known vulnerabilities reported by npm.
-- Git whitespace/conflict checks and direct source review: passed. No runtime service requests or credentials were introduced. English-only source checked, with old Hindi preferences migrating to English.
+- Vitest: **159 tests passed** (24 model, 84 starter, 29 builder, 15 building-program, 3 open-space, 4 export).
+- Playwright: **33 Chrome browser tests passed** in isolated contexts, including native touch input.
+- Production build: passed. Main JavaScript ~101 KB gzip; lazy Three.js scene ~253 KB gzip; CSS ~11 KB gzip. No dependency changes or runtime service requests.
+- Built production bundle smoke-tested separately on a 390×844 touch viewport: editing, brick rendering, eight floor choices, v2 saving and upper-floor image export passed with no page errors or overflow.
+- Git whitespace/conflict checks and source review: passed. No credentials, external endpoints or runtime AI integration added.
 
-Coverage includes guided setup and cancellation, feet/metres, invalid changes, room dimension inputs/history, legacy JSON import/backup/recovery, actual 3D picking/orbit/stages, explicit room movement, valid swaps, invalid drops, primary/secondary pointer cancellation, corner resizing at different zooms, keyboard/tap swap alternatives, catalog/rotation/duplicate, building expansion, finish persistence, desktop split view, phone touch targets and short multi-floor screen layouts.
+New coverage includes real v1 fixtures and geometry-preserving migration; retaining corrupt and empty v2 saves; unequal bedroom/kitchen use swaps; balcony edge/slide/drag/outward-corner resizing; shared courtyard drag/nudge/undo/reload; adding and removing open spaces; moving rooms between disjoint unit areas; invalid edits remaining atomic; shared stair links and floor copying; door separation between private units; and exact program counts for larger homes, apartments and markets.
 
-Additional regressions verify maximum building expansion reserves upper balconies, Fit restores camera scale after zoom, and reading rounded feet measurements at the minimum room size does not invalidate or alter the exact saved measurement.
+Existing coverage retains feet/metres, history, JSON backup/import, guided setup cancellation, picking/orbit/stages, pointer cancellation, catalog/rotation/duplication, building expansion, camera Fit, rounded dimensions, unavailable WebGL/storage paths and export. PNG signature and dimensions are checked. Native Web Share is mocked; tests do not send messages.
 
-Reviewed rendered screenshots at 360×740, 390×844 and desktop sizes, plus split view, exterior materials and the actual downloaded plan PNG. Screenshots wait for visible WebGL pixels. PNG signature and dimensions are checked; Web Share is mocked rather than sending a message or opening an uncontrolled OS flow. WebGL-unavailable and storage-unavailable paths remain usable.
+Rendered UI inspected at 360×740, 390×844 and desktop dimensions, including the actual eight-floor apartment app in mobile, split and per-floor export views. No horizontal overflow or page errors in that eight-floor inspection. A separate synthetic eight-floor / 384-room / 32-balcony Scene exercise recorded 224 exterior draw calls and 18,210 triangles, with 111 calls for an isolated top floor. Desktop JavaScript render submission averaged ~1.72 ms across 45 frames; this is not a phone frame-rate or GPU measurement.
 
-Production preview is inspected separately from the development server. Physical Android/iOS testing, usability sessions with older plot owners and real OS share delivery remain outside this verification. These checks do not establish accessibility conformance, low-end GPU performance or architectural/structural correctness.
+Physical Android/iOS testing, usability sessions with older plot owners, real OS share delivery and architectural review remain outside this verification. These checks do not establish accessibility conformance, low-end phone performance or construction correctness.
