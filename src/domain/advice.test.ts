@@ -156,13 +156,14 @@ describe("home checklist", () => {
       ["furnish", false],
       ["paint", false],
       ["roof", false],
+      ["ensuite", false],
       ["garden", false],
     ]);
     let q = ok(addFurniture(p, "f1", "Bedroom", "wardrobe"));
     q = ok(setRoomWallColor(q, "f1", "Den", "sage"));
     q = ok(setStyle(q, { roof: { style: "hip", material: "terracotta", pitch: 30 } }));
     q = ok(customizeLandscape(q));
-    expect(homeChecks(q).quests.every((c) => c.done)).toBe(true);
+    expect(homeChecks(q).quests.filter((c) => c.id !== "ensuite").every((c) => c.done)).toBe(true);
     const trayed = ok(setAsideRoom(p, "f0", "Bath"));
     const after = homeChecks(trayed).essentials;
     expect(after.find((c) => c.id === "tray")!.done).toBe(false);

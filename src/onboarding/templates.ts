@@ -4,6 +4,7 @@ import { createBlueprint, type BlueprintRequest } from "../domain/blueprints";
 import { homeChecks } from "../domain/advice";
 import { moveRoomStrict, swapRoomUses } from "../domain/model";
 import { addRoomWindow } from "../domain/openingCommands";
+import { addAttachedBathroom } from "../domain/ensuite";
 import type { EditResult, Project, RoomKind } from "../domain/types";
 
 export const FEET = 30.48;
@@ -23,6 +24,8 @@ export type Template = {
   request: Omit<BlueprintRequest, "widthCm" | "depthCm" | "marginCm" | "road">;
   /** Which knobs make sense to tweak for this template. */
   tweak: { bedrooms?: [number, number]; floors?: [number, number] };
+  /** The biggest bedroom gets its own attached bathroom when there's room. */
+  ensuite?: boolean;
 };
 const base = {
   unitsPerFloor: 2,
@@ -47,6 +50,7 @@ export const TEMPLATES: Template[] = [
     plot: { w: 40, d: 60 },
     request: { ...base, kind: "home", flavor: "villa", bedrooms: 3 },
     tweak: { bedrooms: [2, 5], floors: [1, 2] },
+    ensuite: true,
   },
   {
     id: "duplex",
@@ -55,6 +59,7 @@ export const TEMPLATES: Template[] = [
     plot: { w: 30, d: 50 },
     request: { ...base, kind: "home", flavor: "duplex", bedrooms: 3, floors: 2 },
     tweak: { bedrooms: [2, 6], floors: [2, 3] },
+    ensuite: true,
   },
   {
     id: "courtyard",
@@ -120,7 +125,28 @@ export function buildTemplate(
     marginCm: 60,
     road: "south",
   });
-  return result.ok ? { ...result, project: polishTemplate(result.project) } : result;
+  if (!result.ok) return result;
+  const polished = polishTemplate(result.project);
+  return { ...result, project: template.ensuite ? withEnsuite(polished) : polished };
+}
+
+/**
+ * Gives the biggest bedroom its own bathroom, if it fits without breaking any
+ * checklist essential; otherwise the home stays as it was.
+ */
+function withEnsuite(project: Project): Project {
+  const rooms = project.floors.flatMap((f) =>
+    f.rooms.filter((r) => r.kind === "bedroom").map((r) => ({ floorId: f.id, room: r })),
+  );
+  const biggest = rooms.sort(
+    (a, b) => b.room.bounds.w * b.room.bounds.d - a.room.bounds.w * a.room.bounds.d,
+  )[0];
+  if (!biggest) return project;
+  const result = addAttachedBathroom(project, biggest.floorId, biggest.room.id);
+  if (!result.ok) return project;
+  const before = homeChecks(project).essentials.filter((c) => !c.done).length;
+  const after = homeChecks(result.project).essentials.filter((c) => !c.done).length;
+  return after <= before ? result.project : project;
 }
 
 /** Rooms that are fine without a window, in the order we'd rather swap them. */
@@ -155,7 +181,14 @@ export function polishTemplate(project: Project): Project {
     const bedroom = floor.rooms.find((r) => r.id === source.id)!;
     const area = bedroom.bounds.w * bedroom.bounds.d;
     const candidates = floor.rooms
-      .filter((r) => r.id !== bedroom.id && r.unitId === bedroom.unitId && WINDOWLESS_OK.includes(r.kind))
+      .filter(
+        (r) =>
+          r.id !== bedroom.id &&
+          r.unitId === bedroom.unitId &&
+          WINDOWLESS_OK.includes(r.kind) &&
+          // An attached bathroom stays with its bedroom.
+          !r.attachedTo,
+      )
       .sort(
         (a, b) =>
           WINDOWLESS_OK.indexOf(a.kind) - WINDOWLESS_OK.indexOf(b.kind) ||

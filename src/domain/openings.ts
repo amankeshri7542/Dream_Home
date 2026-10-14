@@ -31,6 +31,8 @@ import {
   autoOpenings,
   deriveWallSegments,
   deriveWalls,
+  doorWallFilter,
+  ensuiteHost,
   isPassable,
   isWindow,
   resolveFloorOpenings,
@@ -465,10 +467,14 @@ export function findRoomDoor(
     }
     return undefined;
   };
-  const near = segments.filter((w) => touches(w, room.bounds) && !blocked(w));
+  const doorWall = doorWallFilter(floor);
+  const near = segments.filter(
+    (w) => touches(w, room.bounds) && !blocked(w) && doorWall(room, w),
+  );
   return (
     pick(near.filter((w) => !w.exterior && !privateBoundary(w) && w.length >= 120)) ??
-    (floor.elevation === 0
+    // An attached bathroom never gets its own front door.
+    (floor.elevation === 0 && !ensuiteHost(floor.rooms, room)
       ? pick(near.filter((w) => w.exterior && w.length >= 120))
       : undefined)
   );

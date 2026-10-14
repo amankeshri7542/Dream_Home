@@ -146,6 +146,8 @@ const checkSite = (v: unknown): v is SiteStyle =>
 export function checkRoomExtras(r: Obj) {
   if (!optStr(r.floorMaterial) || !optStr(r.wallColor))
     throw new Error("Project contains an invalid room finish.");
+  if (!optStr(r.attachedTo) || (typeof r.attachedTo === "string" && r.attachedTo.length > 120))
+    throw new Error("Project contains an invalid attached bathroom.");
   if (r.furniture === undefined) return;
   if (
     !Array.isArray(r.furniture) ||
@@ -178,8 +180,9 @@ export function checkProjectExtras(p: Obj) {
 }
 export function copyRoomExtras(
   room: Room,
-): Pick<Room, "floorMaterial" | "wallColor" | "furniture"> {
+): Pick<Room, "floorMaterial" | "wallColor" | "furniture" | "attachedTo"> {
   return {
+    ...(room.attachedTo !== undefined ? { attachedTo: room.attachedTo } : {}),
     ...(room.floorMaterial !== undefined
       ? { floorMaterial: room.floorMaterial }
       : {}),

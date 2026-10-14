@@ -8,6 +8,7 @@ import type { ComponentRef, EditIssue, IssueFix, Project } from "./types";
 import {
   deriveWallSegments,
   deriveWalls,
+  ensuiteHost,
   isPassable,
   isWindow,
   resolveFloorOpenings,
@@ -219,6 +220,11 @@ export function homeChecks(project: Project): {
     check("furnish", "Furnish a room your way", allRooms.some((r) => !!r.furniture?.length)),
     check("paint", "Paint a wall", allRooms.some((r) => r.wallColor !== undefined)),
     check("roof", "Choose a roof", project.style?.roof !== undefined),
+    check(
+      "ensuite",
+      "Give a bedroom its own bathroom",
+      project.floors.some((f) => f.rooms.some((r) => ensuiteHost(f.rooms, r))),
+    ),
     check(
       "garden",
       "Plant a tree",

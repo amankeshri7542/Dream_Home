@@ -100,6 +100,8 @@ export type Room = {
   floorMaterial?: string;
   wallColor?: string;
   furniture?: FurnitureItem[];
+  /** An attached (en-suite) bathroom: the id of the bedroom it opens into. */
+  attachedTo?: string;
 };
 export type StagedRoom = { room: Room; sourceFloorId: string };
 export type Void = { id: string; kind: "courtyard" | "stairs"; bounds: Rect };

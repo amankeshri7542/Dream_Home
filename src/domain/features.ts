@@ -7,3 +7,4 @@ import "./openings";
 import "./furniture";
 import "./landscape";
 import "./materials";
+import "./ensuiteRules";

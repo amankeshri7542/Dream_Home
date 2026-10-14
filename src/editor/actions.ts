@@ -10,6 +10,7 @@ import {
   updateRoom,
 } from "../domain/model";
 import { removeStagedRoom, setAsideRoom } from "../domain/tray";
+import { addAttachedBathroom, ensuiteOf } from "../domain/ensuite";
 import { useEditor } from "./EditorProvider";
 import type { SelectionTarget } from "./types";
 
@@ -151,8 +152,23 @@ export function useSelectionActions() {
     },
     [project, target, floorId, run],
   );
+  /** A bedroom without its own bathroom can get one. */
+  const canAddEnsuite =
+    target?.kind === "room" &&
+    selected?.room?.kind === "bedroom" &&
+    !!selected.floor &&
+    !ensuiteOf(selected.floor.rooms, target.id);
+  const addEnsuite = useCallback(() => {
+    if (target?.kind !== "room" || !floorId) return;
+    run(addAttachedBathroom(project, floorId, target.id), `Add a bathroom to ${selected!.name}`, {
+      notice: `${selected!.name} has its own bathroom now — its door opens into the bedroom.`,
+      quietError: true,
+    });
+  }, [project, target, floorId, selected, run]);
   return {
     target,
+    canAddEnsuite,
+    addEnsuite,
     nudge,
     rotate,
     duplicate,

@@ -6,7 +6,11 @@ import { area, areaLabel } from "../../domain/display";
 import { useEditor } from "../../editor/EditorProvider";
 import { useDesktop } from "../../editor/hooks";
 import { useSelectionActions } from "../../editor/actions";
-import { Icon } from "../../ui/icons";
+import { Icon, roomIcon } from "../../ui/icons";
+import { ensuiteOf } from "../../domain/ensuite";
+import { ensuiteHost } from "../../domain/walls";
+
+const BathIcon = roomIcon("bathroom");
 import { Button, Field, IconButton, Section } from "../../ui/primitives";
 
 type Corner = "nw" | "ne" | "sw" | "se";
@@ -21,6 +25,8 @@ export function RoomInspector() {
   const floor = selected?.floor;
   if (!room || !floor) return null;
   const expanded = desktop || state.sheet !== "peek";
+  const ensuite = room.kind === "bedroom" ? ensuiteOf(floor.rooms, room.id) : null;
+  const host = ensuiteHost(floor.rooms, room);
   const resize = (axis: "w" | "d", value: number) => {
     const bounds = { ...room.bounds, [axis]: value };
     if (axis === "w" && fixedCorner.endsWith("e")) bounds.x += room.bounds.w - value;
@@ -36,6 +42,23 @@ export function RoomInspector() {
         </strong>
         <span>Approximate room area</span>
       </div>
+      {room.kind === "bedroom" &&
+        (ensuite ? (
+          <p className="dh-tip">
+            <BathIcon size={16} aria-hidden />
+            Has its own bathroom: {ensuite.name}
+          </p>
+        ) : (
+          <Button icon={BathIcon} full onClick={actions.addEnsuite}>
+            Add attached bathroom
+          </Button>
+        ))}
+      {host && (
+        <p className="dh-tip">
+          <BathIcon size={16} aria-hidden />
+          Attached to {host.name} — its door opens into the bedroom.
+        </p>
+      )}
       <Section title="Size" description="Width, depth and which corner stays put" open>
         <div className="field-pair">
           <Dimension

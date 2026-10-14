@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditor } from "../editor/EditorProvider";
 import { useSelectionActions } from "../editor/actions";
-import { Icon } from "../ui/icons";
+import { Icon, roomIcon } from "../ui/icons";
+
+const BathIcon = roomIcon("bathroom");
 import { ToolButton } from "../ui/primitives";
 
 const MODE_HINTS: Partial<Record<string, string>> = {
@@ -313,6 +315,20 @@ export function ActionDock() {
             <Icon.viewOptions size={18} aria-hidden />
             All details
           </button>
+          {building && actions.canAddEnsuite && (
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setMore(false);
+                leaveTool();
+                actions.addEnsuite();
+              }}
+            >
+              <BathIcon size={18} aria-hidden />
+              Add attached bathroom
+            </button>
+          )}
           {spatial && (
             <button
               role="menuitem"

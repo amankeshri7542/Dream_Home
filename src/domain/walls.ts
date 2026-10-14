@@ -10,6 +10,7 @@ import type {
   OpeningKind,
   PlacedOpening,
   Rect,
+  Room,
   Wall,
   WallOpening,
 } from "./types";
@@ -126,6 +127,48 @@ export function wallSideRooms(
   return [at(plus), at(minus)];
 }
 
+/** Length of the edge two rectangles share (0 when they don't touch). */
+export function sharedEdge(a: Rect, b: Rect): number {
+  if (a.x + a.w === b.x || b.x + b.w === a.x)
+    return Math.max(0, Math.min(a.z + a.d, b.z + b.d) - Math.max(a.z, b.z));
+  if (a.z + a.d === b.z || b.z + b.d === a.z)
+    return Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  return 0;
+}
+/** The minimum shared wall for an en-suite door. */
+export const ENSUITE_MIN_EDGE = 120;
+/**
+ * The bedroom an attached bathroom opens into, when the link is sound: a
+ * bathroom pointing at a bedroom on the same floor that shares a wall long
+ * enough for a door. Anything else is simply an ordinary room.
+ */
+export function ensuiteHost(rooms: readonly Room[], room: Room): Room | null {
+  if (room.kind !== "bathroom" || !room.attachedTo) return null;
+  const host = rooms.find((r) => r.id === room.attachedTo);
+  return host && host.kind === "bedroom" && sharedEdge(room.bounds, host.bounds) >= ENSUITE_MIN_EDGE
+    ? host
+    : null;
+}
+/**
+ * Door walls respecting attached bathrooms: an en-suite's door only goes on
+ * the wall it shares with its bedroom, and no other room opens into it.
+ * `room` is null for unit-area doors.
+ */
+export function doorWallFilter(floor: GeometryFloor) {
+  const ensuites = new Map<string, string>();
+  for (const r of floor.rooms) {
+    const host = ensuiteHost(floor.rooms, r);
+    if (host) ensuites.set(r.id, host.id);
+  }
+  if (!ensuites.size) return () => true;
+  return (room: Room | null, w: Wall) => {
+    const sides = wallSideRooms(floor, w);
+    const host = room ? ensuites.get(room.id) : undefined;
+    if (room && host) return sides.includes(room.id) && sides.includes(host);
+    return !sides.some((id) => id !== null && ensuites.has(id));
+  };
+}
+
 /**
  * The automatic doors and windows: one 90 cm door per room on its best interior
  * wall, one 100 cm door per unit area, a window on every exterior wall of at
@@ -161,6 +204,7 @@ export function autoOpenings(
     roomOwners(a) - roomOwners(b) ||
     b.length - a.length ||
     a.id.localeCompare(b.id);
+  const doorWall = doorWallFilter(floor);
   for (const room of floor.rooms) {
     const options = segments.filter(
       (w) =>
@@ -168,7 +212,8 @@ export function autoOpenings(
         !privateBoundary(w) &&
         !blocked(w) &&
         w.length >= 120 &&
-        touches(w, room.bounds),
+        touches(w, room.bounds) &&
+        doorWall(room, w),
     );
     options.sort(rank);
     if (options[0])
@@ -186,7 +231,8 @@ export function autoOpenings(
         !privateBoundary(w) &&
         !blocked(w) &&
         w.length >= 140 &&
-        touches(w, area.bounds),
+        touches(w, area.bounds) &&
+        doorWall(null, w),
     );
     options.sort(rank);
     if (options[0])

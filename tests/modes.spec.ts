@@ -155,3 +155,23 @@ test("the home checklist reports progress and offers fixes", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Back to building" })).toBeVisible();
   await expect(party).toHaveCount(0);
 });
+
+test("a bedroom gets its own attached bathroom from the action bar, and undo removes it", async ({ page }) => {
+  await page.setViewportSize(mobile);
+  const project = createPreset("compact");
+  await seed(page, project);
+  const bedroom = project.floors[0].rooms.find((r) => r.kind === "bedroom")!;
+  await page.locator(".scene-room-label").filter({ hasText: bedroom.name }).click();
+  await page.getByRole("toolbar", { name: `${bedroom.name} actions` }).getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Add attached bathroom" }).click();
+  await expect
+    .poll(async () => (await stored(page)).floors[0].rooms.find((r) => r.attachedTo === bedroom.id)?.kind)
+    .toBe("bathroom");
+  await expect(page.getByRole("status", { name: "Notifications" })).toContainText("its own bathroom");
+  // The option disappears once the bedroom has one.
+  await page.getByRole("toolbar", { name: `${bedroom.name} actions` }).getByRole("button", { name: "More" }).click();
+  await expect(page.getByRole("menuitem", { name: "Add attached bathroom" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await undo(page);
+  await expect.poll(async () => (await stored(page)).floors[0].rooms.some((r) => r.attachedTo)).toBe(false);
+});

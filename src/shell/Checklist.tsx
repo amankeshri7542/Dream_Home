@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { homeChecks, type HomeCheck } from "../domain/advice";
 import { addRoomWindow, ensureRoomDoor } from "../domain/openingCommands";
+import { addAttachedBathroom } from "../domain/ensuite";
 import { useEditor } from "../editor/EditorProvider";
 import { targetForId } from "../editor/selection";
 import type { EditorMode } from "../editor/types";
@@ -112,7 +113,22 @@ export function ChecklistPill() {
       } else dispatch({ type: "open-panel", panel: "catalog", pick: check.id });
     }
     else if (check.id === "stairs") dispatch({ type: "open-panel", panel: "catalog" });
-    else if (QUEST_MODE[check.id]) dispatch({ type: "set-mode", mode: QUEST_MODE[check.id] });
+    else if (check.id === "ensuite") {
+      // Straight to it: the biggest bedroom gets its own bathroom.
+      const bedrooms = project.floors.flatMap((f) =>
+        f.rooms.filter((r) => r.kind === "bedroom").map((room) => ({ floorId: f.id, room })),
+      );
+      const biggest = bedrooms.sort(
+        (a, b) => b.room.bounds.w * b.room.bounds.d - a.room.bounds.w * a.room.bounds.d,
+      )[0];
+      if (!biggest) return;
+      dispatch({ type: "set-mode", mode: "build" });
+      run(addAttachedBathroom(project, biggest.floorId, biggest.room.id), `Add a bathroom to ${biggest.room.name}`, {
+        select: { kind: "room", floorId: biggest.floorId, id: biggest.room.id },
+        notice: `${biggest.room.name} has its own bathroom now!`,
+        quietError: true,
+      });
+    } else if (QUEST_MODE[check.id]) dispatch({ type: "set-mode", mode: QUEST_MODE[check.id] });
   };
   return (
     <div className="dh-checklist" ref={ref} data-chrome="checklist">
