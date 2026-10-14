@@ -10,6 +10,8 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     launchOptions: { channel: "chrome" },
     screenshot: "only-on-failure",
+    // Deterministic layout: camera glides, sheets and pop-ins finish instantly.
+    reducedMotion: "reduce",
   },
   webServer: {
     command: "npm run dev",

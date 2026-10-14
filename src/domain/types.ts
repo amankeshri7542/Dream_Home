@@ -2,15 +2,104 @@ export type Rect = { x: number; z: number; w: number; d: number };
 export type EdgeSide = "north" | "south" | "east" | "west";
 export type RoomKind =
   "living" | "kitchen" | "bedroom" | "bathroom" | "dining" | "utility" | "shop";
+export type QuarterTurn = 0 | 90 | 180 | 270;
+
+// ---------------------------------------------------------------------------
+// Openings: absent `Floor.openings` means "automatic" (derived from rooms).
+// ---------------------------------------------------------------------------
+export type OpeningKind =
+  | "door"
+  | "french-door"
+  | "sliding-door"
+  | "archway"
+  | "window"
+  | "picture-window";
+export type OpeningStyle = "panel" | "flush" | "glazed" | "plain" | "divided";
+export type PlacedOpening = {
+  id: string;
+  kind: OpeningKind;
+  /** "x": the wall runs east–west at z = line; "z": north–south at x = line. */
+  axis: "x" | "z";
+  line: number;
+  /** Centre along the wall, in plot centimetres. */
+  center: number;
+  width: number;
+  height: number;
+  sill: number;
+  style?: OpeningStyle;
+  hinge?: "start" | "end";
+  /** Side of the wall line the leaf swings toward (+1 = +z / +x). */
+  swing?: -1 | 1;
+};
+/** An opening resolved onto a derived wall segment (render/plan only). */
+export type WallOpening = {
+  id: string;
+  kind: OpeningKind;
+  /** Centre of the opening measured from the wall's start, in cm. */
+  offset: number;
+  width: number;
+  height: number;
+  sill: number;
+  auto: boolean;
+  style?: OpeningStyle;
+  hinge?: "start" | "end";
+  swing?: -1 | 1;
+};
+
+// ---------------------------------------------------------------------------
+// Furniture: absent `Room.furniture` means the automatic layout.
+// Coordinates are room-local centimetres (item centre from room NW corner).
+// ---------------------------------------------------------------------------
+export type FurnitureItem = {
+  id: string;
+  catalogId: string;
+  x: number;
+  z: number;
+  /** Direction the item's back faces: 0 north, 90 east, 180 south, 270 west. */
+  rotation: QuarterTurn;
+  w?: number;
+  d?: number;
+  finish?: string;
+};
+
+// ---------------------------------------------------------------------------
+// Landscape: absent `Project.landscape` means the automatic garden.
+// Coordinates are plot centimetres (item centre).
+// ---------------------------------------------------------------------------
+export type LandscapeItem = {
+  id: string;
+  kind: string;
+  x: number;
+  z: number;
+  rotation: QuarterTurn;
+  w?: number;
+  d?: number;
+  variant?: string;
+};
+
+export type RoofStyle = "flat" | "gable" | "hip" | "shed";
+export type ProjectStyle = {
+  /** Wins over the legacy `finish`, which stays in sync with its family. */
+  exterior?: string;
+  trim?: string;
+  frontDoor?: string;
+  roof?: { style: RoofStyle; material: string; pitch: 20 | 30 | 40 };
+};
+export type SiteStyle = { ground?: string; fence?: string };
+
 export type Room = {
   id: string;
   name: string;
   kind: RoomKind;
   bounds: Rect;
   unitId: string | null;
-  furnishingRotation?: 0 | 90 | 180 | 270;
+  furnishingRotation?: QuarterTurn;
   floorFinish?: "auto" | "wood" | "tile" | "stone";
   furnishing?: "auto" | "none";
+  /** Richer floor material id; `floorFinish` keeps the nearest legacy family. */
+  floorMaterial?: string;
+  wallColor?: string;
+  furniture?: FurnitureItem[];
 };
 export type StagedRoom = { room: Room; sourceFloorId: string };
 export type Void = { id: string; kind: "courtyard" | "stairs"; bounds: Rect };
@@ -40,6 +129,7 @@ export type Floor = {
   rooms: Room[];
   balconies: Balcony[];
   unitAreas: UnitArea[];
+  openings?: PlacedOpening[];
 };
 export type GeometryFloor = Floor & { voids: Void[] };
 export type Project = {
@@ -59,6 +149,9 @@ export type Project = {
   garden: boolean;
   parking: boolean;
   finish?: "ivory" | "brick" | "sand";
+  style?: ProjectStyle;
+  site?: SiteStyle;
+  landscape?: LandscapeItem[];
 };
 export type Wall = {
   id: string;
@@ -67,15 +160,43 @@ export type Wall = {
   z: number;
   length: number;
   exterior: boolean;
-  opening?: {
-    kind: "door" | "window";
-    width: number;
-    sill: number;
-    height: number;
-  };
+  /** Sorted by offset. */
+  openings: WallOpening[];
+};
+
+// ---------------------------------------------------------------------------
+// Structured edit feedback.
+// ---------------------------------------------------------------------------
+export type ComponentRef =
+  | { kind: "room" | "balcony" | "opening"; id: string; floorId: string }
+  | { kind: "furniture"; id: string; floorId: string | null; roomId: string }
+  | {
+      kind: "vertical" | "unit" | "landscape" | "staged" | "floor";
+      id: string;
+      floorId?: string;
+    }
+  | { kind: "project"; id: "project" };
+export type IssueFix =
+  | { kind: "swap-uses"; floorId: string; sourceId: string; targetId: string }
+  | { kind: "set-aside"; floorId: string; roomId: string }
+  | { kind: "add-door" | "add-window"; floorId: string; roomId: string }
+  | { kind: "reset-openings"; floorId: string }
+  | { kind: "edit"; target: ComponentRef; focus: "move" | "resize" }
+  | { kind: "undo" };
+export type IssueSeverity = "error" | "warning" | "notice";
+export type EditIssue = {
+  code: string;
+  severity: IssueSeverity;
+  message: string;
+  source?: ComponentRef;
+  blockers: ComponentRef[];
+  floorIds: string[];
+  attempted?: Rect;
+  fixes: IssueFix[];
 };
 export type EditResult =
-  { ok: true; project: Project } | { ok: false; error: string };
+  | { ok: true; project: Project; focusId?: string; notices?: EditIssue[] }
+  | { ok: false; error: string; issues?: EditIssue[] };
 export type PresetId = "courtyard" | "compact" | "family";
 export type ViewSettings = {
   floor: string | "all";
@@ -90,12 +211,12 @@ export type ViewSettings = {
   resetKey: number;
 };
 export const ROOM_META: Record<RoomKind, { label: string; color: string }> = {
-  shop: { label: "Shop", color: "#c7b5cb" },
-  living: { label: "Living room", color: "#d9b493" },
-  kitchen: { label: "Kitchen", color: "#9ab8aa" },
-  bedroom: { label: "Bedroom", color: "#a8b9cc" },
-  bathroom: { label: "Bathroom", color: "#b5cad0" },
-  dining: { label: "Dining", color: "#d5c49d" },
-  utility: { label: "Utility", color: "#c8bdcb" },
+  shop: { label: "Shop", color: "#d2b6c9" },
+  living: { label: "Living room", color: "#e3b98f" },
+  kitchen: { label: "Kitchen", color: "#a9c3a1" },
+  bedroom: { label: "Bedroom", color: "#b7c4d6" },
+  bathroom: { label: "Bathroom", color: "#b9d3d3" },
+  dining: { label: "Dining", color: "#e2c98f" },
+  utility: { label: "Utility", color: "#cdbfc9" },
 };
 export const STAGES = ["Plot", "Foundation", "Frame", "Walls", "Slabs", "Roof"];

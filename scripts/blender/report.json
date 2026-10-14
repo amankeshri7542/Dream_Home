@@ -1,0 +1,1895 @@
+{
+  "items": [
+    {
+      "id": "bench",
+      "kit": "exterior",
+      "tris": 572,
+      "triBudget": 600,
+      "bounds": {
+        "w": 150.0,
+        "d": 55.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 150.0,
+        "d": 55.0,
+        "h": 80.0
+      },
+      "slots": [
+        "metal",
+        "wood"
+      ],
+      "fitScale": [
+        1.0,
+        1.0476,
+        1.0183
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "car",
+      "kit": "exterior",
+      "tris": 2164,
+      "triBudget": 2500,
+      "bounds": {
+        "w": 180.0,
+        "d": 410.0,
+        "h": 150.0
+      },
+      "size": {
+        "w": 180.0,
+        "d": 410.0,
+        "h": 150.0
+      },
+      "slots": [
+        "rubber",
+        "metal",
+        "accent",
+        "glass"
+      ],
+      "fitScale": [
+        0.9912,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "cloud",
+      "kit": "exterior",
+      "tris": 300,
+      "triBudget": 300,
+      "bounds": {
+        "w": 600.0,
+        "d": 300.0,
+        "h": 160.0
+      },
+      "size": {
+        "w": 600.0,
+        "d": 300.0,
+        "h": 160.0
+      },
+      "slots": [
+        "linen"
+      ],
+      "fitScale": [
+        1.0138,
+        1.2691,
+        1.0344
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.014,1.269,1.034"
+      ]
+    },
+    {
+      "id": "fence-panel",
+      "kit": "exterior",
+      "tris": 296,
+      "triBudget": 300,
+      "bounds": {
+        "w": 200.0,
+        "d": 8.0,
+        "h": 120.0
+      },
+      "size": {
+        "w": 200.0,
+        "d": 8.0,
+        "h": 120.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "flowerbed-module",
+      "kit": "exterior",
+      "tris": 660,
+      "triBudget": 700,
+      "bounds": {
+        "w": 100.0,
+        "d": 60.0,
+        "h": 40.0
+      },
+      "size": {
+        "w": 100.0,
+        "d": 60.0,
+        "h": 40.0
+      },
+      "slots": [
+        "bark",
+        "leaf",
+        "accent"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.1256
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.000,1.000,1.126"
+      ]
+    },
+    {
+      "id": "gate",
+      "kit": "exterior",
+      "tris": 336,
+      "triBudget": 400,
+      "bounds": {
+        "w": 110.0,
+        "d": 8.0,
+        "h": 120.0
+      },
+      "size": {
+        "w": 110.0,
+        "d": 8.0,
+        "h": 120.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        0.9928,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "hedge-module",
+      "kit": "exterior",
+      "tris": 172,
+      "triBudget": 400,
+      "bounds": {
+        "w": 100.0,
+        "d": 60.0,
+        "h": 110.0
+      },
+      "size": {
+        "w": 100.0,
+        "d": 60.0,
+        "h": 110.0
+      },
+      "slots": [
+        "leaf"
+      ],
+      "fitScale": [
+        1.0,
+        1.0027,
+        0.9411
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "lamp-post",
+      "kit": "exterior",
+      "tris": 312,
+      "triBudget": 400,
+      "bounds": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 320.0
+      },
+      "size": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 320.0
+      },
+      "slots": [
+        "metal",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        1.0515,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "mailbox",
+      "kit": "exterior",
+      "tris": 284,
+      "triBudget": 300,
+      "bounds": {
+        "w": 40.0,
+        "d": 30.0,
+        "h": 120.0
+      },
+      "size": {
+        "w": 40.0,
+        "d": 30.0,
+        "h": 120.0
+      },
+      "slots": [
+        "metal",
+        "accent"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "parasol",
+      "kit": "exterior",
+      "tris": 320,
+      "triBudget": 500,
+      "bounds": {
+        "w": 220.0,
+        "d": 220.0,
+        "h": 240.0
+      },
+      "size": {
+        "w": 220.0,
+        "d": 220.0,
+        "h": 240.0
+      },
+      "slots": [
+        "metal",
+        "accent"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "planter",
+      "kit": "exterior",
+      "tris": 460,
+      "triBudget": 500,
+      "bounds": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 75.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 75.0
+      },
+      "slots": [
+        "terracotta",
+        "leaf"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        0.9829
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "pool-ladder",
+      "kit": "exterior",
+      "tris": 268,
+      "triBudget": 300,
+      "bounds": {
+        "w": 60.0,
+        "d": 40.0,
+        "h": 120.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 40.0,
+        "h": 120.0
+      },
+      "slots": [
+        "metal"
+      ],
+      "fitScale": [
+        0.9677,
+        1.0256,
+        1.0288
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "rock",
+      "kit": "exterior",
+      "tris": 100,
+      "triBudget": 150,
+      "bounds": {
+        "w": 70.0,
+        "d": 50.0,
+        "h": 40.0
+      },
+      "size": {
+        "w": 70.0,
+        "d": 50.0,
+        "h": 40.0
+      },
+      "slots": [
+        "stone"
+      ],
+      "fitScale": [
+        1.0222,
+        1.1559,
+        0.9444
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.022,1.156,0.944"
+      ]
+    },
+    {
+      "id": "shrub",
+      "kit": "exterior",
+      "tris": 480,
+      "triBudget": 500,
+      "bounds": {
+        "w": 90.0,
+        "d": 90.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 90.0,
+        "d": 90.0,
+        "h": 80.0
+      },
+      "slots": [
+        "leaf"
+      ],
+      "fitScale": [
+        1.0803,
+        1.1414,
+        1.0148
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.080,1.141,1.015"
+      ]
+    },
+    {
+      "id": "sun-lounger",
+      "kit": "exterior",
+      "tris": 592,
+      "triBudget": 600,
+      "bounds": {
+        "w": 70.0,
+        "d": 190.0,
+        "h": 40.0
+      },
+      "size": {
+        "w": 70.0,
+        "d": 190.0,
+        "h": 40.0
+      },
+      "slots": [
+        "wood",
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        1.0106,
+        0.991
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "tree-blossom",
+      "kit": "exterior",
+      "tris": 1328,
+      "triBudget": 1500,
+      "bounds": {
+        "w": 320.0,
+        "d": 320.0,
+        "h": 450.0
+      },
+      "size": {
+        "w": 320.0,
+        "d": 320.0,
+        "h": 450.0
+      },
+      "slots": [
+        "bark",
+        "accent",
+        "leaf"
+      ],
+      "fitScale": [
+        1.0645,
+        1.1305,
+        1.0572
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.065,1.130,1.057"
+      ]
+    },
+    {
+      "id": "tree-oak",
+      "kit": "exterior",
+      "tris": 1308,
+      "triBudget": 1500,
+      "bounds": {
+        "w": 380.0,
+        "d": 380.0,
+        "h": 560.0
+      },
+      "size": {
+        "w": 380.0,
+        "d": 380.0,
+        "h": 560.0
+      },
+      "slots": [
+        "bark",
+        "leaf"
+      ],
+      "fitScale": [
+        0.9913,
+        1.0004,
+        1.0056
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "tree-palm",
+      "kit": "exterior",
+      "tris": 964,
+      "triBudget": 1200,
+      "bounds": {
+        "w": 360.0,
+        "d": 360.0,
+        "h": 600.0
+      },
+      "size": {
+        "w": 360.0,
+        "d": 360.0,
+        "h": 600.0
+      },
+      "slots": [
+        "bark",
+        "leaf"
+      ],
+      "fitScale": [
+        1.011,
+        1.0546,
+        1.0302
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "tree-pine",
+      "kit": "exterior",
+      "tris": 424,
+      "triBudget": 900,
+      "bounds": {
+        "w": 230.0,
+        "d": 230.0,
+        "h": 620.0
+      },
+      "size": {
+        "w": 230.0,
+        "d": 230.0,
+        "h": 620.0
+      },
+      "slots": [
+        "bark",
+        "leaf"
+      ],
+      "fitScale": [
+        0.9174,
+        1.0594,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 0.917,1.059,1.000"
+      ]
+    },
+    {
+      "id": "armchair",
+      "kit": "interior",
+      "tris": 816,
+      "triBudget": 900,
+      "bounds": {
+        "w": 85.0,
+        "d": 85.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 85.0,
+        "d": 85.0,
+        "h": 80.0
+      },
+      "slots": [
+        "wood_dark",
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        0.9884,
+        1.0084
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "bathtub",
+      "kit": "interior",
+      "tris": 690,
+      "triBudget": 1000,
+      "bounds": {
+        "w": 170.0,
+        "d": 75.0,
+        "h": 58.0
+      },
+      "size": {
+        "w": 170.0,
+        "d": 75.0,
+        "h": 58.0
+      },
+      "slots": [
+        "ceramic",
+        "water",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0033
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "bed-double",
+      "kit": "interior",
+      "tris": 1356,
+      "triBudget": 1800,
+      "bounds": {
+        "w": 160.0,
+        "d": 210.0,
+        "h": 95.0
+      },
+      "size": {
+        "w": 160.0,
+        "d": 210.0,
+        "h": 95.0
+      },
+      "slots": [
+        "wood",
+        "fabric",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        0.9973,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "bed-single",
+      "kit": "interior",
+      "tris": 1196,
+      "triBudget": 1400,
+      "bounds": {
+        "w": 100.0,
+        "d": 205.0,
+        "h": 90.0
+      },
+      "size": {
+        "w": 100.0,
+        "d": 205.0,
+        "h": 90.0
+      },
+      "slots": [
+        "wood",
+        "fabric",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        0.9972,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "bedside-table",
+      "kit": "interior",
+      "tris": 388,
+      "triBudget": 400,
+      "bounds": {
+        "w": 45.0,
+        "d": 40.0,
+        "h": 50.0
+      },
+      "size": {
+        "w": 45.0,
+        "d": 40.0,
+        "h": 50.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "bookshelf",
+      "kit": "interior",
+      "tris": 876,
+      "triBudget": 900,
+      "bounds": {
+        "w": 90.0,
+        "d": 32.0,
+        "h": 190.0
+      },
+      "size": {
+        "w": 90.0,
+        "d": 32.0,
+        "h": 190.0
+      },
+      "slots": [
+        "wood",
+        "accent",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "coffee-table",
+      "kit": "interior",
+      "tris": 360,
+      "triBudget": 400,
+      "bounds": {
+        "w": 110.0,
+        "d": 60.0,
+        "h": 42.0
+      },
+      "size": {
+        "w": 110.0,
+        "d": 60.0,
+        "h": 42.0
+      },
+      "slots": [
+        "wood",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0027
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "desk",
+      "kit": "interior",
+      "tris": 576,
+      "triBudget": 700,
+      "bounds": {
+        "w": 130.0,
+        "d": 60.0,
+        "h": 75.0
+      },
+      "size": {
+        "w": 130.0,
+        "d": 60.0,
+        "h": 75.0
+      },
+      "slots": [
+        "wood",
+        "rubber",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "dining-chair",
+      "kit": "interior",
+      "tris": 448,
+      "triBudget": 500,
+      "bounds": {
+        "w": 45.0,
+        "d": 50.0,
+        "h": 88.0
+      },
+      "size": {
+        "w": 45.0,
+        "d": 50.0,
+        "h": 88.0
+      },
+      "slots": [
+        "wood"
+      ],
+      "fitScale": [
+        1.0,
+        1.0061,
+        1.0102
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "dining-table",
+      "kit": "interior",
+      "tris": 580,
+      "triBudget": 600,
+      "bounds": {
+        "w": 150.0,
+        "d": 90.0,
+        "h": 75.0
+      },
+      "size": {
+        "w": 150.0,
+        "d": 90.0,
+        "h": 75.0
+      },
+      "slots": [
+        "wood",
+        "ceramic",
+        "terracotta"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0005
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "dining-table-round",
+      "kit": "interior",
+      "tris": 428,
+      "triBudget": 500,
+      "bounds": {
+        "w": 110.0,
+        "d": 110.0,
+        "h": 75.0
+      },
+      "size": {
+        "w": 110.0,
+        "d": 110.0,
+        "h": 75.0
+      },
+      "slots": [
+        "wood"
+      ],
+      "fitScale": [
+        1.0,
+        1.0103,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "display-shelf-module",
+      "kit": "interior",
+      "tris": 544,
+      "triBudget": 600,
+      "bounds": {
+        "w": 60.0,
+        "d": 40.0,
+        "h": 180.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 40.0,
+        "h": 180.0
+      },
+      "slots": [
+        "wood",
+        "accent",
+        "linen",
+        "terracotta"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "dresser",
+      "kit": "interior",
+      "tris": 560,
+      "triBudget": 600,
+      "bounds": {
+        "w": 100.0,
+        "d": 45.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 100.0,
+        "d": 45.0,
+        "h": 80.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "floor-lamp",
+      "kit": "interior",
+      "tris": 376,
+      "triBudget": 400,
+      "bounds": {
+        "w": 40.0,
+        "d": 40.0,
+        "h": 160.0
+      },
+      "size": {
+        "w": 40.0,
+        "d": 40.0,
+        "h": 160.0
+      },
+      "slots": [
+        "metal",
+        "accent",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "fridge",
+      "kit": "interior",
+      "tris": 460,
+      "triBudget": 500,
+      "bounds": {
+        "w": 70.0,
+        "d": 70.0,
+        "h": 190.0
+      },
+      "size": {
+        "w": 70.0,
+        "d": 70.0,
+        "h": 190.0
+      },
+      "slots": [
+        "accent",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "kitchen-base",
+      "kit": "interior",
+      "tris": 352,
+      "triBudget": 400,
+      "bounds": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 92.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 92.0
+      },
+      "slots": [
+        "accent",
+        "stone",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "kitchen-island",
+      "kit": "interior",
+      "tris": 548,
+      "triBudget": 600,
+      "bounds": {
+        "w": 180.0,
+        "d": 90.0,
+        "h": 92.0
+      },
+      "size": {
+        "w": 180.0,
+        "d": 90.0,
+        "h": 92.0
+      },
+      "slots": [
+        "wood",
+        "accent",
+        "stone"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "kitchen-sink",
+      "kit": "interior",
+      "tris": 652,
+      "triBudget": 700,
+      "bounds": {
+        "w": 80.0,
+        "d": 60.0,
+        "h": 92.0
+      },
+      "size": {
+        "w": 80.0,
+        "d": 60.0,
+        "h": 92.0
+      },
+      "slots": [
+        "accent",
+        "stone",
+        "metal",
+        "water"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "kitchen-stove",
+      "kit": "interior",
+      "tris": 684,
+      "triBudget": 700,
+      "bounds": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 92.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 92.0
+      },
+      "slots": [
+        "accent",
+        "stone",
+        "rubber",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "kitchen-upper",
+      "kit": "interior",
+      "tris": 196,
+      "triBudget": 300,
+      "bounds": {
+        "w": 60.0,
+        "d": 35.0,
+        "h": 70.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 35.0,
+        "h": 70.0
+      },
+      "slots": [
+        "accent",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0234,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "laundry-counter",
+      "kit": "interior",
+      "tris": 460,
+      "triBudget": 500,
+      "bounds": {
+        "w": 110.0,
+        "d": 55.0,
+        "h": 90.0
+      },
+      "size": {
+        "w": 110.0,
+        "d": 55.0,
+        "h": 90.0
+      },
+      "slots": [
+        "wood",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0001
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "media-unit",
+      "kit": "interior",
+      "tris": 568,
+      "triBudget": 600,
+      "bounds": {
+        "w": 170.0,
+        "d": 45.0,
+        "h": 110.0
+      },
+      "size": {
+        "w": 170.0,
+        "d": 45.0,
+        "h": 110.0
+      },
+      "slots": [
+        "wood",
+        "rubber",
+        "glass"
+      ],
+      "fitScale": [
+        1.0,
+        1.0181,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "mirror",
+      "kit": "interior",
+      "tris": 142,
+      "triBudget": 150,
+      "bounds": {
+        "w": 60.0,
+        "d": 4.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 4.0,
+        "h": 80.0
+      },
+      "slots": [
+        "wood",
+        "glass"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "office-chair",
+      "kit": "interior",
+      "tris": 668,
+      "triBudget": 700,
+      "bounds": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 95.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 95.0
+      },
+      "slots": [
+        "metal",
+        "rubber",
+        "fabric"
+      ],
+      "fitScale": [
+        1.0745,
+        1.0215,
+        0.9985
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.075,1.021,0.998"
+      ]
+    },
+    {
+      "id": "pendant-light",
+      "kit": "interior",
+      "tris": 296,
+      "triBudget": 300,
+      "bounds": {
+        "w": 45.0,
+        "d": 45.0,
+        "h": 50.0
+      },
+      "size": {
+        "w": 45.0,
+        "d": 45.0,
+        "h": 50.0
+      },
+      "slots": [
+        "metal",
+        "accent",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "plant-floor",
+      "kit": "interior",
+      "tris": 738,
+      "triBudget": 800,
+      "bounds": {
+        "w": 45.0,
+        "d": 45.0,
+        "h": 120.0
+      },
+      "size": {
+        "w": 45.0,
+        "d": 45.0,
+        "h": 120.0
+      },
+      "slots": [
+        "terracotta",
+        "leaf"
+      ],
+      "fitScale": [
+        0.9675,
+        1.013,
+        1.0224
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "plant-small",
+      "kit": "interior",
+      "tris": 292,
+      "triBudget": 300,
+      "bounds": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 50.0
+      },
+      "size": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 50.0
+      },
+      "slots": [
+        "terracotta",
+        "leaf"
+      ],
+      "fitScale": [
+        1.1387,
+        1.2269,
+        1.0962
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.139,1.227,1.096"
+      ]
+    },
+    {
+      "id": "prayer-mat",
+      "kit": "interior",
+      "tris": 52,
+      "triBudget": 60,
+      "bounds": {
+        "w": 65.0,
+        "d": 56.0,
+        "h": 2.0
+      },
+      "size": {
+        "w": 65.0,
+        "d": 56.0,
+        "h": 2.0
+      },
+      "slots": [
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "prayer-shrine",
+      "kit": "interior",
+      "tris": 681,
+      "triBudget": 700,
+      "bounds": {
+        "w": 80.0,
+        "d": 50.0,
+        "h": 90.0
+      },
+      "size": {
+        "w": 80.0,
+        "d": 50.0,
+        "h": 90.0
+      },
+      "slots": [
+        "wood",
+        "terracotta",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "rug-rect",
+      "kit": "interior",
+      "tris": 56,
+      "triBudget": 60,
+      "bounds": {
+        "w": 200.0,
+        "d": 140.0,
+        "h": 1.0
+      },
+      "size": {
+        "w": 200.0,
+        "d": 140.0,
+        "h": 1.0
+      },
+      "slots": [
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "rug-round",
+      "kit": "interior",
+      "tris": 116,
+      "triBudget": 120,
+      "bounds": {
+        "w": 150.0,
+        "d": 150.0,
+        "h": 1.0
+      },
+      "size": {
+        "w": 150.0,
+        "d": 150.0,
+        "h": 1.0
+      },
+      "slots": [
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "shop-counter",
+      "kit": "interior",
+      "tris": 572,
+      "triBudget": 600,
+      "bounds": {
+        "w": 140.0,
+        "d": 60.0,
+        "h": 100.0
+      },
+      "size": {
+        "w": 140.0,
+        "d": 60.0,
+        "h": 100.0
+      },
+      "slots": [
+        "rubber",
+        "accent",
+        "stone"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        0.9991
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "shower",
+      "kit": "interior",
+      "tris": 596,
+      "triBudget": 600,
+      "bounds": {
+        "w": 90.0,
+        "d": 90.0,
+        "h": 205.0
+      },
+      "size": {
+        "w": 90.0,
+        "d": 90.0,
+        "h": 205.0
+      },
+      "slots": [
+        "ceramic",
+        "water",
+        "metal",
+        "glass"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "side-table",
+      "kit": "interior",
+      "tris": 296,
+      "triBudget": 300,
+      "bounds": {
+        "w": 45.0,
+        "d": 45.0,
+        "h": 55.0
+      },
+      "size": {
+        "w": 45.0,
+        "d": 45.0,
+        "h": 55.0
+      },
+      "slots": [
+        "wood"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "sleeping-mat",
+      "kit": "interior",
+      "tris": 284,
+      "triBudget": 400,
+      "bounds": {
+        "w": 76.0,
+        "d": 115.0,
+        "h": 10.0
+      },
+      "size": {
+        "w": 76.0,
+        "d": 115.0,
+        "h": 10.0
+      },
+      "slots": [
+        "fabric",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        1.0021,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "sofa-2",
+      "kit": "interior",
+      "tris": 1136,
+      "triBudget": 1200,
+      "bounds": {
+        "w": 160.0,
+        "d": 90.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 160.0,
+        "d": 90.0,
+        "h": 80.0
+      },
+      "slots": [
+        "wood_dark",
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        0.9891,
+        1.0084
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "sofa-3",
+      "kit": "interior",
+      "tris": 1456,
+      "triBudget": 1500,
+      "bounds": {
+        "w": 220.0,
+        "d": 90.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 220.0,
+        "d": 90.0,
+        "h": 80.0
+      },
+      "slots": [
+        "wood_dark",
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        0.9891,
+        1.0084
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "toilet",
+      "kit": "interior",
+      "tris": 728,
+      "triBudget": 900,
+      "bounds": {
+        "w": 42.0,
+        "d": 68.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 42.0,
+        "d": 68.0,
+        "h": 80.0
+      },
+      "slots": [
+        "ceramic",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        0.9985,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "vanity",
+      "kit": "interior",
+      "tris": 768,
+      "triBudget": 800,
+      "bounds": {
+        "w": 60.0,
+        "d": 46.0,
+        "h": 88.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 46.0,
+        "h": 88.0
+      },
+      "slots": [
+        "wood",
+        "metal",
+        "ceramic",
+        "water"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "wardrobe",
+      "kit": "interior",
+      "tris": 696,
+      "triBudget": 700,
+      "bounds": {
+        "w": 120.0,
+        "d": 60.0,
+        "h": 210.0
+      },
+      "size": {
+        "w": 120.0,
+        "d": 60.0,
+        "h": 210.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "washing-machine",
+      "kit": "interior",
+      "tris": 524,
+      "triBudget": 600,
+      "bounds": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 85.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 60.0,
+        "h": 85.0
+      },
+      "slots": [
+        "ceramic",
+        "metal",
+        "rubber",
+        "glass"
+      ],
+      "fitScale": [
+        1.0,
+        0.9868,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    }
+  ],
+  "kits": {
+    "interior": {
+      "bytes": 882992,
+      "materials": [
+        "fabric",
+        "linen",
+        "wood",
+        "metal",
+        "wood_dark",
+        "rubber",
+        "ceramic",
+        "terracotta",
+        "accent",
+        "glass",
+        "stone",
+        "water",
+        "glow",
+        "leaf"
+      ],
+      "nodes": 143,
+      "errors": [],
+      "tris": 23211,
+      "items": [
+        "bed-double",
+        "bed-single",
+        "sleeping-mat",
+        "bedside-table",
+        "wardrobe",
+        "dresser",
+        "sofa-3",
+        "sofa-2",
+        "armchair",
+        "dining-chair",
+        "office-chair",
+        "coffee-table",
+        "side-table",
+        "dining-table",
+        "dining-table-round",
+        "desk",
+        "bookshelf",
+        "media-unit",
+        "kitchen-base",
+        "kitchen-sink",
+        "kitchen-stove",
+        "kitchen-upper",
+        "fridge",
+        "kitchen-island",
+        "toilet",
+        "vanity",
+        "mirror",
+        "shower",
+        "bathtub",
+        "washing-machine",
+        "laundry-counter",
+        "display-shelf-module",
+        "shop-counter",
+        "prayer-shrine",
+        "prayer-mat",
+        "rug-rect",
+        "rug-round",
+        "plant-floor",
+        "plant-small",
+        "floor-lamp",
+        "pendant-light"
+      ]
+    },
+    "exterior": {
+      "bytes": 417828,
+      "materials": [
+        "bark",
+        "leaf",
+        "accent",
+        "terracotta",
+        "stone",
+        "metal",
+        "wood",
+        "fabric",
+        "glow",
+        "glass",
+        "rubber",
+        "linen"
+      ],
+      "nodes": 56,
+      "errors": [],
+      "tris": 11340,
+      "items": [
+        "tree-oak",
+        "tree-pine",
+        "tree-palm",
+        "tree-blossom",
+        "shrub",
+        "planter",
+        "rock",
+        "flowerbed-module",
+        "hedge-module",
+        "bench",
+        "sun-lounger",
+        "parasol",
+        "lamp-post",
+        "mailbox",
+        "car",
+        "fence-panel",
+        "gate",
+        "pool-ladder",
+        "cloud"
+      ]
+    }
+  },
+  "thumbs": [
+    "bed-double",
+    "bed-single",
+    "sleeping-mat",
+    "bedside-table",
+    "wardrobe",
+    "dresser",
+    "sofa-3",
+    "sofa-2",
+    "armchair",
+    "dining-chair",
+    "office-chair",
+    "coffee-table",
+    "side-table",
+    "dining-table",
+    "dining-table-round",
+    "desk",
+    "bookshelf",
+    "media-unit",
+    "kitchen-counter",
+    "kitchen-base",
+    "kitchen-sink",
+    "kitchen-stove",
+    "kitchen-upper",
+    "fridge",
+    "kitchen-island",
+    "toilet",
+    "vanity",
+    "mirror",
+    "shower",
+    "bathtub",
+    "washing-machine",
+    "laundry-counter",
+    "display-shelf",
+    "display-shelf-module",
+    "shop-counter",
+    "prayer-shrine",
+    "prayer-mat",
+    "rug-rect",
+    "rug-round",
+    "plant-floor",
+    "plant-small",
+    "floor-lamp",
+    "pendant-light",
+    "tree-oak",
+    "tree-pine",
+    "tree-palm",
+    "tree-blossom",
+    "shrub",
+    "planter",
+    "rock",
+    "flowerbed",
+    "hedge",
+    "bench",
+    "sun-lounger",
+    "parasol",
+    "lamp-post",
+    "mailbox",
+    "parking",
+    "pool",
+    "path",
+    "patio",
+    "fence-panel",
+    "gate",
+    "pool-ladder",
+    "cloud"
+  ],
+  "errors": []
+}

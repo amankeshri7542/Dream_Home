@@ -46,7 +46,7 @@ export function DialogHeading({
         aria-label={"Close dialog"}
         onClick={onClose}
       >
-        <X size={21} />
+        <X size={21} aria-hidden />
       </button>
     </div>
   );
@@ -124,7 +124,7 @@ export function Dimension({
             disabled={cm - (unit === "ft" ? 30 : 10) < min}
             onClick={() => onChange(cm - (unit === "ft" ? 30 : 10))}
           >
-            <Minus size={20} />
+            <Minus size={20} aria-hidden />
             Smaller
           </button>
           <button
@@ -133,7 +133,7 @@ export function Dimension({
             disabled={cm + (unit === "ft" ? 30 : 10) > max}
             onClick={() => onChange(cm + (unit === "ft" ? 30 : 10))}
           >
-            <Plus size={20} />
+            <Plus size={20} aria-hidden />
             Bigger
           </button>
         </div>

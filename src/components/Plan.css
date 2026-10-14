@@ -1,3 +1,4 @@
+@layer legacy {
 .plan-wrap.direct-plan {
   position: relative;
   inset: auto;
@@ -35,7 +36,7 @@
   text-align: center;
   color: #29493c;
   line-height: 1.15;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   pointer-events: none;
 }
 .direct-plan .plan-room-caption strong {
@@ -133,4 +134,5 @@
   .direct-plan .plan-hint {
     font-size: 11px;
   }
+}
 }

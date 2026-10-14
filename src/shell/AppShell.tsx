@@ -1,0 +1,307 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createStarter } from "../domain/starters";
+import type { Project } from "../domain/types";
+import { loadSession, saveSession } from "../editor/preferences";
+import { useReducedMotion } from "../editor/hooks";
+import { CoachMarks, TemplateGallery, TitleScreen } from "../onboarding/Onboarding";
+import { ExploreHud } from "../explore/ExploreHud";
+import { PhotoDialog } from "../explore/PhotoDialog";
+import type { TrayPointer } from "../components/RoomTray";
+import { useEditor } from "../editor/EditorProvider";
+import { useChromeInsets, useDesktop } from "../editor/hooks";
+import { Icon } from "../ui/icons";
+import { IconButton } from "../ui/primitives";
+import { DialogHost, ProjectFileInput } from "./Dialogs";
+import { ConfirmDialog, Notifications } from "./Feedback";
+import { CameraHud, FloorSwitcher, ViewOptions } from "./Hud";
+import { Inspector } from "./Inspector";
+import { ModeBar } from "./ModeBar";
+import { ActionDock, ModeHint, ToolPalette } from "./Palette";
+import { ChecklistPill } from "./Checklist";
+import { SelectionAnnouncer } from "./Announcer";
+import { useBackButton } from "./useBackButton";
+import { PlanLens } from "./PlanLens";
+import { SceneHost } from "./SceneHost";
+import { TopBar } from "./TopBar";
+import "./shell.css";
+
+/** The construction reveal: five steps, then "Ta-da!" for a moment. */
+const REVEAL_MS = 5 * 520 + 1800;
+
+export function AppShell() {
+  const editor = useEditor();
+  const { state, dispatch, selected } = editor;
+  const desktop = useDesktop();
+  const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  const insets = useChromeInsets(root);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [noWebGL, setNoWebGL] = useState(false);
+  const onWebGL = useCallback((value: boolean) => setNoWebGL(value), []);
+  const [trayDrag, setTrayDrag] = useState<TrayPointer | null>(null);
+  const [trayDrop, setTrayDrop] = useState<(TrayPointer & { key: number }) | null>(null);
+  const [screen, setScreen] = useState<"title" | "gallery" | "workspace">(() =>
+    loadSession().titleDismissed ? "workspace" : "title",
+  );
+  const [preview, setPreview] = useState<Project | null>(null);
+  const [tour, setTour] = useState(false);
+  const reduced = useReducedMotion();
+  const reveal = useRef<number[]>([]);
+  useEffect(() => () => reveal.current.forEach((t) => window.clearTimeout(t)), []);
+  const enterWorkspace = useCallback(() => {
+    saveSession({ titleDismissed: true });
+    setScreen("workspace");
+    setPreview(null);
+    dispatch({ type: "camera", command: { type: "fit", subject: "home", view: "hero" } });
+  }, [dispatch]);
+  const startTourIfNew = useCallback(() => {
+    if (!editor.prefs.tourSeen) setTour(true);
+  }, [editor.prefs.tourSeen]);
+  const [caption, setCaption] = useState<string | null>(null);
+  /** A gentle "construction" sequence: foundation, frame, walls, floors. */
+  const constructionReveal = useCallback(() => {
+    reveal.current.forEach((t) => window.clearTimeout(t));
+    if (reduced) {
+      dispatch({ type: "view", patch: { stage: 4, roof: false, cutaway: true } });
+      return;
+    }
+    const steps = [
+      "Clearing the plot…",
+      "Laying the foundation…",
+      "Raising the frame…",
+      "Building the walls…",
+      "Adding the floors…",
+    ];
+    steps.forEach((text, stage) => {
+      reveal.current.push(
+        window.setTimeout(() => {
+          dispatch({ type: "view", patch: { stage, roof: false, cutaway: true } });
+          setCaption(text);
+        }, stage * 520),
+      );
+    });
+    reveal.current.push(
+      window.setTimeout(() => setCaption("Ta-da! Your home is ready."), steps.length * 520),
+      window.setTimeout(() => setCaption(null), REVEAL_MS),
+    );
+  }, [dispatch, reduced]);
+  const onPreview = useCallback((project: Project | null) => setPreview(project), []);
+  /**
+   * A first-run starting home becomes the beginning of history, so Undo never
+   * swaps it for the invisible default. Returning users can undo back.
+   */
+  const adopt = (project: Project, label: string) => {
+    if (!editor.hasSavedProject && !editor.canUndo) editor.startFresh(project);
+    else editor.commit(project, label, { select: null });
+  };
+  const [photoRequest, setPhotoRequest] = useState<{ id: number } | null>(null);
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [flash, setFlash] = useState(0);
+  const [walkStatus, setWalkStatus] = useState("");
+  const [walkFloorId, setWalkFloorId] = useState<string | undefined>();
+  const onWalkStatus = useCallback(
+    ({ floorId, roomId }: { floorId: string; roomId: string | null }) => {
+      const floor = editor.project.floors.find((f) => f.id === floorId);
+      const room = floor?.rooms.find((r) => r.id === roomId);
+      const floorName = editor.project.floors.length > 1 && floor ? ` · ${floor.name}` : "";
+      setWalkFloorId(floorId);
+      setWalkStatus(room ? `${room.name}${floorName}` : `Hallway${floorName}`);
+    },
+    [editor.project],
+  );
+  const takePhoto = useCallback(() => {
+    setPhotoRequest((r) => ({ id: (r?.id ?? 0) + 1 }));
+    if (!reduced) setFlash((n) => n + 1);
+  }, [reduced]);
+  const explore = state.mode === "explore";
+  const chromeHidden = state.chromeHidden || screen !== "workspace";
+  const layerOpen =
+    screen === "gallery" ||
+    (screen === "workspace" &&
+      (!!state.selection ||
+        !!state.panel ||
+        state.lens ||
+        state.viewOptions ||
+        !!state.overlay ||
+        state.tool !== "select" ||
+        state.chromeHidden ||
+        explore));
+  useBackButton(layerOpen, () => {
+    if (screen === "gallery") setScreen("title");
+    else if (state.overlay) dispatch({ type: "overlay", overlay: null });
+    else if (explore && state.explore !== "walk")
+      dispatch({ type: "set-mode", mode: state.lastEditMode });
+    else dispatch({ type: "escape" });
+  });
+  const inspector = (
+    <Inspector
+      desktop={desktop}
+      onTrayDrag={setTrayDrag}
+      onTrayDrop={(pointer) => setTrayDrop({ ...pointer, key: Date.now() })}
+    />
+  );
+  // Build mode has spatial actions; other modes keep everything in the panel.
+  const showDock = !!selected && state.mode === "build";
+  return (
+    <div
+      ref={setRoot}
+      className={`dh-app ${desktop ? "is-desktop" : "is-compact"}`}
+      data-mode={state.mode}
+      data-chrome-hidden={chromeHidden || undefined}
+      data-lens={state.lens || noWebGL ? "open" : "closed"}
+      data-selection={selected?.target.kind ?? undefined}
+      data-dock={showDock || undefined}
+      data-tool={state.tool}
+    >
+      <SceneHost
+        insets={insets}
+        onWebGLUnavailable={onWebGL}
+        preview={screen === "gallery" ? preview : null}
+        showcase={screen !== "workspace"}
+        photoRequest={photoRequest}
+        onPhoto={setPhoto}
+        onWalkStatus={onWalkStatus}
+      />
+      {flash > 0 && <div key={flash} className="dh-photo-flash" aria-hidden />}
+      {caption && (
+        <div
+          key={caption}
+          className={`dh-reveal ${caption.startsWith("Ta-da") ? "is-done" : ""}`}
+          role="status"
+          aria-live="polite"
+        >
+          {caption.startsWith("Ta-da") && <Icon.sparkle size={20} aria-hidden />}
+          {caption}
+        </div>
+      )}
+      {explore && screen === "workspace" && !state.chromeHidden && (
+        <ExploreHud
+          onPhoto={takePhoto}
+          walkAvailable
+          walkStatus={state.explore === "walk" ? walkStatus : undefined}
+          walkFloorId={walkFloorId}
+        />
+      )}
+      {photo && (
+        <PhotoDialog blob={photo} name={editor.project.name} onClose={() => setPhoto(null)} />
+      )}
+      <PlanLens
+        desktop={desktop}
+        primary={noWebGL}
+        trayDrag={trayDrag}
+        trayDrop={trayDrop}
+        onTrayDropHandled={() => setTrayDrop(null)}
+      />
+      {screen === "title" && (
+        <TitleScreen
+          onContinue={enterWorkspace}
+          onNew={() => setScreen("gallery")}
+          onSample={() => {
+            const sample = createStarter(
+              { widthCm: 914, depthCm: 1524, road: "south", marginCm: 60, bedrooms: 2, floors: 1 },
+              "family",
+            );
+            if (sample.ok) adopt(sample.project, "Try the sample home");
+            enterWorkspace();
+            constructionReveal();
+            startTourIfNew();
+          }}
+          onOpen={() => fileInput.current?.click()}
+        />
+      )}
+      {screen === "gallery" && (
+        <TemplateGallery
+          onBack={() => setScreen("title")}
+          onPreview={onPreview}
+          onBuild={(project, template) => {
+            adopt(project, `Start a ${template.name.toLowerCase()}`);
+            dispatch({ type: "choose-floor", floor: "all" });
+            enterWorkspace();
+            constructionReveal();
+            if (editor.prefs.tourSeen)
+              dispatch({
+                type: "notify",
+                text: `Ta-da! Your ${template.name.toLowerCase()} is ready. Tap any room to make it yours.`,
+                tone: "success",
+              });
+            // The tour waits for the "Ta-da!" so it never covers the reveal.
+            if (reduced) startTourIfNew();
+            else reveal.current.push(window.setTimeout(startTourIfNew, REVEAL_MS));
+          }}
+          onCustom={() => {
+            enterWorkspace();
+            dispatch({ type: "overlay", overlay: "start" });
+          }}
+        />
+      )}
+      {tour && screen === "workspace" && (
+        <CoachMarks
+          onDone={() => {
+            setTour(false);
+            editor.setPrefs({ tourSeen: true });
+          }}
+        />
+      )}
+      {screen !== "workspace" || explore ? null : chromeHidden ? (
+        <IconButton
+          icon={Icon.showInside}
+          className="dh-show-chrome"
+          label="Show controls"
+          onClick={() => dispatch({ type: "chrome", hidden: false })}
+        />
+      ) : (
+        <>
+          <TopBar
+            desktop={desktop}
+            onHome={() => {
+              saveSession({ titleDismissed: false });
+              setScreen("title");
+            }}
+          />
+          {desktop && <ToolPalette rail />}
+          {desktop && inspector}
+          <ChecklistPill />
+          {!explore && <FloorSwitcher />}
+          <CameraHud />
+          {!explore && (
+            <IconButton
+              icon={Icon.hideControls}
+              className="dh-hide-chrome"
+              label="Hide controls"
+              onClick={() => dispatch({ type: "chrome", hidden: true })}
+            />
+          )}
+          {desktop ? (
+            <>
+              <ModeHint />
+              <div className="dh-bottom is-desktop" data-chrome="bottom">
+                {showDock && <ActionDock />}
+              </div>
+            </>
+          ) : (
+            <div className="dh-bottom" data-inset="bottom" data-chrome="bottom">
+              {state.tool === "select" && inspector}
+              <ModeHint />
+              {showDock ? <ActionDock /> : <ToolPalette rail={false} />}
+              {!showDock && <ModeBar placement="bottom" />}
+            </div>
+          )}
+        </>
+      )}
+      {state.viewOptions && !chromeHidden && <ViewOptions />}
+      <Notifications />
+      <SelectionAnnouncer />
+      <ConfirmDialog />
+      <DialogHost
+        fileInput={fileInput}
+        onReplayTour={() => setTour(true)}
+        onStartNew={() => setScreen("gallery")}
+      />
+      <ProjectFileInput
+        inputRef={fileInput}
+        onOpened={() => {
+          if (screen !== "workspace") enterWorkspace();
+        }}
+      />
+    </div>
+  );
+}

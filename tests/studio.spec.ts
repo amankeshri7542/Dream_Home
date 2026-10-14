@@ -1,33 +1,25 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createPreset } from "../src/domain/model";
 import type { Project } from "../src/domain/types";
-const KEY = "dream-home.project.v2";
+import {
+  KEY,
+  closeDetails,
+  controls,
+  dock,
+  openPlan,
+  seed as seedProject,
+  showDetails,
+} from "./support/dreamHome";
 async function seed(page: Page, project = createPreset("compact")) {
-  await page.addInitScript(
-    ({ project, key }) => {
-      if (!localStorage.getItem(key))
-        localStorage.setItem(key, JSON.stringify(project));
-      localStorage.setItem(
-        "dream-home.preferences.v1",
-        JSON.stringify({ unit: "m" }),
-      );
-    },
-    { project, key: KEY },
-  );
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: project.name, exact: true }),
-  ).toBeVisible();
+  await seedProject(page, project, "m");
   return project;
 }
 const saved = (page: Page): Promise<Project> =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), KEY);
 async function inspectFirst(page: Page) {
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
+  await openPlan(page);
   await page.locator(".plan-room").first().locator("rect").first().click();
-  await expect(
-    page.getByRole("button", { name: "Set aside", exact: true }),
-  ).toBeVisible();
+  await expect(dock(page, "Set aside")).toBeVisible();
 }
 const trayButton = (page: Page) =>
   page.getByRole("toolbar").getByRole("button", { name: /Room tray/ });
@@ -43,26 +35,32 @@ async function planPoint(page: Page, x: number, z: number) {
   );
 }
 
-test("mobile hero has ample canvas, optional labels, furnishings and focus controls", async ({
+test("mobile hero keeps a full-bleed canvas with optional labels, furnishings and hidden controls", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await seed(page);
-  const canvas = await page.locator(".model-canvas").boundingBox();
-  expect(canvas!.height).toBeGreaterThan(450);
+  const canvas = (await page.locator(".model-canvas").boundingBox())!;
+  expect(canvas.height).toBeGreaterThan(800);
+  await controls(page, "View").click();
   await page.getByRole("button", { name: "Top view of home" }).click();
-  await page.getByRole("button", { name: "Focus on the model" }).click();
-  expect(
-    (await page.locator(".model-canvas").boundingBox())!.height,
-  ).toBeGreaterThan(canvas!.height + 90);
-  await page.getByRole("button", { name: "Exit focus mode" }).click();
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
-  await expect(page.locator(".room-label")).toHaveCount(0);
-  expect(await page.locator("[data-room-details]").count()).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "Focus on the model" }).click();
-  await expect(page.locator(".home-app")).toHaveClass(/focus-mode/);
+  await closeDetails(page);
+  await page.getByRole("button", { name: "Hide controls" }).click();
+  await expect(page.locator(".dh-app")).toHaveAttribute("data-chrome-hidden", "true");
+  await expect(page.getByRole("toolbar", { name: "Building tools" })).toHaveCount(0);
+  expect(await page.locator(".model-canvas").boundingBox()).toEqual(canvas);
   await page.keyboard.press("Escape");
-  await expect(page.locator(".home-app")).not.toHaveClass(/focus-mode/);
+  await expect(page.locator(".dh-app")).not.toHaveAttribute("data-chrome-hidden", "true");
+  await openPlan(page);
+  expect(await page.locator("[data-room-details]").count()).toBeGreaterThan(0);
+  const labels = await page.locator(".plan-room-caption, .room-label").count();
+  await controls(page, "View").click();
+  await page.getByRole("switch", { name: "Room names", exact: true }).click();
+  await closeDetails(page);
+  await expect
+    .poll(() => page.locator(".plan-room-caption, .room-label").count())
+    .not.toBe(labels);
+  expect(await page.locator(".model-canvas").boundingBox()).toEqual(canvas);
 });
 
 test("room appearance, fixed corner resizing and tray survive reload and restore with undo", async ({
@@ -71,6 +69,7 @@ test("room appearance, fixed corner resizing and tray survive reload and restore
   const project = await seed(page);
   const original = project.floors[0].rooms[0];
   await inspectFirst(page);
+  await showDetails(page);
   await page.getByText("Room appearance", { exact: true }).click();
   await page
     .getByLabel("Room floor finish", { exact: true })
@@ -88,7 +87,7 @@ test("room appearance, fixed corner resizing and tray survive reload and restore
   await expect
     .poll(async () => (await saved(page)).floors[0].rooms[0].bounds.x)
     .toBe(original.bounds.x + 20);
-  await page.getByRole("button", { name: "Set aside", exact: true }).click();
+  await dock(page, "Set aside").click();
   await expect(
     page.getByRole("region", { name: "Room tray", exact: true }),
   ).toBeVisible();
@@ -102,7 +101,7 @@ test("room appearance, fixed corner resizing and tray survive reload and restore
   await trayButton(page).click();
   await page
     .getByRole("button", {
-      name: `Find space for ${original.name}`,
+      name: `Find a spot for ${original.name}`,
       exact: true,
     })
     .click();
@@ -130,10 +129,10 @@ test("mobile tap placement rejects occupied space then restores the piece in its
   const project = await seed(page);
   const original = project.floors[0].rooms[0];
   await inspectFirst(page);
-  await page.getByRole("button", { name: "Set aside", exact: true }).click();
+  await dock(page, "Set aside").click();
   await page
     .getByRole("button", {
-      name: `Choose position for ${original.name}`,
+      name: `Pick a spot for ${original.name}`,
       exact: true,
     })
     .click();
@@ -166,9 +165,10 @@ test("room drag to tray and drag back commit only completed gestures", async ({
   const project = await seed(page);
   const room = project.floors[0].rooms[0];
   await page
-    .getByRole("toolbar")
+    .getByRole("toolbar", { name: "Building tools" })
     .getByRole("button", { name: "Move", exact: true })
     .click();
+  await openPlan(page);
   const start = await planPoint(
     page,
     room.bounds.x + room.bounds.w / 2,
@@ -211,18 +211,20 @@ test("room drag to tray and drag back commit only completed gestures", async ({
 test("3D remains reachable after placing a selected room", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   const project = await seed(page);
+  const canvas = await page.locator("canvas").elementHandle();
   await inspectFirst(page);
-  await page.getByRole("button", { name: "Set aside", exact: true }).click();
+  await dock(page, "Set aside").click();
   await page
     .getByRole("button", {
-      name: `Find space for ${project.floors[0].rooms[0].name}`,
+      name: `Find a spot for ${project.floors[0].rooms[0].name}`,
       exact: true,
     })
     .click();
-  await page
-    .getByRole("button", { name: "See home in 3D", exact: true })
-    .click();
-  await expect(page.locator(".model-canvas")).toHaveClass(/mode-3d/);
+  await page.getByRole("button", { name: "Close floor plan", exact: true }).click();
+  // The very same canvas element survived every panel and tool change.
+  expect(await canvas!.evaluate((el) => el.isConnected)).toBe(true);
+  await closeDetails(page);
+  await controls(page, "View").click();
   await expect(
     page.getByRole("button", { name: "Top view of home" }),
   ).toBeVisible();

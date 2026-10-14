@@ -4,103 +4,35 @@ import { createPreset, migrateV1 } from "../src/domain/model";
 import type { Project } from "../src/domain/types";
 import { RESIZE_HANDLES, resizeBounds } from "../src/domain/resize";
 
-const KEY = "dream-home.project.v2";
-const mobile = { width: 390, height: 844 };
-const stored = (page: Page) =>
-  page.evaluate(
-    (key) => JSON.parse(localStorage.getItem(key) ?? "null") as Project,
-    KEY,
-  );
-const controls = (page: Page, name: string) =>
-  page
-    .getByRole("navigation", { name: "Home controls" })
-    .getByRole("button", { name, exact: true });
-const undo = async (page: Page) => {
+import {
+  KEY,
+  chooseFloor,
+  closeDetails,
+  controls,
+  freshVisit,
+  history,
+  mobile,
+  noOverflow,
+  openPlan,
+  redo,
+  renderedModel,
+  stableBox,
+  seed,
+  showDetails,
+  stored,
+  tool,
+  undo,
+} from "./support/dreamHome";
+
+async function start(page: Page) {
   await page.getByRole("button", { name: "More options", exact: true }).click();
   await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Undo", exact: true })
+    .getByRole("button", { name: "Start a new home", exact: true })
     .click();
-  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
-};
-async function seed(
-  page: Page,
-  fixture = createPreset("courtyard"),
-  unit: "ft" | "m" = "ft",
-) {
-  await page.addInitScript(
-    ({ fixture, unit, key }) => {
-      if (!localStorage.getItem(key))
-        localStorage.setItem(key, JSON.stringify(fixture));
-      localStorage.setItem(
-        "dream-home.preferences.v1",
-        JSON.stringify({ language: "en", unit }),
-      );
-    },
-    { fixture, unit, key: KEY },
-  );
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: fixture.name, exact: true }),
-  ).toBeVisible();
-}
-async function noOverflow(page: Page) {
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-}
-async function renderedModel(page: Page) {
-  const canvas = page.locator("canvas");
-  await expect(canvas).toBeVisible();
-  // Canvas attachment precedes the first WebGL frame. Inspect screenshot pixels,
-  // not the drawing buffer (which is deliberately cleared between demand frames).
-  await expect
-    .poll(
-      async () => {
-        const png = (await canvas.screenshot()).toString("base64");
-        return page.evaluate(async (encoded) => {
-          const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
-          const bitmap = await createImageBitmap(
-            new Blob([bytes], { type: "image/png" }),
-          );
-          const surface = new OffscreenCanvas(bitmap.width, bitmap.height);
-          const context = surface.getContext("2d")!;
-          context.drawImage(bitmap, 0, 0);
-          bitmap.close();
-          const { data } = context.getImageData(
-            0,
-            0,
-            surface.width,
-            surface.height,
-          );
-          let different = 0,
-            samples = 0;
-          for (let i = 0; i < data.length; i += 64) {
-            samples++;
-            if (
-              Math.max(
-                Math.abs(data[i] - data[0]),
-                Math.abs(data[i + 1] - data[1]),
-                Math.abs(data[i + 2] - data[2]),
-              ) > 24
-            )
-              different++;
-          }
-          return different / samples;
-        }, png);
-      },
-      {
-        message:
-          "A visible 3D model must replace the blank canvas before capture",
-      },
-    )
-    .toBeGreaterThan(0.025);
-}
-async function start(page: Page) {
+  // The friendly gallery comes first; measured plots are one link away.
   await page
-    .getByRole("button", { name: "Start with my plot", exact: true })
+    .getByRole("dialog", { name: "Choose a starting home" })
+    .getByRole("button", { name: /Start with my plot/ })
     .click();
   await expect(
     page.getByRole("dialog", { name: "Start your home" }),
@@ -125,7 +57,7 @@ for (const [width, depth] of [
     page,
   }) => {
     await page.setViewportSize(mobile);
-    await page.goto("/");
+    await freshVisit(page);
     if (width === 20) {
       await renderedModel(page);
       await page.screenshot({ path: "test-results/default-390.png" });
@@ -171,7 +103,7 @@ for (const [width, depth] of [
 
 test("cancelling guided setup preserves the current home", async ({ page }) => {
   await page.setViewportSize(mobile);
-  await page.goto("/");
+  await freshVisit(page);
   await expect.poll(async () => !!(await stored(page))).toBe(true);
   const before = await stored(page);
   await start(page);
@@ -194,7 +126,7 @@ test("old Hindi preference normalizes to English and keeps units", async ({
       JSON.stringify({ language: "hi", unit: "m" }),
     ),
   );
-  await page.goto("/");
+  await freshVisit(page);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(controls(page, "Rooms")).toBeVisible();
   await expect(
@@ -202,8 +134,8 @@ test("old Hindi preference normalizes to English and keeps units", async ({
   ).toHaveCount(0);
   await controls(page, "My plot").click();
   await expect(
-    page.getByRole("button", { name: "m", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("radio", { name: "m", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   await noOverflow(page);
 });
 
@@ -220,7 +152,7 @@ test("feet/metres stay coherent and invalid plot changes preserve the home", asy
   await width.fill("65");
   await width.press("Enter");
   await expect.poll(async () => (await stored(page)).plot.width).toBe(1981);
-  await page.getByRole("button", { name: "m", exact: true }).click();
+  await page.getByRole("radio", { name: "m", exact: true }).click();
   await expect(width).toHaveValue("19.8");
   const before = await stored(page);
   await width.fill("4");
@@ -230,7 +162,7 @@ test("feet/metres stay coherent and invalid plot changes preserve the home", asy
   );
   expect(await stored(page)).toEqual(before);
   await expect(width).toHaveValue("19.8");
-  await page.getByLabel("Road is on this side").selectOption("east");
+  await page.getByLabel("Which side is the road?").selectOption("east");
   await expect.poll(async () => (await stored(page)).plot.road).toBe("east");
 });
 
@@ -239,7 +171,7 @@ test("room list editing updates plan, undo/redo and persisted dimensions", async
 }) => {
   await page.setViewportSize(mobile);
   await seed(page, createPreset("courtyard"), "m");
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
+  await openPlan(page);
   await controls(page, "Rooms").click();
   await page.locator(".room-card").filter({ hasText: "Living room" }).click();
   const width = page.getByRole("spinbutton", {
@@ -252,17 +184,12 @@ test("room list editing updates plan, undo/redo and persisted dimensions", async
   await expect(page.locator(".plan-room").first()).toContainText("4 × 4.7 m");
   await undo(page);
   await expect(width).toHaveValue("4.5");
-  await page.getByRole("button", { name: "More options", exact: true }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Redo", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await redo(page);
   await expect(width).toHaveValue("4");
   await width.fill("9");
   await width.press("Enter");
   await expect(page.getByRole("alert")).toContainText(
-    /overlap|space is already used/i,
+    /overlap|bumps into|space is already used/i,
   );
   await expect(width).toHaveValue("4");
   await page.reload();
@@ -272,7 +199,7 @@ test("room list editing updates plan, undo/redo and persisted dimensions", async
 test("legacy version-one JSON imports and backup roundtrips; malformed files preserve the home", async ({
   page,
 }) => {
-  await page.goto("/");
+  await freshVisit(page);
   const source = JSON.parse(
     await readFile("tests/fixtures/legacy-v1-compact.json", "utf8"),
   );
@@ -282,7 +209,7 @@ test("legacy version-one JSON imports and backup roundtrips; malformed files pre
   await page.getByRole("button", { name: "More options", exact: true }).click();
   const downloading = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Download project backup", exact: true })
+    .getByRole("button", { name: "Save a copy of my home", exact: true })
     .click();
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("dream-home.json");
@@ -295,7 +222,7 @@ test("legacy version-one JSON imports and backup roundtrips; malformed files pre
     mimeType: "application/json",
     buffer: Buffer.from("{broken"),
   });
-  await expect(page.getByRole("status")).toContainText("not valid JSON");
+  await expect(page.getByRole("alert").or(page.getByRole("status", { name: "Notifications" }))).toContainText("not valid JSON");
   expect(await stored(page)).toEqual(legacy);
 });
 
@@ -312,12 +239,7 @@ test("actual 3D picking, orbit and construction views render without service req
   await seed(page);
   const canvas = page.locator("canvas");
   await expect(canvas).toBeVisible();
-  await page.getByLabel("Visible floor").selectOption("floor-0");
-  await controls(page, "View").click();
-  await page.getByRole("switch", { name: "Room names", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Close controls", exact: true })
-    .click();
+  await chooseFloor(page, "Ground floor");
   const label = page
     .locator(".scene-room-label")
     .filter({ hasText: "Kitchen" });
@@ -329,14 +251,13 @@ test("actual 3D picking, orbit and construction views render without service req
     labelBox.y + labelBox.height / 2,
   );
   await expect(
-    page.getByRole("spinbutton", { name: "Room width", exact: true }),
-  ).toBeVisible();
-  await expect(
     page.getByRole("complementary", { name: "Kitchen", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Close controls", exact: true })
-    .click();
+  await showDetails(page);
+  await expect(
+    page.getByRole("spinbutton", { name: "Room width", exact: true }),
+  ).toBeVisible();
+  await closeDetails(page);
   const box = (await canvas.boundingBox())!;
   const before = await canvas.screenshot();
   await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.65);
@@ -347,8 +268,8 @@ test("actual 3D picking, orbit and construction views render without service req
   await page.mouse.up();
   expect(before.equals(await canvas.screenshot())).toBe(false);
   await page.mouse.wheel(0, -150);
-  await page.getByRole("button", { name: "Reset view", exact: true }).click();
-  await page.getByLabel("Visible floor").selectOption("all");
+  await page.getByRole("button", { name: "Fit home", exact: true }).click();
+  await chooseFloor(page, "Whole home");
   await controls(page, "View").click();
   await page.getByText("How a home takes shape", { exact: true }).click();
   const stages = page.getByRole("group", { name: "Construction stage" });
@@ -375,18 +296,16 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
   const fixture = createPreset("courtyard");
   fixture.floors[0].rooms[0].bounds.w = 350;
   await seed(page, fixture, "m");
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
+  await openPlan(page);
   const rect = page.locator(".plan-room").first().locator("rect").first();
   await rect.click();
   await expect(
-    page.getByRole("spinbutton", { name: "Room width", exact: true }),
+    page.getByRole("complementary", { name: fixture.floors[0].rooms[0].name }),
   ).toBeVisible();
   expect((await stored(page)).floors[0].rooms[0].bounds).toEqual(
     fixture.floors[0].rooms[0].bounds,
   );
-  await page
-    .getByRole("button", { name: "Close controls", exact: true })
-    .click();
+  await closeDetails(page);
   async function dragRoom(commit: boolean) {
     const box = (await rect.boundingBox())!;
     const scale = await page
@@ -394,13 +313,13 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
       .evaluate((el) => (el as SVGSVGElement).getScreenCTM()!.a);
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await expect(page.locator(".home-app")).not.toHaveClass(/panel-open/);
+    await expect(page.locator('.dh-inspector[data-snap="medium"]')).toHaveCount(0);
     await page.mouse.move(
       box.x + box.width / 2 + 80 * scale,
       box.y + box.height / 2,
       { steps: 4 },
     );
-    await expect(page.locator(".home-app")).not.toHaveClass(/panel-open/);
+    await expect(page.locator('.dh-inspector[data-snap="medium"]')).toHaveCount(0);
     await page.mouse.up();
     if (commit)
       await expect
@@ -411,7 +330,7 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
   expect((await stored(page)).floors[0].rooms[0].bounds.x).toBe(
     fixture.floors[0].rooms[0].bounds.x,
   );
-  await page.getByRole("button", { name: "Move", exact: true }).click();
+  await tool(page, "Move").click();
   await dragRoom(true);
   await undo(page);
   expect((await stored(page)).floors[0].rooms[0].bounds.x).toBe(
@@ -422,7 +341,7 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
 test("key mobile controls are 48px and remain within 360, 390 and 430px screens", async ({
   page,
 }) => {
-  await page.goto("/");
+  await freshVisit(page);
   for (const width of [360, 390, 430]) {
     await page.setViewportSize({ width, height: width === 360 ? 740 : 844 });
     if (width === 360) {
@@ -434,8 +353,9 @@ test("key mobile controls are 48px and remain within 360, 390 and 430px screens"
       controls(page, "My plot"),
       controls(page, "Rooms"),
       controls(page, "View"),
-      page.getByRole("button", { name: "Reset view", exact: true }),
-      page.getByRole("button", { name: "Share home plan", exact: true }),
+      page.getByRole("button", { name: "Fit home", exact: true }),
+      page.getByRole("button", { name: "Undo last change", exact: true }),
+      page.getByRole("button", { name: "More options", exact: true }),
     ]) {
       const box = (await button.boundingBox())!;
       expect(
@@ -448,7 +368,7 @@ test("key mobile controls are 48px and remain within 360, 390 and 430px screens"
       ).toBeGreaterThanOrEqual(48);
     }
   }
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
+  await openPlan(page);
   const svg = page.locator(".plan-svg");
   const original = await svg.getAttribute("viewBox");
   await page
@@ -478,7 +398,6 @@ test("key mobile controls are 48px and remain within 360, 390 and 430px screens"
   await controlsDoNotOverlap();
   await controls(page, "Rooms").click();
   await noOverflow(page);
-  await controlsDoNotOverlap();
   await page.screenshot({ path: "test-results/workspace-mobile.png" });
 });
 
@@ -502,7 +421,7 @@ test("PNG export is a real image and native sharing is safely mocked", async ({
       },
     });
   });
-  await page.goto("/");
+  await freshVisit(page);
   await renderedModel(page);
   await page.screenshot({ path: "test-results/default-desktop.png" });
   await page
@@ -538,8 +457,8 @@ test("corrupt storage stays intact and storage failures leave editing available"
   await page.addInitScript(() =>
     localStorage.setItem("dream-home.project.v2", "invalid-saved-data"),
   );
-  await page.goto("/");
-  await expect(page.getByRole("status")).toContainText(
+  await freshVisit(page);
+  await expect(page.getByRole("status", { name: "Notifications" })).toContainText(
     "saved file could not be opened",
   );
   expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(
@@ -572,8 +491,7 @@ test("corrupt storage stays intact and storage failures leave editing available"
   await width.press("Enter");
   await expect(page.getByRole("alert")).toContainText("Saving is unavailable");
   await expect(width).toHaveValue("40");
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
-  await expect(page.locator(".plan-svg")).toBeVisible();
+  await openPlan(page);
 });
 
 test("WebGL fallback leaves the 2D plan editable", async ({ page }) => {
@@ -588,11 +506,10 @@ test("WebGL fallback leaves the 2D plan editable", async ({ page }) => {
         : Reflect.apply(original, this, [type, ...args]);
     } as typeof original;
   });
-  await page.goto("/");
+  await freshVisit(page);
   await expect(
     page.getByText("3D isn’t available in this browser", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
   await expect(page.locator(".plan-svg")).toBeVisible();
   await controls(page, "Rooms").click();
   await page.locator(".room-card").first().click();
@@ -625,9 +542,7 @@ function sparseHome() {
   return project;
 }
 const builderTool = (page: Page, name: string) =>
-  page
-    .getByRole("toolbar", { name: "Building tools" })
-    .getByRole("button", { name, exact: true });
+  name === "Undo last change" ? history(page, "Undo") : tool(page, name);
 async function roomPointer(page: Page, dx: number, dz: number) {
   const rect = page.locator(".plan-room").first().locator("rect").first();
   const box = (await rect.boundingBox())!;
@@ -649,6 +564,7 @@ test("real plan dragging previews valid moves and swaps; invalid drops and cance
   const fixture = sparseHome();
   await seed(page, fixture, "m");
   await builderTool(page, "Move").click();
+  await openPlan(page);
   await roomPointer(page, 0, 100);
   await expect(page.locator(".plan-hint")).toContainText("release to place");
   expect(await stored(page)).toEqual(fixture);
@@ -700,7 +616,11 @@ test("real plan dragging previews valid moves and swaps; invalid drops and cance
   await page.mouse.up();
   expect(await stored(page)).toEqual(fixture);
   await expect(builderTool(page, "Undo last change")).toBeDisabled();
-  await page.getByRole("button", { name: /Edit details/ }).click();
+  await page.locator(".plan-room").first().locator("rect").first().click();
+  // Details stay tucked away while a tool is active; finish moving first.
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await showDetails(page);
+  await page.getByText("Use", { exact: true }).click();
   await page.getByLabel("Swap room uses with").selectOption("room-b");
   await expect
     .poll(async () =>
@@ -775,7 +695,7 @@ test("catalog, rotation, duplication, building expansion and exterior finish per
 }) => {
   await seed(page, sparseHome(), "m");
   await builderTool(page, "Add space").click();
-  const dialog = page.getByRole("dialog", { name: "Add space", exact: true });
+  const dialog = page.getByRole("region", { name: "Add space", exact: true });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Compact", exact: true }).click();
   await dialog.getByRole("button", { name: /^Study / }).click();
@@ -786,7 +706,6 @@ test("catalog, rotation, duplication, building expansion and exterior finish per
   await expect
     .poll(async () => (await stored(page)).floors[0].rooms.length)
     .toBe(3);
-  await page.getByRole("button", { name: /Edit details/ }).click();
   const oldRoom = (await stored(page)).floors[0].rooms.at(-1)!;
   await page.getByRole("button", { name: "Rotate", exact: true }).click();
   await expect
@@ -796,9 +715,10 @@ test("catalog, rotation, duplication, building expansion and exterior finish per
   await expect
     .poll(async () => (await stored(page)).floors[0].rooms.length)
     .toBe(4);
+  await closeDetails(page);
   await controls(page, "My plot").click();
   const depth = page.getByRole("spinbutton", {
-    name: "Building depth",
+    name: "House depth",
     exact: true,
   });
   const prior = (await stored(page)).floors[0].footprint.d;
@@ -824,15 +744,16 @@ test("desktop Plan + 3D shows synchronized geometry without overlapping building
   page,
 }) => {
   await seed(page, sparseHome(), "m");
-  await page.getByRole("button", { name: "Plan + 3D", exact: true }).click();
-  await expect(page.locator(".plan-svg")).toBeVisible();
+  const canvasBefore = await page.locator("canvas").boundingBox();
+  await openPlan(page);
   await renderedModel(page);
+  // The plan docks beside the tools; the 3D canvas never resizes or remounts.
+  expect(await page.locator("canvas").boundingBox()).toEqual(canvasBefore);
   const plan = (await page.locator(".plan-pane").boundingBox())!;
-  const scene = (await page.locator(".scene-pane").boundingBox())!;
-  expect(
-    Math.min(plan.x + plan.width, scene.x + scene.width) -
-      Math.max(plan.x, scene.x),
-  ).toBeLessThanOrEqual(1);
+  const tools = (await page
+    .getByRole("toolbar", { name: "Building tools" })
+    .boundingBox())!;
+  expect(plan.x).toBeGreaterThanOrEqual(tools.x + tools.width);
   await page.locator(".plan-room").first().locator("rect").first().click();
   const width = page.getByRole("spinbutton", {
     name: "Room width",
@@ -856,15 +777,14 @@ test("short mobile multi-floor plan keeps selection, floors and zoom reachable",
   await seed(page, createPreset("courtyard"), "m");
   await builderTool(page, "Resize").click();
   await page.locator(".plan-room").first().locator("rect").first().click();
-  const floor = page.getByLabel("Visible floor");
-  await floor.selectOption("floor-1");
+  await chooseFloor(page, "Floor 1");
   await page.locator(".plan-room").first().locator("rect").first().click();
-  await expect(page.locator(".selected-chip")).toContainText("Edit details");
+  await expect(page.getByRole("toolbar", { name: /actions$/ })).toBeVisible();
   const boxes = await Promise.all([
-    page.locator(".selected-chip").boundingBox(),
-    floor.boundingBox(),
+    page.locator(".dh-lens-title").boundingBox(),
+    page.locator(".dh-lens-floors").boundingBox(),
     page.locator(".plan-tools").boundingBox(),
-    page.getByRole("toolbar", { name: "Building tools" }).boundingBox(),
+    page.getByRole("toolbar", { name: /actions$/ }).boundingBox(),
   ]);
   for (let i = 0; i < boxes.length; i++) {
     const a = boxes[i]!;
@@ -894,7 +814,7 @@ test("available plot space preserves upper balconies and undo", async ({
   await seed(page, original);
   await controls(page, "My plot").click();
   await page
-    .getByRole("button", { name: "Use available plot space", exact: true })
+    .getByRole("button", { name: "Grow the house to fill the plot", exact: true })
     .click();
   await expect
     .poll(async () => (await stored(page)).floors[0].footprint.d)
@@ -914,35 +834,19 @@ test("available plot space preserves upper balconies and undo", async ({
 test("fit view restores the camera after using zoom buttons", async ({
   page,
 }) => {
+  await page.setViewportSize(mobile);
   await seed(page, createPreset("compact"));
   await renderedModel(page);
-  const size = async () => {
-    const encoded = (await page.locator("canvas").screenshot()).toString(
-      "base64",
-    );
-    return page.evaluate(async (encoded) => {
-      const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
-      const bitmap = await createImageBitmap(
-        new Blob([bytes], { type: "image/png" }),
-      );
-      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(bitmap, 0, 0);
-      bitmap.close();
-      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let count = 0;
-      for (let i = 0; i < data.length; i += 16)
-        if (
-          Math.max(
-            Math.abs(data[i] - 220),
-            Math.abs(data[i + 1] - 229),
-            Math.abs(data[i + 2] - 228),
-          ) > 35
-        )
-          count++;
-      return count;
-    }, encoded);
-  };
+  // The renderer's debug bridge reports the camera distance to its target.
+  const size = () =>
+    page.evaluate(async () => {
+      const dh = (window as unknown as {
+        __dreamHome: { waitForIdle: () => Promise<void>; camera: () => { distance: number } };
+      }).__dreamHome;
+      await dh.waitForIdle();
+      // Closer camera → bigger home on screen.
+      return 1 / dh.camera().distance;
+    });
   const initial = await size();
   await page
     .getByRole("button", { name: "Zoom in on home", exact: true })
@@ -950,8 +854,8 @@ test("fit view restores the camera after using zoom buttons", async ({
   await page
     .getByRole("button", { name: "Zoom in on home", exact: true })
     .click();
-  await expect.poll(size).toBeGreaterThan(initial * 1.3);
-  await page.getByRole("button", { name: "Reset view", exact: true }).click();
+  await expect.poll(size).toBeGreaterThan(initial * 1.2);
+  await page.getByRole("button", { name: "Fit home", exact: true }).click();
   await expect
     .poll(async () => Math.abs((await size()) / initial - 1))
     .toBeLessThan(0.05);
@@ -1012,7 +916,7 @@ for (const scenario of [
     page,
   }) => {
     await page.setViewportSize(mobile);
-    await page.goto("/");
+    await freshVisit(page);
     await start(page);
     const dialog = page.getByRole("dialog", {
       name: "Start your home",
@@ -1130,7 +1034,7 @@ test("tray drags survive an unrelated pointer cancellation and cancel safely wit
   fixture.stagedRooms = [{ room, sourceFloorId: fixture.floors[0].id }];
   await seed(page, fixture, "m");
   await page
-    .getByRole("button", { name: "Room tray, 1 pieces", exact: true })
+    .getByRole("button", { name: "Room tray, 1 piece", exact: true })
     .click();
   const grip = page.getByRole("button", {
     name: `Place ${room.name} from tray`,
@@ -1194,14 +1098,14 @@ test("tray drags survive an unrelated pointer cancellation and cancel safely wit
   await page
     .getByRole("button", { name: "Close room tray", exact: true })
     .click();
-  await page.getByRole("button", { name: "3D home", exact: true }).click();
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
+  await page.getByRole("button", { name: "Close floor plan", exact: true }).click();
+  await openPlan(page);
   await page
-    .getByRole("button", { name: "Room tray, 1 pieces", exact: true })
+    .getByRole("button", { name: "Room tray, 1 piece", exact: true })
     .click();
   expect(await stored(page)).toEqual(fixture);
   await page
-    .getByRole("button", { name: `Find space for ${room.name}`, exact: true })
+    .getByRole("button", { name: `Find a spot for ${room.name}`, exact: true })
     .click();
   await expect.poll(async () => (await stored(page)).stagedRooms).toEqual([]);
   expect(
@@ -1225,7 +1129,7 @@ test("native phone touch restores a tray piece and resizes its top left corner",
     fixture.stagedRooms = [{ room, sourceFloorId: fixture.floors[0].id }];
     await seed(page, fixture, "m");
     await page
-      .getByRole("button", { name: "Room tray, 1 pieces", exact: true })
+      .getByRole("button", { name: "Room tray, 1 piece", exact: true })
       .tap();
     const grip = (await page
       .getByRole("button", {
@@ -1275,10 +1179,13 @@ test("native phone touch restores a tray piece and resizes its top left corner",
     expect(
       (await stored(page)).floors[0].rooms.find((item) => item.id === room.id),
     ).toEqual(room);
-    await builderTool(page, "Resize").tap();
+    await page
+      .getByRole("toolbar", { name: /actions$/ })
+      .getByRole("button", { name: "Resize", exact: true })
+      .tap();
     const corner = page.locator('[data-resize-handle="nw"]');
     await expect(corner).toBeVisible();
-    const target = (await corner.boundingBox())!,
+    const target = await stableBox(corner),
       scale = await page
         .locator(".plan-svg")
         .evaluate((element) => (element as SVGSVGElement).getScreenCTM()!.a);

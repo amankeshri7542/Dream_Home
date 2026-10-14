@@ -2,17 +2,12 @@ import {
   defaultRoomUnit,
   findRoomPosition,
   getLimits,
-  validateProject,
 } from "./model";
+import { finalizeEdit } from "./edit";
 import { snap } from "./geometry";
+import { rotateLayout } from "./furniture";
 import type { EditResult, Project, Rect, Room } from "./types";
 
-function checked(project: Project): EditResult {
-  const errors = validateProject(project);
-  return errors.length
-    ? { ok: false, error: errors[0] }
-    : { ok: true, project };
-}
 
 export function setAsideRoom(
   project: Project,
@@ -29,7 +24,7 @@ export function setAsideRoom(
       error:
         "Your tray holds 48 rooms. Place a room back before setting another aside.",
     };
-  return checked({
+  return finalizeEdit(project, {
     ...project,
     floors: project.floors.map((floor) =>
       floor.id === floorId
@@ -68,7 +63,7 @@ export function restoreStagedRoom(
         ? room.unitId
         : defaultRoomUnit(floor);
   const insert = (bounds: Rect): EditResult =>
-    checked({
+    finalizeEdit(project, {
       ...project,
       stagedRooms: (project.stagedRooms ?? []).filter(
         (item) => item.room.id !== roomId,
@@ -117,7 +112,7 @@ export function updateStagedRoom(
   if (!project.stagedRooms?.some((item) => item.room.id === roomId))
     return { ok: false, error: "Room not found in the tray." };
   const { width, depth, ...presentation } = patch;
-  return checked({
+  return finalizeEdit(project, {
     ...project,
     stagedRooms: project.stagedRooms.map((item) =>
       item.room.id === roomId
@@ -142,18 +137,31 @@ export function rotateStagedRoom(project: Project, roomId: string): EditResult {
   const room = project.stagedRooms?.find(
     (item) => item.room.id === roomId,
   )?.room;
-  return room
-    ? updateStagedRoom(project, roomId, {
-        width: room.bounds.d,
-        depth: room.bounds.w,
-      })
-    : { ok: false, error: "Room not found in the tray." };
+  if (!room) return { ok: false, error: "Room not found in the tray." };
+  return finalizeEdit(project, {
+    ...project,
+    stagedRooms: project.stagedRooms!.map((item) =>
+      item.room.id === roomId
+        ? {
+            ...item,
+            room: {
+              ...item.room,
+              bounds: { ...room.bounds, w: room.bounds.d, d: room.bounds.w },
+              // Explicit furniture turns with the room.
+              ...(room.furniture
+                ? { furniture: rotateLayout(room, room.furniture) }
+                : {}),
+            },
+          }
+        : item,
+    ),
+  });
 }
 
 export function removeStagedRoom(project: Project, roomId: string): EditResult {
   if (!project.stagedRooms?.some((item) => item.room.id === roomId))
     return { ok: false, error: "Room not found in the tray." };
-  return checked({
+  return finalizeEdit(project, {
     ...project,
     stagedRooms: project.stagedRooms.filter((item) => item.room.id !== roomId),
   });

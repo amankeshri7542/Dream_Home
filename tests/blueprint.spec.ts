@@ -3,6 +3,16 @@ import { readFile } from "node:fs/promises";
 import { createPreset, balconyBounds } from "../src/domain/model";
 import type { Project, Rect } from "../src/domain/types";
 import { createBlueprint } from "../src/domain/blueprints";
+import {
+  chooseFloor,
+  controls,
+  freshVisit,
+  history,
+  openPlan,
+  seed as seedProject,
+  showDetails,
+  stableBox,
+} from "./support/dreamHome";
 
 const KEY = "dream-home.project.v2";
 const LEGACY = "dream-home.project.v1";
@@ -11,28 +21,17 @@ const saved = (page: Page) =>
     (key) => JSON.parse(localStorage.getItem(key) ?? "null") as Project,
     KEY,
   );
-async function seed(page: Page, project: Project) {
-  await page.addInitScript(
-    ({ key, project }) => {
-      if (!localStorage.getItem(key))
-        localStorage.setItem(key, JSON.stringify(project));
-      localStorage.setItem(
-        "dream-home.preferences.v1",
-        JSON.stringify({ unit: "m" }),
-      );
-    },
-    { key: KEY, project },
-  );
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: project.name, exact: true }),
-  ).toBeVisible();
-}
+const seed = (page: Page, project: Project) => seedProject(page, project, "m");
+/** Building tools, or the selection's action dock when a space is selected. */
 const tool = (page: Page, name: string) =>
-  page
-    .getByRole("toolbar", { name: "Building tools" })
-    .getByRole("button", { name, exact: true });
+  name === "Undo last change"
+    ? history(page, "Undo")
+    : page
+        .getByRole("toolbar", { name: /^(Building tools|.+ actions)$/ })
+        .getByRole("button", { name, exact: true })
+        .first();
 async function dragRect(page: Page, from: Rect, dx: number, dz: number) {
+  await stableBox(page.locator(".plan-svg"));
   const coords = await page.locator(".plan-svg").evaluate(
     (element, args) => {
       const matrix = (element as SVGSVGElement).getScreenCTM()!;
@@ -65,7 +64,7 @@ test("v1 browser save migrates to v2 while preserving its original recovery copy
     ({ original, key }) => localStorage.setItem(key, original),
     { original, key: LEGACY },
   );
-  await page.goto("/");
+  await freshVisit(page);
   await expect.poll(async () => (await saved(page))?.schemaVersion).toBe(2);
   expect(await page.evaluate((key) => localStorage.getItem(key), LEGACY)).toBe(
     original,
@@ -93,7 +92,7 @@ test("a corrupt v2 save is preserved instead of silently loading a stale v1 file
     },
     { original, key: KEY, legacy: LEGACY },
   );
-  await page.goto("/");
+  await freshVisit(page);
   await expect(
     page.getByText(/Your saved file could not be opened/),
   ).toBeVisible();
@@ -116,6 +115,8 @@ test("the unequal bedroom and kitchen in the courtyard home exchange uses withou
   expect(bedroom.bounds.w).not.toBe(kitchen.bounds.w);
   await seed(page, project);
   await tool(page, "Move").click();
+  // Phones move in 3D; this test drags in the floor plan.
+  await openPlan(page);
   await dragRect(
     page,
     bedroom.bounds,
@@ -148,7 +149,7 @@ test("the unequal bedroom and kitchen in the courtyard home exchange uses withou
 
 test("an empty current save is retained for recovery", async ({ page }) => {
   await page.addInitScript((key) => localStorage.setItem(key, ""), KEY);
-  await page.goto("/");
+  await freshVisit(page);
   await expect(
     page.getByText(/Your saved file could not be opened/),
   ).toBeVisible();
@@ -164,12 +165,9 @@ test("balcony and courtyard support direct movement, tap controls, undo and relo
     floor.rooms = [];
   });
   await seed(page, project);
-  await page.getByRole("button", { name: "Floor plan", exact: true }).click();
-  await page
-    .getByRole("navigation", { name: "Home controls" })
-    .getByRole("button", { name: "Rooms", exact: true })
-    .click();
-  await page.getByLabel("Editing floor").selectOption(project.floors[1].id);
+  await openPlan(page);
+  await controls(page, "Rooms").click();
+  await chooseFloor(page, "Floor 1");
   await page.getByRole("button", { name: /Balcony 1/ }).click();
   await expect(page.getByLabel("Balcony width", { exact: true })).toBeVisible();
   // The sample has only one metre of side clearance; reduce depth explicitly.
@@ -206,7 +204,8 @@ test("balcony and courtyard support direct movement, tap controls, undo and relo
         )?.bounds.x,
     )
     .toBe(courtyard.bounds.x + 100);
-  await page.locator(".selected-chip").click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await showDetails(page);
   await expect(
     page.getByText(
       /Moving or resizing it updates every affected floor together/,
@@ -256,11 +255,9 @@ test("a room can move into another flat with its size and use preserved", async 
   const source = floor.rooms[0];
   floor.rooms = floor.rooms.filter((room) => room.unitId !== targetId);
   await seed(page, project);
-  await page
-    .getByRole("navigation", { name: "Home controls" })
-    .getByRole("button", { name: "Rooms", exact: true })
-    .click();
+  await controls(page, "Rooms").click();
   await page.locator(".room-card").first().click();
+  await page.getByText("Use", { exact: true }).click();
   await page
     .getByLabel("Move room to group", { exact: true })
     .selectOption(targetId);
@@ -297,6 +294,7 @@ test("native touch can move a courtyard without panning the page", async ({
     });
     await seed(page, project);
     await tool(page, "Move").tap();
+    await page.getByRole("button", { name: "Floor plan", exact: true }).tap();
     const space = project.verticalSpaces.find(
       (item) => item.kind === "courtyard",
     )!;
@@ -352,7 +350,7 @@ test("the open-space catalog adds a courtyard and exposes its resize and remove 
   project.floors[0].rooms = [];
   await seed(page, project);
   await tool(page, "Add space").click();
-  const dialog = page.getByRole("dialog", { name: "Add space", exact: true });
+  const dialog = page.getByRole("region", { name: "Add space", exact: true });
   await dialog
     .getByRole("button", { name: "Balconies & open spaces", exact: true })
     .click();
@@ -371,7 +369,7 @@ test("the open-space catalog adds a courtyard and exposes its resize and remove 
         ).length,
     )
     .toBe(1);
-  await page.locator(".selected-chip").click();
+  await showDetails(page);
   await expect(
     page.getByLabel("Courtyard width", { exact: true }),
   ).toBeVisible();
@@ -390,11 +388,8 @@ test("a back balcony resizes outward from its visible corner", async ({
     floor = project.floors[1];
   floor.balconies[0].edge = "north";
   await seed(page, project);
-  await page
-    .getByRole("navigation", { name: "Home controls" })
-    .getByRole("button", { name: "Rooms", exact: true })
-    .click();
-  await page.getByLabel("Editing floor").selectOption(floor.id);
+  await controls(page, "Rooms").click();
+  await chooseFloor(page, "Floor 1");
   await page.getByRole("button", { name: /Balcony 1/ }).click();
   await page.getByRole("button", { name: "Resize space", exact: true }).click();
   const handle = page.locator(".plan-resize-handle[data-resize-handle=ne]");

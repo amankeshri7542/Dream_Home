@@ -3,9 +3,10 @@ import {
   findRoomPosition,
   getLimits,
   updateRoom,
-  validateProject,
 } from "./model";
+import { finalizeEdit } from "./edit";
 import { allocateId, componentIds, sameRect, snap } from "./geometry";
+import { furnitureIdSeed, rotateLayout } from "./furniture";
 import type { EditResult, Floor, Project, Room, RoomKind } from "./types";
 export { moveRoomSmart, swapRoomUses } from "./model";
 export type RoomSize = "small" | "regular" | "large";
@@ -110,12 +111,6 @@ export const ROOM_CATALOG: ReadonlyArray<{
   },
 ];
 
-const checked = (project: Project): EditResult => {
-  const errors = validateProject(project);
-  return errors.length
-    ? { ok: false, error: errors[0] }
-    : { ok: true, project };
-};
 const replaceFloor = (project: Project, floor: Floor): Project => ({
   ...project,
   floors: project.floors.map((f) => (f.id === floor.id ? floor : f)),
@@ -146,7 +141,7 @@ function insertRoom(
       error:
         "There is no free space for this room in the selected unit. Try a smaller size or enlarge its area.",
     };
-  return checked(
+  return finalizeEdit(project,
     replaceFloor(project, {
       ...floor,
       rooms: [...floor.rooms, { ...room, bounds }],
@@ -206,15 +201,26 @@ export function duplicateRoom(
     .find((f) => f.id === floorId)
     ?.rooms.find((r) => r.id === roomId);
   if (!source) return { ok: false, error: "Room not found." };
+  const ids = componentIds(project),
+    id = allocateId(`room-${source.kind}`, ids);
   return insertRoom(
     project,
     floorId,
     {
       ...source,
-      id: allocateId(`room-${source.kind}`, componentIds(project)),
+      id,
       name: `${source.name.slice(0, 75)} copy`,
       kind: source.kind,
       unitId: source.unitId,
+      // A copied room keeps its furniture and finishes, with fresh item ids.
+      ...(source.furniture
+        ? {
+            furniture: source.furniture.map((item) => ({
+              ...item,
+              id: allocateId(furnitureIdSeed(id, item.catalogId), ids),
+            })),
+          }
+        : {}),
     },
     { w: source.bounds.w, d: source.bounds.d },
   );
@@ -230,6 +236,8 @@ export function rotateRoom(
   if (!room) return { ok: false, error: "Room not found." };
   return updateRoom(project, floorId, roomId, {
     bounds: { ...room.bounds, w: room.bounds.d, d: room.bounds.w },
+    // Explicit furniture turns with the room.
+    ...(room.furniture ? { furniture: rotateLayout(room, room.furniture) } : {}),
   });
 }
 export function swapRoomPositions(
@@ -247,7 +255,7 @@ export function swapRoomPositions(
       ok: false,
       error: "Physical position swaps must stay within the same unit.",
     };
-  return checked(
+  return finalizeEdit(project,
     replaceFloor(project, {
       ...floor,
       rooms: floor.rooms.map((r) =>
@@ -267,7 +275,7 @@ export function resizeBuilding(
 ): EditResult {
   if (!project.floors.some((f) => f.id === floorId))
     return { ok: false, error: "Floor not found." };
-  return checked({
+  return finalizeEdit(project, {
     ...project,
     floors: project.floors.map((f) => {
       const footprint = { ...f.footprint, w: snap(size.w), d: snap(size.d) };
@@ -282,4 +290,34 @@ export function resizeBuilding(
       };
     }),
   });
+}
+
+/**
+ * Grows the building outline into the plot's free space (inside the sketch
+ * margin), keeping every room in place. Used by "Grow house" one-tap fixes.
+ */
+export function growHouse(project: Project, floorId: string): EditResult {
+  const floor = project.floors.find((f) => f.id === floorId) ?? project.floors[0];
+  const { plot } = project;
+  const { x, z, w, d } = floor.footprint;
+  const southBalcony = Math.max(
+    0,
+    ...project.floors.map((f) =>
+      Math.max(0, ...f.balconies.filter((b) => b.edge === "south").map((b) => b.depth)),
+    ),
+  );
+  const eastBalcony = Math.max(
+    0,
+    ...project.floors.map((f) =>
+      Math.max(0, ...f.balconies.filter((b) => b.edge === "east").map((b) => b.depth)),
+    ),
+  );
+  const maxW = Math.floor((plot.width - plot.setback - x - eastBalcony) / 10) * 10;
+  const maxD = Math.floor((plot.depth - plot.setback - z - southBalcony) / 10) * 10;
+  if (maxW <= w && maxD <= d)
+    return {
+      ok: false,
+      error: "The house already fills the plot. Set a room aside or try a smaller size.",
+    };
+  return resizeBuilding(project, floor.id, { w: Math.max(w, maxW), d: Math.max(d, maxD) });
 }

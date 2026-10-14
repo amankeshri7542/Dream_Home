@@ -1,3 +1,4 @@
+@layer legacy {
 /* Direct-building layer: the model remains central; controls read like actions. */
 :root {
   --muted: #56685e;
@@ -917,4 +918,5 @@ summary {
 }
 .tool-move .plan-space {
   cursor: grab;
+}
 }

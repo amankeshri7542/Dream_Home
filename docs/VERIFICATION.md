@@ -1,3 +1,130 @@
+# Warm diorama sandbox verification — 14 October 2026
+
+Checks were run locally on macOS (Apple M4) with Node 24 and the installed Google Chrome. Nothing was committed or pushed.
+
+## Commands
+| Command | Result |
+|---|---|
+| `npm run typecheck` | passed |
+| `npm run lint` | passed |
+| `npm test` (Vitest) | **544 tests** in 27 files passed |
+| `npm run test:e2e` (Playwright, Chrome, reduced motion) | **75 tests** passed |
+| `npm run build` | passed |
+
+The Playwright suite covers:
+- shell stability (one canvas mount at 320–1280 px);
+- onboarding, and every mode (Build, Doors & windows, Decorate, Outside, Explore);
+- direct 3D moving with mouse and real CDP touch: swap, blocked drop, Escape, orbit on empty space, drop on the Tray;
+- dragging furniture in Decorate on phone and desktop, including a refused drop with a reason;
+- the first-person walk: keyboard, joystick from a standstill, tap-to-walk, and floor buttons;
+- photo capture, the checklist and its celebration;
+- the legacy plan, tray, blueprint and studio flows;
+- axe accessibility scans (WCAG 2.1 A/AA, serious and critical findings fail) of every mode at 390 px and 1440 px, plus the title screen and gallery.
+
+## Child-usability review
+An independent review agent walked the whole journey as an 8–12-year-old would, at 360, 390 and 768 px (touch) and at 1280 and 1440 px. It reported one P0, 13 P1 and 12 P2 findings.
+
+**Fixed:**
+- **Furniture:** pieces can now be dragged in 3D, and nudges move about 1 ft.
+- **Walking:** the controls no longer overflow on phones, and the app can no longer scroll sideways.
+- **Garden:** pools and patios shrink to fit small gardens, and the error messages are correct.
+- **Add space:** it opens on a room that fits.
+- **Checklist:**
+  - its hints open the tray or the right catalogue entry;
+  - every starting home passes its own checklist (all 277 template variants);
+  - an inner bedroom's "Fix it" explains the problem and arms Move.
+- **Doors and windows:** narrower windows now fit, and a full wall changes an existing window into the kind asked for.
+- **Panels:**
+  - a newly selected item starts at the top of its panel;
+  - choosing a room in Decorate or Doors & windows zooms the camera into it and opens its panel half-way;
+  - labels declutter, and the selected room's label steps aside.
+- **Navigation:** More → Start a new home opens the friendly gallery.
+- **Wording:** kid-friendly copy in My plot and the menu.
+- **Desktop layout:**
+  - the action bar fits between the side panels;
+  - the camera no longer slides when a panel opens, unless the panel would cover the home.
+- **Small details:**
+  - the celebration shows only for real progress, at most once per visit;
+  - the checklist goal now counts "make it yours" ideas;
+  - a peek and a count in the gallery;
+  - the tour starts after the reveal;
+  - the drag badge stays in view;
+  - tray buttons no longer wrap one word per line;
+  - home names can use two lines on small phones;
+  - a window icon;
+  - areas follow the unit setting;
+  - messages fade by themselves;
+  - a warm light follows the visitor on night walks.
+
+**Still open:**
+- quick-add strips in the closed phone sheet;
+- moving the camera to a newly added item;
+- scenery outside windows while walking;
+- a visible label on the picture-quality button.
+
+## Compatibility
+- Saves stay at `schemaVersion: 2` with optional additions only.
+- 57 golden snapshots lock the automatic walls, openings and furniture of every generated home to their pre-transformation output.
+- v1 and v2 fixtures parse unchanged.
+
+**Rollback note:** an older build opening a newer save keeps the rooms and drops the newer optional fields (openings, furniture, materials, garden) when it saves again.
+
+## Render measurements
+These are from headless Chrome on an Apple M4 at the Balanced tier, using the sample home. They describe scene complexity, not frame rates on phones.
+
+| View | Draw calls | Triangles |
+|---|---|---|
+| Build | 51 | 20.5k |
+| Explore exterior | 41 | 8.1k |
+| Walk inside | 64–72 | 27–29k |
+
+- **Idle:** 0 frames rendered over 2 s.
+- **8-floor apartment exterior** (renderer lab, 390×844): 118 calls and about 34k triangles.
+- **External requests:** none at the Beautiful tier.
+- **Models blocked:** with `models/*.glb` blocked, procedural furniture renders and there are no page errors.
+
+## Bundle (production build, gzip)
+| Chunk | Size | Loaded |
+|---|---|---|
+| App | 167 kB | eagerly |
+| 3D vendor (three, R3F, drei) | 237 kB | lazily |
+| Scene | 65 kB | lazily |
+| Post-processing effects | 164 kB | lazily, never on the Battery tier |
+| Walkthrough | 3.3 kB | lazily |
+| 3D move and furniture-drag gestures | 4 kB | lazily |
+| GLTF loader + meshopt decoder | 19 kB | lazily |
+
+The eager app chunk is above the original ~125 kB goal because of the new openings, furniture, landscape and material domains.
+
+## Visual checks
+Screenshots were taken and inspected at:
+- 320×640
+- 360×740
+- 390×844
+- 768×1024
+- 1280×800
+- 1440×900/1000
+
+The flow covered:
+1. title and gallery;
+2. the construction reveal and tour;
+3. selection, the dock and details;
+4. 3D Move with ghost, swap, blocked and tray states;
+5. each mode;
+6. Explore at golden hour and at night;
+7. walking upstairs in a two-floor home;
+8. a photo;
+9. the checklist celebration.
+
+## Not verified
+- Physical iOS and Android devices.
+- Usability sessions with real children and older users.
+- Real OS share delivery.
+- Low-end GPU frame rates.
+- Architectural or code compliance. All checks in the app are friendly suggestions only.
+
+---
+
 # Rooms-as-pieces release verification — 12 September 2026
 
 - Typecheck, ESLint and production build: passed.

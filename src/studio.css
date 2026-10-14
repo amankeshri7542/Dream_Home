@@ -1,3 +1,4 @@
+@layer legacy {
 /* The building owns the workspace; controls sit at its edges. */
 .home-app.hero-workspace .scene-area {
   --canvas-top: 112px;
@@ -475,4 +476,5 @@
     bottom: auto;
     top: 126px;
   }
+}
 }

@@ -245,7 +245,7 @@ export default function GuidedStart({
           aria-label={"Go back"}
           onClick={() => (step ? setStep(step - 1) : onClose())}
         >
-          <ArrowLeft size={21} />
+          <ArrowLeft size={21} aria-hidden />
         </button>
         <span className="step-caption">{"A home that starts with you"}</span>
         <button
@@ -253,13 +253,13 @@ export default function GuidedStart({
           aria-label={"Close setup"}
           onClick={onClose}
         >
-          <X size={21} />
+          <X size={21} aria-hidden />
         </button>
       </div>
       <div className="step-progress" aria-label={`Step ${step + 1} of 3`}>
         {["Your plot", "Your building", "Your options"].map((s, i) => (
           <span key={i} className={step >= i ? "done" : ""}>
-            <i>{step > i ? <Check size={12} /> : i + 1}</i>
+            <i>{step > i ? <Check size={12} aria-hidden /> : i + 1}</i>
             {s}
           </span>
         ))}
@@ -370,7 +370,7 @@ export default function GuidedStart({
             <details className="plain-details">
               <summary>
                 {"Road side & open margin"}
-                <ChevronDown size={16} />
+                <ChevronDown size={16} aria-hidden />
               </summary>
               <label className="select-label">
                 {"Road along the plot"}
@@ -441,7 +441,7 @@ export default function GuidedStart({
                   aria-pressed={kind === item.id}
                   onClick={() => chooseKind(item.id)}
                 >
-                  <House size={23} />
+                  <House size={23} aria-hidden />
                   <strong>{item.name}</strong>
                   <span>{item.description}</span>
                 </button>
@@ -575,7 +575,7 @@ export default function GuidedStart({
               aria-checked={preferCourtyard}
               onClick={() => setPreferCourtyard(!preferCourtyard)}
             >
-              <Sun size={24} />
+              <Sun size={24} aria-hidden />
               <span>
                 <strong>Include an open-to-sky courtyard</strong>
                 <small>
@@ -585,7 +585,7 @@ export default function GuidedStart({
               <i className={`toggle ${preferCourtyard ? "on" : ""}`} />
             </button>
             <div className="advice-note">
-              <Leaf size={19} />
+              <Leaf size={19} aria-hidden />
               <p>
                 {kind === "blank"
                   ? "Begin with an outline. Multi-floor buildings include shared stairs so you can arrange the rest."
@@ -637,7 +637,7 @@ export default function GuidedStart({
                   </div>
                   {o.project && (
                     <span className="option-check">
-                      {selected?.id === o.id && <Check size={15} />}
+                      {selected?.id === o.id && <Check size={15} aria-hidden />}
                     </span>
                   )}
                 </button>
@@ -674,7 +674,7 @@ export default function GuidedStart({
             : step === 1
               ? "See my options"
               : "Make this my starting home"}
-          <ArrowRight size={18} />
+          <ArrowRight size={18} aria-hidden />
         </button>
       </div>
     </div>

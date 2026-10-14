@@ -19,7 +19,7 @@ export default function UnitEditor({
   return (
     <details className="plain-details unit-editor">
       <summary>
-        Flats & shops on this floor <ChevronDown size={17} />
+        Flats & shops on this floor <ChevronDown size={17} aria-hidden />
       </summary>
       <p className="field-note">
         Each group has its own area. The space between groups is shared. Move

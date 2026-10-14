@@ -1,0 +1,36 @@
+{
+  "$comment": "Garden and site catalog shared by src/domain/landscape.ts, the renderer and scripts/blender. Sizes are centimetres. 'footprint' is the validated ground footprint (trunk for trees); 'size' is the model's visual bounding box. 'layer': solid items may not overlap other solid items; ground items (paths, patios, beds) may sit under/around them. 'tall' items may not sit under upper-floor balconies. 'procedural' items are generated in code (no model). 'tile' items repeat a module model along their width. IDs are append-only.",
+  "items": [
+    { "id": "tree-oak", "label": "Shade tree", "category": "trees", "model": "tree-oak", "footprint": { "w": 60, "d": 60 }, "size": { "w": 380, "d": 380, "h": 560 }, "layer": "solid", "tall": true, "rotatable": false, "variants": ["s", "m", "l"], "slots": ["bark", "leaf"], "triBudget": 1500 },
+    { "id": "tree-pine", "label": "Pine", "category": "trees", "model": "tree-pine", "footprint": { "w": 50, "d": 50 }, "size": { "w": 230, "d": 230, "h": 620 }, "layer": "solid", "tall": true, "rotatable": false, "variants": ["s", "m", "l"], "slots": ["bark", "leaf"], "triBudget": 900 },
+    { "id": "tree-palm", "label": "Palm", "category": "trees", "model": "tree-palm", "footprint": { "w": 40, "d": 40 }, "size": { "w": 360, "d": 360, "h": 600 }, "layer": "solid", "tall": true, "rotatable": false, "variants": ["s", "m", "l"], "slots": ["bark", "leaf"], "triBudget": 1200 },
+    { "id": "tree-blossom", "label": "Blossom tree", "category": "trees", "model": "tree-blossom", "footprint": { "w": 50, "d": 50 }, "size": { "w": 320, "d": 320, "h": 450 }, "layer": "solid", "tall": true, "rotatable": false, "variants": ["s", "m", "l"], "slots": ["bark", "leaf", "accent"], "triBudget": 1500 },
+    { "id": "shrub", "label": "Round shrub", "category": "plants", "model": "shrub", "footprint": { "w": 90, "d": 90 }, "size": { "w": 90, "d": 90, "h": 80 }, "layer": "solid", "tall": false, "rotatable": false, "slots": ["leaf"], "triBudget": 500 },
+    { "id": "planter", "label": "Planter", "category": "plants", "model": "planter", "footprint": { "w": 60, "d": 60 }, "size": { "w": 60, "d": 60, "h": 75 }, "layer": "solid", "tall": false, "rotatable": false, "slots": ["terracotta", "leaf"], "triBudget": 500 },
+    { "id": "rock", "label": "Garden rock", "category": "plants", "model": "rock", "footprint": { "w": 70, "d": 50 }, "size": { "w": 70, "d": 50, "h": 40 }, "layer": "solid", "tall": false, "rotatable": true, "slots": ["stone"], "triBudget": 150 },
+    { "id": "flowerbed", "label": "Flower bed", "category": "plants", "model": "flowerbed-module", "footprint": { "w": 150, "d": 60 }, "size": { "w": 150, "d": 60, "h": 40 }, "layer": "ground", "tall": false, "rotatable": true, "resizable": { "w": [60, 600], "d": [40, 200] }, "tile": { "module": "flowerbed-module", "moduleWidth": 100 }, "variants": ["pink", "yellow", "white", "purple"], "slots": ["leaf", "accent", "bark"], "triBudget": 700 },
+    { "id": "hedge", "label": "Hedge", "category": "plants", "model": "hedge-module", "footprint": { "w": 200, "d": 60 }, "size": { "w": 200, "d": 60, "h": 110 }, "layer": "solid", "tall": false, "rotatable": true, "resizable": { "w": [60, 1200], "d": [40, 80] }, "tile": { "module": "hedge-module", "moduleWidth": 100 }, "slots": ["leaf"], "triBudget": 400 },
+    { "id": "bench", "label": "Garden bench", "category": "living", "model": "bench", "footprint": { "w": 150, "d": 55 }, "size": { "w": 150, "d": 55, "h": 80 }, "layer": "solid", "tall": false, "rotatable": true, "slots": ["wood", "metal"], "triBudget": 600 },
+    { "id": "sun-lounger", "label": "Sun lounger", "category": "living", "model": "sun-lounger", "footprint": { "w": 70, "d": 190 }, "size": { "w": 70, "d": 190, "h": 40 }, "layer": "solid", "tall": false, "rotatable": true, "slots": ["wood", "fabric"], "triBudget": 600 },
+    { "id": "parasol", "label": "Parasol", "category": "living", "model": "parasol", "footprint": { "w": 50, "d": 50 }, "size": { "w": 220, "d": 220, "h": 240 }, "layer": "solid", "tall": true, "rotatable": false, "slots": ["accent", "metal"], "triBudget": 500 },
+    { "id": "lamp-post", "label": "Lamp post", "category": "living", "model": "lamp-post", "footprint": { "w": 30, "d": 30 }, "size": { "w": 30, "d": 30, "h": 320 }, "layer": "solid", "tall": true, "rotatable": false, "light": { "y": 300, "color": "#ffcf8a", "intensity": 1 }, "slots": ["metal", "glow"], "triBudget": 400 },
+    { "id": "mailbox", "label": "Letterbox", "category": "living", "model": "mailbox", "footprint": { "w": 40, "d": 30 }, "size": { "w": 40, "d": 30, "h": 120 }, "layer": "solid", "tall": false, "rotatable": true, "slots": ["accent", "metal"], "triBudget": 300 },
+    { "id": "parking", "label": "Parking spot", "category": "site", "model": "car", "footprint": { "w": 260, "d": 450 }, "size": { "w": 180, "d": 410, "h": 150 }, "layer": "solid", "tall": false, "rotatable": true, "slots": ["accent", "glass", "rubber", "metal"], "triBudget": 2500 },
+    { "id": "pool", "label": "Pool", "category": "site", "procedural": true, "footprint": { "w": 400, "d": 600 }, "size": { "w": 400, "d": 600, "h": 20 }, "layer": "solid", "tall": false, "rotatable": true, "resizable": { "w": [200, 800], "d": [300, 1200] }, "slots": ["stone", "water"] },
+    { "id": "path", "label": "Path", "category": "site", "procedural": true, "footprint": { "w": 100, "d": 300 }, "size": { "w": 100, "d": 300, "h": 2 }, "layer": "ground", "tall": false, "rotatable": true, "resizable": { "w": [60, 200], "d": [60, 2000] }, "slots": ["stone"] },
+    { "id": "patio", "label": "Patio", "category": "site", "procedural": true, "footprint": { "w": 300, "d": 300 }, "size": { "w": 300, "d": 300, "h": 3 }, "layer": "ground", "tall": false, "rotatable": true, "resizable": { "w": [120, 800], "d": [120, 800] }, "slots": ["stone"] }
+  ],
+  "modules": [
+    { "id": "fence-panel", "label": "Fence panel", "size": { "w": 200, "d": 8, "h": 120 }, "slots": ["wood", "metal"], "triBudget": 300 },
+    { "id": "gate", "label": "Garden gate", "size": { "w": 110, "d": 8, "h": 120 }, "slots": ["wood", "metal"], "triBudget": 400 },
+    { "id": "pool-ladder", "label": "Pool ladder", "size": { "w": 60, "d": 40, "h": 120 }, "slots": ["metal"], "triBudget": 300 },
+    { "id": "cloud", "label": "Cloud", "size": { "w": 600, "d": 300, "h": 160 }, "slots": ["linen"], "triBudget": 300 }
+  ],
+  "fences": {
+    "none": { "label": "No fence" },
+    "picket": { "label": "White picket", "module": "fence-panel", "color": "#efe9df" },
+    "timber": { "label": "Timber slats", "module": "fence-panel", "color": "#9a6f4c" },
+    "hedge": { "label": "Living hedge", "module": "hedge-module", "color": "#5f8250" },
+    "low-wall": { "label": "Low stone wall", "procedural": true, "color": "#cbbfa8" }
+  }
+}

@@ -132,9 +132,10 @@ describe("one-floor family and architect image", () => {
       );
     const geometryFloor = floorForGeometry(project, floor.id);
     for (const kind of ["door", "window"]) {
-      const expected = deriveWalls(geometryFloor, project.plot.road).filter(
-        (wall) => wall.opening?.kind === kind,
-      ).length;
+      const expected = deriveWalls(geometryFloor, project.plot.road)
+        .flatMap((wall) => wall.openings)
+        .filter((o) => (o.kind.includes("window") ? "window" : "door") === kind)
+        .length;
       expect([
         ...svg.matchAll(new RegExp(`data-opening="${kind}"`, "g")),
       ]).toHaveLength(expected);

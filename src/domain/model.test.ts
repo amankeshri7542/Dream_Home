@@ -246,7 +246,7 @@ describe("balconies and generic component transforms", () => {
         walls.some(
           (w) =>
             w.exterior &&
-            w.opening?.kind === "door" &&
+            w.openings.some((o) => o.kind === "door") &&
             (edge === "north"
               ? w.z === 500
               : edge === "south"
@@ -439,7 +439,7 @@ describe("unit ownership, wall topology and room-use swaps", () => {
       (w) => w.axis === "z" && w.x === 1000,
     );
     expect(shared.length).toBeGreaterThan(0);
-    expect(shared.every((w) => w.opening === undefined)).toBe(true);
+    expect(shared.every((w) => w.openings.length === 0)).toBe(true);
   });
   it("swaps use and names while preserving IDs, geometry, unit membership and every wall", () => {
     const p = grouped(),

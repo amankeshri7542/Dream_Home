@@ -53,11 +53,11 @@ export default function SpaceInspector({
     <>
       <div className="room-quick-actions">
         <button onClick={() => onTool("move")}>
-          <Move size={21} />
+          <Move size={21} aria-hidden />
           Move {balcony ? "along an edge" : "space"}
         </button>
         <button onClick={() => onTool("resize")}>
-          <Expand size={21} />
+          <Expand size={21} aria-hidden />
           Resize space
         </button>
       </div>
@@ -132,7 +132,7 @@ export default function SpaceInspector({
                 )
               }
             >
-              <ArrowLeft size={21} />
+              <ArrowLeft size={21} aria-hidden />
               Slide back
             </button>
             <button
@@ -145,7 +145,7 @@ export default function SpaceInspector({
               }
             >
               Slide forward
-              <ArrowRight size={21} />
+              <ArrowRight size={21} aria-hidden />
             </button>
           </div>
           <p className="field-note">
@@ -200,7 +200,7 @@ export default function SpaceInspector({
                     changeBounds({ x: item.bounds.x + x, z: item.bounds.z + z })
                   }
                 >
-                  <Icon size={20} />
+                  <Icon size={20} aria-hidden />
                 </button>
               ))}
             </div>
@@ -264,7 +264,7 @@ export default function SpaceInspector({
           if (onApply(result)) onRemove();
         }}
       >
-        <Trash2 size={16} />
+        <Trash2 size={16} aria-hidden />
         Remove {item.name.toLowerCase()}
       </button>
     </>

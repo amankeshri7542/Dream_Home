@@ -1,0 +1,157 @@
+/* Warm architectural diorama — design tokens. The only place colours live. */
+@layer reset, legacy, tokens, base, components, modes, utilities;
+
+@layer tokens {
+  :root {
+    color-scheme: light;
+    /* Paper & ink */
+    --dh-paper-0: #fffdf9;
+    --dh-paper-1: #fbf5ec;
+    --dh-paper-2: #f3e9da;
+    --dh-paper-3: #ead9c2;
+    --dh-line: #e4d6c3;
+    --dh-line-strong: #cdb99e;
+    --dh-field-border: #9a8670;
+    --dh-ink: #2e2620;
+    --dh-ink-soft: #5a4d43;
+    --dh-ink-muted: #76685c;
+    /* Brand */
+    --dh-terracotta-50: #fbefe8;
+    --dh-terracotta-100: #f7e1d5;
+    --dh-terracotta-300: #e3a17f;
+    --dh-terracotta-600: #b5562f;
+    --dh-terracotta-700: #964324;
+    --dh-oak-100: #f4e6d2;
+    --dh-oak-500: #c68a4e;
+    --dh-oak-700: #8b5d32;
+    /* Status — colour is always paired with an icon and text */
+    --dh-sage-100: #e2eedf;
+    --dh-sage-600: #4d7a53;
+    --dh-sage-700: #3d6342;
+    --dh-amber-100: #fbebc8;
+    --dh-amber-500: #d89b23;
+    --dh-amber-700: #8a5f0c;
+    --dh-crimson-100: #f8dde1;
+    --dh-crimson-600: #b3283f;
+    --dh-crimson-700: #911d31;
+    --dh-sun-400: #f4bc55;
+    --dh-sun-100: #fdf0d2;
+    /* Focus ring: deep terracotta with a paper halo (base.css) */
+    --dh-focus: #7a3418;
+    /* Sky behind the canvas while 3D loads */
+    --dh-sky-top: #cfe0ea;
+    --dh-sky-horizon: #fbe9d3;
+    /* Glass */
+    --dh-glass-bg: rgb(255 252 247 / 0.86);
+    --dh-glass-border: rgb(255 255 255 / 0.7);
+    --dh-glass-solid: rgb(255 252 247 / 0.97);
+    /* Explore HUD */
+    --dh-hud-bg: rgb(28 23 20 / 0.66);
+    --dh-hud-bg-strong: rgb(28 23 20 / 0.82);
+    --dh-hud-ink: #fff7ec;
+    --dh-hud-ink-muted: #d9cbbb;
+    --dh-hud-line: rgb(255 247 236 / 0.18);
+    /* Room tints (plan, chips, export) */
+    --dh-room-living: #e3b98f;
+    --dh-room-kitchen: #a9c3a1;
+    --dh-room-bedroom: #b7c4d6;
+    --dh-room-bathroom: #b9d3d3;
+    --dh-room-dining: #e2c98f;
+    --dh-room-utility: #cdbfc9;
+    --dh-room-shop: #d2b6c9;
+
+    /* Typography */
+    --dh-font-ui: "Figtree Variable", system-ui, -apple-system, "Segoe UI",
+      Roboto, sans-serif;
+    --dh-font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+    --dh-text-hero: clamp(40px, 8vw, 64px);
+    --dh-text-2xl: 28px;
+    --dh-text-xl: 22px;
+    --dh-text-lg: 18px;
+    --dh-text-body: 16px;
+    --dh-text-label: 15px;
+    --dh-text-tab: 13px;
+    --dh-text-caption: 13px;
+
+    /* Space (4 px base) */
+    --dh-space-1: 4px;
+    --dh-space-2: 8px;
+    --dh-space-3: 12px;
+    --dh-space-4: 16px;
+    --dh-space-5: 20px;
+    --dh-space-6: 24px;
+    --dh-space-7: 32px;
+    --dh-space-8: 40px;
+    --dh-space-9: 48px;
+    --dh-space-10: 64px;
+
+    /* Radii — chunky, like the furniture */
+    --dh-radius-xs: 6px;
+    --dh-radius-sm: 10px;
+    --dh-radius-md: 14px;
+    --dh-radius-lg: 20px;
+    --dh-radius-xl: 28px;
+    --dh-radius-pill: 999px;
+
+    /* Targets */
+    --dh-target-primary: 48px;
+    --dh-target-secondary: 44px;
+
+    /* Elevation — warm, brown-tinted */
+    --dh-shadow-1: 0 1px 2px rgb(74 52 33 / 0.1), 0 2px 6px rgb(74 52 33 / 0.06);
+    --dh-shadow-2: 0 2px 4px rgb(74 52 33 / 0.08),
+      0 8px 20px rgb(74 52 33 / 0.1);
+    --dh-shadow-3: 0 6px 12px rgb(74 52 33 / 0.1),
+      0 18px 48px rgb(74 52 33 / 0.16);
+    --dh-shadow-inset: inset 0 1px 0 rgb(255 255 255 / 0.7);
+
+    /* Motion */
+    --dh-dur-instant: 80ms;
+    --dh-dur-fast: 140ms;
+    --dh-dur-base: 220ms;
+    --dh-dur-slow: 360ms;
+    --dh-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --dh-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --dh-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dh-ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+
+    /* Layout */
+    --dh-topbar-h: 56px;
+    --dh-modebar-h: 64px;
+    --dh-palette-h: 60px;
+    --dh-rail-w: 76px;
+    --dh-panel-w: 372px;
+    --dh-safe-top: env(safe-area-inset-top, 0px);
+    --dh-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --dh-safe-left: env(safe-area-inset-left, 0px);
+    --dh-safe-right: env(safe-area-inset-right, 0px);
+
+    /* z-order */
+    --dh-z-canvas: 0;
+    --dh-z-labels: 5;
+    --dh-z-hud: 10;
+    --dh-z-chrome: 20;
+    --dh-z-sheet: 30;
+    --dh-z-coach: 50;
+    --dh-z-notify: 60;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --dh-dur-instant: 0.01ms;
+      --dh-dur-fast: 0.01ms;
+      --dh-dur-base: 0.01ms;
+      --dh-dur-slow: 0.01ms;
+      --dh-ease-pop: var(--dh-ease-out);
+      --dh-ease-spring: var(--dh-ease-out);
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root {
+      --dh-glass-bg: var(--dh-glass-solid);
+    }
+  }
+  :root[data-quality="battery"] {
+    --dh-glass-bg: var(--dh-glass-solid);
+  }
+}

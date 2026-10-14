@@ -34,11 +34,16 @@ export const componentIds = (p: Project) =>
   new Set([
     ...p.units.map((u) => u.id),
     ...p.verticalSpaces.map((v) => v.id),
-    ...(p.stagedRooms ?? []).map((item) => item.room.id),
+    ...(p.stagedRooms ?? []).flatMap((item) => [
+      item.room.id,
+      ...(item.room.furniture ?? []).map((f) => f.id),
+    ]),
+    ...(p.landscape ?? []).map((l) => l.id),
     ...p.floors.flatMap((f) => [
       f.id,
-      ...f.rooms.map((r) => r.id),
+      ...f.rooms.flatMap((r) => [r.id, ...(r.furniture ?? []).map((i) => i.id)]),
       ...f.balconies.map((b) => b.id),
+      ...(f.openings ?? []).map((o) => o.id),
     ]),
   ]);
 export function allocateId(seed: string, used: Set<string>): string {
@@ -67,4 +72,26 @@ export function freeRect(
         return r;
     }
   return undefined;
+}
+/** Counts every component id in the project (for uniqueness checks). */
+export function idCounts(project: Project): Map<string, number> {
+  const counts = new Map<string, number>();
+  const add = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
+  project.units.forEach((u) => add(u.id));
+  project.verticalSpaces.forEach((v) => add(v.id));
+  (project.landscape ?? []).forEach((l) => add(l.id));
+  for (const s of project.stagedRooms ?? []) {
+    add(s.room.id);
+    (s.room.furniture ?? []).forEach((f) => add(f.id));
+  }
+  for (const f of project.floors) {
+    add(f.id);
+    for (const r of f.rooms) {
+      add(r.id);
+      (r.furniture ?? []).forEach((i) => add(i.id));
+    }
+    f.balconies.forEach((b) => add(b.id));
+    (f.openings ?? []).forEach((o) => add(o.id));
+  }
+  return counts;
 }

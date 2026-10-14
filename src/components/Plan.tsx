@@ -10,6 +10,7 @@ import type {
 } from "../domain/types";
 import { ROOM_META } from "../domain/types";
 import { balconyBounds, deriveWalls, floorForGeometry } from "../domain/model";
+import { isWindow } from "../domain/walls";
 import { transformComponent as editPlanItem } from "../domain/model";
 import { planItems, type PlanItem } from "../domain/selection";
 import { restoreStagedRoom, setAsideRoom } from "../domain/tray";
@@ -713,36 +714,23 @@ export default function Plan({
                 stroke="#59675f"
                 strokeWidth="14"
               />
-              {view.openings && wall.opening && (
-                <line
-                  x1={
-                    wall.x +
-                    (wall.axis === "x"
-                      ? (wall.length - wall.opening.width) / 2
-                      : 0)
-                  }
-                  y1={
-                    wall.z +
-                    (wall.axis === "z"
-                      ? (wall.length - wall.opening.width) / 2
-                      : 0)
-                  }
-                  x2={
-                    wall.x +
-                    (wall.axis === "x"
-                      ? (wall.length + wall.opening.width) / 2
-                      : 0)
-                  }
-                  y2={
-                    wall.z +
-                    (wall.axis === "z"
-                      ? (wall.length + wall.opening.width) / 2
-                      : 0)
-                  }
-                  stroke={wall.opening.kind === "door" ? "#faf9f3" : "#99c8d4"}
-                  strokeWidth="16"
-                />
-              )}
+              {view.openings &&
+                wall.openings.map((opening) => {
+                  const from = Math.max(0, opening.offset - opening.width / 2),
+                    to = Math.min(wall.length, opening.offset + opening.width / 2);
+                  return (
+                    <line
+                      key={opening.id}
+                      data-opening={isWindow(opening.kind) ? "window" : "door"}
+                      x1={wall.x + (wall.axis === "x" ? from : 0)}
+                      y1={wall.z + (wall.axis === "z" ? from : 0)}
+                      x2={wall.x + (wall.axis === "x" ? to : 0)}
+                      y2={wall.z + (wall.axis === "z" ? to : 0)}
+                      stroke={isWindow(opening.kind) ? "#99c8d4" : "#faf9f3"}
+                      strokeWidth="16"
+                    />
+                  );
+                })}
             </g>
           ))}
         {displayFloor.balconies.map((balcony, index) => {
@@ -912,7 +900,7 @@ export default function Plan({
           disabled={zoom >= MAX_ZOOM}
           onClick={() => changeZoom(Math.min(MAX_ZOOM, zoom * 1.3))}
         >
-          <Plus size={20} />
+          <Plus size={20} aria-hidden />
         </button>
         <button
           type="button"
@@ -920,14 +908,14 @@ export default function Plan({
           disabled={zoom <= 1}
           onClick={() => changeZoom(Math.max(1, zoom / 1.3))}
         >
-          <Minus size={20} />
+          <Minus size={20} aria-hidden />
         </button>
         <button
           type="button"
           aria-label="Fit plan"
           onClick={() => changeZoom(1)}
         >
-          <Maximize2 size={17} />
+          <Maximize2 size={17} aria-hidden />
           <span>Fit</span>
         </button>
       </div>

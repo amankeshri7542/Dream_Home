@@ -1,3 +1,4 @@
+@layer legacy {
 :root {
   font-family: "Avenir Next", "Segoe UI", "Nirmala UI", sans-serif;
   color: #294c3f;
@@ -2404,4 +2405,5 @@ button:hover:not(:disabled) {
     left: 0;
     right: auto;
   }
+}
 }

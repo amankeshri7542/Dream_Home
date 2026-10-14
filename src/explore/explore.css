@@ -1,0 +1,296 @@
+@layer components {
+  .dh-explore {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dh-z-chrome);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: calc(12px + var(--dh-safe-top)) calc(12px + var(--dh-safe-right))
+      calc(12px + var(--dh-safe-bottom)) calc(12px + var(--dh-safe-left));
+    color: var(--dh-hud-ink);
+    pointer-events: none;
+  }
+  .dh-explore > * {
+    pointer-events: auto;
+  }
+  .dh-explore-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .dh-explore-top-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .dh-explore .dh-hud-btn {
+    background: var(--dh-hud-bg);
+    border-color: var(--dh-hud-line);
+    color: var(--dh-hud-ink);
+    box-shadow: none;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dh-explore .dh-hud-btn:hover {
+    background: var(--dh-hud-bg-strong);
+  }
+  .dh-quality {
+    position: relative;
+  }
+  .dh-hud-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 240px;
+    padding: 6px;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-hud-bg-strong);
+    border: 1px solid var(--dh-hud-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    animation: dh-pop var(--dh-dur-base) var(--dh-ease-pop);
+  }
+  .dh-hud-menu button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 48px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: var(--dh-radius-md);
+    background: transparent;
+    color: var(--dh-hud-ink);
+    text-align: left;
+  }
+  .dh-hud-menu button small {
+    color: var(--dh-hud-ink-muted);
+  }
+  .dh-hud-menu button[aria-checked="true"] {
+    background: rgb(255 247 236 / 0.14);
+  }
+  .dh-explore-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-self: center;
+    width: min(620px, 100%);
+    padding: 12px 14px;
+    border-radius: var(--dh-radius-xl);
+    background: var(--dh-hud-bg);
+    border: 1px solid var(--dh-hud-line);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    animation: dh-rise var(--dh-dur-slow) var(--dh-ease-spring);
+  }
+  .dh-time-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dh-time-row input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+    accent-color: var(--dh-sun-400);
+  }
+  .dh-time-row output {
+    min-width: 132px;
+    text-align: right;
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--dh-hud-ink);
+  }
+  .dh-time-presets,
+  .dh-explore-views {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .dh-explore-views {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    grid-auto-flow: column;
+  }
+  .dh-time-presets button,
+  .dh-explore-views button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--dh-hud-line);
+    border-radius: var(--dh-radius-pill);
+    background: transparent;
+    color: var(--dh-hud-ink);
+    font-size: 13.5px;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .dh-explore-views button {
+    min-height: 48px;
+    font-size: 14.5px;
+  }
+  .dh-time-presets button[aria-pressed="true"],
+  .dh-explore-views button[aria-checked="true"] {
+    background: var(--dh-sun-400);
+    border-color: var(--dh-sun-400);
+    color: var(--dh-ink);
+  }
+  .dh-walk {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    margin-bottom: 10px;
+    pointer-events: none;
+  }
+  .dh-walk > * {
+    pointer-events: auto;
+  }
+  .dh-joystick {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 128px;
+    height: 128px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--dh-hud-bg);
+    border: 1px solid var(--dh-hud-line);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    touch-action: none;
+  }
+  .dh-joystick i {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--dh-sun-400);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.3);
+    transition: transform var(--dh-dur-instant) linear;
+  }
+  .dh-walk-hint {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-hud-bg);
+    font-size: 13px;
+    color: var(--dh-hud-ink-muted);
+    text-align: center;
+  }
+  .dh-walk-hint strong {
+    color: var(--dh-hud-ink);
+    font-size: 15px;
+  }
+  .dh-walk-floors {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dh-walk-tip-short {
+    display: none;
+  }
+  /* Phones: the room chip spans the top of the walk controls, the joystick
+     sits left and compact floor buttons right — nothing runs off screen. */
+  @media (max-width: 600px) {
+    .dh-walk {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        "hint hint hint"
+        "stick . floors";
+      align-items: end;
+      gap: 8px;
+    }
+    .dh-walk .dh-joystick {
+      grid-area: stick;
+      width: 112px;
+      height: 112px;
+    }
+    .dh-walk-hint {
+      grid-area: hint;
+      justify-self: center;
+      max-width: 100%;
+    }
+    .dh-walk-hint strong {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dh-walk-tip-long {
+      display: none;
+    }
+    .dh-walk-tip-short {
+      display: inline;
+    }
+    .dh-walk-floors {
+      grid-area: floors;
+    }
+    .dh-walk-floors .dh-btn {
+      width: 52px;
+      min-height: 52px;
+      padding: 0;
+    }
+    .dh-walk-floor-text {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
+  /* Phones: icon above a short label so every choice fits without scrolling. */
+  @media (max-width: 520px) {
+    .dh-time-presets button,
+    .dh-explore-views button {
+      flex-direction: column;
+      gap: 2px;
+      min-height: 52px;
+      padding: 4px 4px;
+      border-radius: var(--dh-radius-md);
+      font-size: 12.5px;
+      line-height: 1.1;
+      white-space: normal;
+      text-align: center;
+    }
+    .dh-explore-views button {
+      min-height: 56px;
+      font-size: 13.5px;
+    }
+  }
+  .dh-photo-flash {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dh-z-notify);
+    background: var(--dh-paper-0);
+    pointer-events: none;
+    animation: dh-flash 420ms var(--dh-ease-out) forwards;
+  }
+  @keyframes dh-flash {
+    from {
+      opacity: 0.85;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @media (max-width: 430px) {
+    .dh-time-row output {
+      min-width: 0;
+      font-size: 12.5px;
+    }
+    .dh-time-row > svg {
+      display: none;
+    }
+  }
+}

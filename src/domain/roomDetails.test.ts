@@ -91,7 +91,17 @@ describe("recognisable room details", () => {
       z: 250,
       length: 320,
       exterior: false,
-      opening: { kind: "door", width: 90, height: 215, sill: 0 },
+      openings: [
+        {
+          id: "auto:north-door",
+          kind: "door",
+          offset: 160,
+          width: 90,
+          height: 215,
+          sill: 0,
+          auto: true,
+        },
+      ],
     };
     const bed = roomDetails(room, [wall]).find(
       (part) => part.role === "bed base",

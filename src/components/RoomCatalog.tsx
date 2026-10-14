@@ -15,7 +15,12 @@ import {
   Sun,
   Footprints,
 } from "lucide-react";
-import { ROOM_CATALOG, addCatalogRoom, type RoomSize } from "../domain/builder";
+import {
+  ROOM_CATALOG,
+  addCatalogRoom,
+  growHouse,
+  type RoomSize,
+} from "../domain/builder";
 import { suggestBalcony, suggestVerticalSpace } from "../domain/openSpaces";
 import type { Project, EdgeSide } from "../domain/types";
 import { length, unitLabel, type Unit } from "../domain/display";
@@ -39,7 +44,10 @@ export default function RoomCatalog({
   onClose,
   onUse,
   onExpand,
+  initialPick,
 }: {
+  /** Open on this room (e.g. "kitchen" from a checklist hint). */
+  initialPick?: string | null;
   project: Project;
   floorId: string;
   unit: Unit;
@@ -56,16 +64,34 @@ export default function RoomCatalog({
   const [space, setSpace] = useState<"balcony" | "courtyard" | "stairs">(
     "balcony",
   );
-  const [size, setSize] = useState<RoomSize>("regular");
-  const [picked, setPicked] = useState<(typeof ROOM_CATALOG)[number]["id"]>(
-    floor.unitAreas.length > 0 &&
+  // Open on a choice that works: the usual room at a size that fits (or fits
+  // once the house grows), else the first room that does — never a failure.
+  type CatalogPick = (typeof ROOM_CATALOG)[number]["id"];
+  const [initial] = useState((): { size: RoomSize; picked: CatalogPick } => {
+    const asked = ROOM_CATALOG.find((item) => item.id === initialPick)?.id;
+    const want: CatalogPick = asked ??
+      (floor.unitAreas.length > 0 &&
       floor.unitAreas.every(
-        (area) =>
-          project.units.find((u) => u.id === area.unitId)?.use === "commercial",
+        (area) => project.units.find((u) => u.id === area.unitId)?.use === "commercial",
       )
-      ? "shop"
-      : "bedroom",
-  );
+        ? "shop"
+        : "bedroom");
+    const firstOwner = floor.unitAreas.length === 1 ? floor.unitAreas[0].unitId : null;
+    const grownHome = growHouse(project, floorId);
+    const works = (id: CatalogPick, sz: RoomSize) =>
+      addCatalogRoom(project, floorId, id, sz, firstOwner).ok ||
+      (grownHome.ok && addCatalogRoom(grownHome.project, floorId, id, sz, firstOwner).ok);
+    const sizes: RoomSize[] = ["regular", "small"];
+    for (const sz of sizes) if (works(want, sz)) return { size: sz, picked: want };
+    if (asked) return { size: "small", picked: asked };
+    for (const sz of sizes) {
+      const any = ROOM_CATALOG.find((item) => works(item.id, sz));
+      if (any) return { size: sz, picked: any.id };
+    }
+    return { size: "regular", picked: want };
+  });
+  const [size, setSize] = useState<RoomSize>(initial.size);
+  const [picked, setPicked] = useState<CatalogPick>(initial.picked);
   const options = useMemo(
     () =>
       ROOM_CATALOG.map((item) => ({
@@ -74,7 +100,27 @@ export default function RoomCatalog({
       })),
     [project, floorId, size, owner],
   );
+  // When the house is full, growing it into free plot space often makes room.
+  const grown = useMemo(() => {
+    const g = growHouse(project, floorId);
+    return g.ok ? g.project : null;
+  }, [project, floorId]);
+  const grownOptions = useMemo(
+    () =>
+      new Map(
+        ROOM_CATALOG.map((item) => [
+          item.id,
+          grown ? addCatalogRoom(grown, floorId, item.id, size, owner || null) : null,
+        ]),
+      ),
+    [grown, floorId, size, owner],
+  );
   const selected = options.find((option) => option.item.id === picked)!;
+  const grownResult = grownOptions.get(picked);
+  const grownAdded =
+    grownResult?.ok
+      ? grownResult.project.floors.find((f) => f.id === floorId)!.rooms.at(-1)
+      : null;
   const added = selected.result.ok
     ? selected.result.project.floors.find((f) => f.id === floorId)!.rooms.at(-1)
     : null;
@@ -182,11 +228,23 @@ export default function RoomCatalog({
                   aria-pressed={picked === item.id}
                   onClick={() => setPicked(item.id)}
                 >
-                  <Icon size={25} />
+                  <Icon size={25} aria-hidden />
                   <strong>{item.label}</strong>
                   <small>{item.description}</small>
-                  <span className={result.ok ? "fits" : "needs-space"}>
-                    {result.ok ? "Fits on this floor" : "Needs more room"}
+                  <span
+                    className={
+                      result.ok
+                        ? "fits"
+                        : grownOptions.get(item.id)?.ok
+                          ? "grows"
+                          : "needs-space"
+                    }
+                  >
+                    {result.ok
+                      ? "Fits right away"
+                      : grownOptions.get(item.id)?.ok
+                        ? "Fits if the house grows"
+                        : "Needs more room"}
                   </span>
                 </button>
               );
@@ -224,7 +282,7 @@ export default function RoomCatalog({
                   aria-pressed={space === item.id}
                   onClick={() => setSpace(item.id)}
                 >
-                  <item.icon size={25} />
+                  <item.icon size={25} aria-hidden />
                   <strong>{item.name}</strong>
                   <small>{item.description}</small>
                 </button>
@@ -271,7 +329,7 @@ export default function RoomCatalog({
               disabled={!spaceResult?.ok}
               onClick={useSpace}
             >
-              <Plus size={20} />
+              <Plus size={20} aria-hidden />
               Add{" "}
               {space === "balcony" && floor.elevation === 0 ? "veranda" : space}
             </button>
@@ -292,20 +350,36 @@ export default function RoomCatalog({
                       onUse(selected.result.project, added.id);
                   }}
                 >
-                  <Plus size={20} />
+                  <Plus size={20} aria-hidden />
                   Add {selected.item.label.toLowerCase()}
                 </button>
               </>
             ) : (
-              <>
-                <p role="status">
-                  {selected.result.ok ? "" : selected.result.error}
-                </p>
-                <button className="secondary-button" onClick={onExpand}>
-                  <Expand size={20} />
-                  Adjust building area
-                </button>
-              </>
+              grownAdded && grownResult?.ok ? (
+                <>
+                  <p role="status">
+                    The house is full — grow it into the garden to make room.
+                  </p>
+                  <button
+                    className="primary-button"
+                    onClick={() => onUse(grownResult.project, grownAdded.id)}
+                  >
+                    <Expand size={20} aria-hidden />
+                    Grow house & add {selected.item.label.toLowerCase()}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p role="status">
+                    No room left for this one. Set a room aside in the tray, pick
+                    a smaller size, or make the plot bigger.
+                  </p>
+                  <button className="secondary-button" onClick={onExpand}>
+                    <Expand size={20} aria-hidden />
+                    Make more space
+                  </button>
+                </>
+              )
             )}
           </>
         )}

@@ -119,7 +119,7 @@ export default function SharePlan({
         <div className="share-actions">
           {canShare && (
             <button className="primary-button" onClick={() => void share()}>
-              <Share2 size={18} />
+              <Share2 size={18} aria-hidden />
               {"Share this floor"}
             </button>
           )}
@@ -135,13 +135,13 @@ export default function SharePlan({
               }
             }}
           >
-            <Download size={18} />
+            <Download size={18} aria-hidden />
             {"Download floor image"}
           </button>
         </div>
         {message && (
           <p className="share-message" role="status">
-            <Check size={16} />
+            <Check size={16} aria-hidden />
             {message}
           </p>
         )}

@@ -64,13 +64,13 @@ export default function RoomTray({
           <p>Keep pieces here while you make space.</p>
         </div>
         <button aria-label="Close room tray" onClick={onClose}>
-          <X size={20} />
+          <X size={20} aria-hidden />
         </button>
       </div>
       {!pieces.length ? (
         <div className="tray-empty">
-          Drag a room here in Move mode, or choose <strong>Set aside</strong> in
-          its details. Nothing is lost.
+          Your tray is empty. Rooms you <strong>set aside</strong> wait here
+          safely until you put them back.
         </div>
       ) : (
         <>
@@ -175,14 +175,14 @@ export default function RoomTray({
                 </button>
                 <div className="tray-piece-actions">
                   <button
-                    aria-label={`Choose position for ${room.name}`}
+                    aria-label={`Pick a spot for ${room.name}`}
                     onClick={() => onPlace(room.id)}
                   >
-                    <ArrowUpRight size={17} />
-                    Place
+                    <ArrowUpRight size={17} aria-hidden />
+                    Pick a spot
                   </button>
                   <button
-                    aria-label={`Find space for ${room.name}`}
+                    aria-label={`Find a spot for ${room.name}`}
                     onClick={() => {
                       const result = restoreStagedRoom(
                         project,
@@ -193,20 +193,20 @@ export default function RoomTray({
                       if (onApply(result)) onRestored(room.id);
                     }}
                   >
-                    <Check size={17} />
-                    Fit
+                    <Check size={17} aria-hidden />
+                    Find a spot
                   </button>
                   <button
                     aria-label={`Rotate ${room.name} in tray`}
                     onClick={() => onApply(rotateStagedRoom(project, room.id))}
                   >
-                    <RotateCcw size={17} />
+                    <RotateCcw size={17} aria-hidden />
                   </button>
                   <button
                     aria-label={`Remove ${room.name} from tray`}
                     onClick={() => onApply(removeStagedRoom(project, room.id))}
                   >
-                    <Trash2 size={17} />
+                    <Trash2 size={17} aria-hidden />
                   </button>
                 </div>
               </article>

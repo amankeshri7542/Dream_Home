@@ -1,8 +1,13 @@
-# Dream-Home
+# Dream Home
 
-A mobile-first building sandbox for plot owners. Start with measured land, choose a building program, then shape the spaces directly. React, TypeScript, Vite and procedural Three.js; no account, backend, runtime AI calls or API keys.
+A warm, playful 3D sandbox for building the home you keep imagining. Pick a
+starting home, move rooms like puzzle pieces, place doors and windows, furnish
+every room, style the roof and garden — then walk right in and take a photo.
+React, TypeScript, Vite, React Three Fiber and Three.js, with furniture modelled
+in Blender. No account, backend, runtime AI calls or API keys; everything saves
+on your device.
 
-[Open Dream-Home](https://dream-home-liard-nine.vercel.app/)
+[Open Dream Home](https://dream-home-liard-nine.vercel.app/)
 
 ## Run locally
 
@@ -13,36 +18,94 @@ npm install
 npm run dev
 ```
 
-Open [localhost:5173](http://localhost:5173). `npm run build` creates `dist/`; `npm run preview` serves it locally. GitHub's `main` branch is the existing Vercel deployment source.
+Open [localhost:5173](http://localhost:5173). `npm run build` creates `dist/`;
+`npm run preview` serves it locally. GitHub's `main` branch is the Vercel
+deployment source.
 
-## Build an idea
+> The project lives in an iCloud-synced folder on the author's machine, so
+> `node_modules` is a symlink to an un-synced `node_modules.nosync`. If
+> `npm install` replaces the symlink, restore it with
+> `rm -rf node_modules.nosync && mv node_modules node_modules.nosync && ln -s node_modules.nosync node_modules`.
 
-1. **Start with my plot**: enter measured sides, then choose Home, Apartments, Shops & market, Shop + home or Blank building. Home defaults include bungalow, villa and duplex. Setup supports 1–8 floors, up to 12 total home bedrooms, or flat/shop counts. Recommendations preserve requested counts and explain when they cannot fit.
-2. **Add space**: add a bedroom, kitchen, bathroom, living/dining, utility, study, prayer room, guest room or shop. A separate category adds balconies/verandas, courtyards and stairs. Choose a flat/shop group where relevant; placement finds a clear area.
-3. **Move**: drag a space to a valid position. Dropping one room onto another exchanges their uses and names while preserving walls, sizes and ownership. **Resize** provides eight edge/corner handles, arrow-key controls and a closer view for small rooms. Invalid or cancelled gestures leave the plan unchanged. Zoom and pan work on the plan.
-4. **Edit details**: use dimension inputs with a choice of fixed corner, bigger/smaller buttons and arrows without dragging. Set a room aside in the **Tray** while making space, then drag it back, tap a clear spot or use automatic Fit. Tray pieces retain their size and appearance in saves and backups. Rooms support rotation, duplication, change of use, an explicit use-swap picker and moving to another group's available space. Balconies have side/slide/width/depth controls. Courtyards and stairs update every connected floor atomically, naming any blocking room.
-5. **Rooms**: edit each floor and its named flat/shop boundaries. Add a floor by copying the top floor and extending its stair/courtyard connections. **Undo** reverses an entire edit; redo and editable backups are in **More**.
-6. **View**: see inside, outside or the road-facing elevation; try ivory plaster, brick or sandstone. Beds, counters, dining settings and bathroom fixtures make rooms recognizable with names switched off. Choose room floor finishes, turn furnishings or hide them. **Top**, **Focus**, room **Look inside**, Fit home and Fit plot offer different ways to explore. Floor isolation, construction stages, layers and optional names remain available. Desktop **Plan + 3D** shows matching views of the selected floor.
-7. **Share**: choose a floor for a PNG with dimensions and unit labels. Native file sharing is available where supported. Download all floors together as an editable JSON project.
+## Play
 
-The interface is English only. Custom imported names stay intact. Plans save in the current browser; up to 50 edits can be undone. Tabs and devices do not synchronize.
+1. **Start** — a title screen offers *Continue my home*, *Start a new home*,
+   *Try the sample home* and *Open a saved project*. The gallery has eight
+   starting homes (cosy bungalow, garden villa, duplex, courtyard home,
+   apartment block, shop + home, little market, blank plot) with live 3D
+   previews and simple steppers. *Start with my plot* opens the detailed
+   wizard for measured plots, 1–8 floors and apartments or shops. A short
+   construction reveal and a three-step tour follow (replay it from More).
+2. **Build** — tap any room in 3D (or pick it from Rooms) to see a compact
+   card and an action bar: Move, Resize, Rotate, Duplicate, Set aside. Press
+   **Move** and drag the room right in 3D (grab the floor or its name label;
+   with a mouse, just drag the selected room): a ghost shows where it lands,
+   dropping it on another room swaps them, and dropping it on the Tray sets it
+   aside. *Show details* reveals sizes, finishes, position and use. *Add space* adds rooms,
+   balconies, courtyards and stairs; when the house is full it offers
+   **Grow house & add** in one tap. The **tray** keeps set-aside rooms safe until
+   you place them back. Floors are an elevator on the right.
+3. **Doors & windows** — every room lists its doors and windows. Add doors,
+   French and sliding doors, archways, windows and picture windows; slide them
+   along the wall, resize them, move them to another wall, flip which way a door
+   opens, or make the whole floor automatic again.
+4. **Decorate** — tap a room and the camera glides inside it. About forty
+   pieces of chunky, rounded furniture with real thumbnails: add them to a
+   room (they find a free spot), tap a piece and drag it around — even into
+   another room — or nudge, turn, copy and recolour it. Paint the walls and choose the floor
+   (oak, walnut, herringbone, tile, terrazzo, marble, stone, slate, concrete,
+   carpet). *Auto-furnish* and *Empty the room* are one tap.
+5. **Outside** — choose the outside walls (plaster, brick, sandstone, stucco,
+   render, timber, stone, concrete, charcoal), a flat, gable, hip or shed roof
+   with material and steepness, trim and front-door colours. Plant trees,
+   shrubs, flower beds, hedges, a pool, paths, patios, lamps and benches; pick
+   the ground and a fence.
+6. **Explore** — admire the home on a turntable, slide the time of day from
+   morning to a glowing night, take a photo to save or share, and walk inside
+   with the keyboard, a thumb joystick or tap-to-walk; stairs take you between
+   floors.
+7. **Share** — a dimensioned plan image per floor, or the whole project as an
+   editable JSON backup.
+
+**Never lost:** every change can be undone (with a description of what it
+undid), removing a room asks first and offers *Set aside instead*, and the
+browser/phone Back button closes the top panel instead of leaving the app.
+**Friendly checks:** a Home checklist notices rooms without doors, bedrooms
+without windows, missing stairs, kitchen or bathroom — "friendly checks, not
+building-code checks". Every starting home passes it; finishing the essentials
+celebrates with confetti, then the pill counts "make it yours" ideas to try.
+
+**Accessible:** every drag has a tap, keyboard or number alternative; targets
+are 44–48 px; selections are announced to screen readers; reduced-motion
+settings turn off camera glides and animations; `?` lists keyboard shortcuts.
 
 ## Architecture
 
-- `src/domain/types.ts`: schema-v2 document in integer centimetres, with units, unit areas, multiple edge-attached balconies and canonical vertical spaces.
-- `src/domain/model.ts` and `geometry.ts`: atomic edits, bounded validation, shared wall/opening derivation and slab geometry.
-- `src/domain/migration.ts`: validates and migrates v1 files. Browser persistence writes a separate v2 key and preserves the original v1 copy.
-- `src/domain/blueprints.ts` and `starters.ts`: deterministic building programs and existing compact home arrangements, producing the same document.
-- `src/domain/builder.ts`, `openSpaces.ts` and `selection.ts`: room catalog, free placement and common room/open-space selection.
-- `src/domain/export.ts`: escaped, bounded, per-floor SVG/PNG export and whole-project JSON backup.
-- `src/useProject.ts`: history, local saving and recovery without silently replacing corrupt saves.
-- `src/components/Scene.tsx` and `sceneMaterials.ts`: shared materials, metre-scaled procedural textures, merged wall/window parts, restrained shadows and demand rendering.
-- `src/components/Plan.tsx`: SVG gestures preview and commit through the same domain operations.
-- `src/domain/tray.ts` and `resize.ts`: persistent staging and anchored resize commands.
-- `src/domain/roomDetails.ts`, `RoomDetailsPlan.tsx` and `RoomDetails.tsx`: shared deterministic furnishings, SVG cues and merged 3D detail.
-- `src/components/CameraControls.tsx`: visible-building framing and explicit focus; `studio.css` reclaims mobile model space.
+- `src/domain/` — the pure model in integer centimetres (schema v2 with optional
+  additions for openings, furniture, materials and landscape), validation with
+  structured issues (`validate.ts`), a single edit gate (`edit.ts`), walls with
+  multiple openings (`walls.ts`), openings/furniture/landscape/materials
+  commands, the home checklist (`advice.ts`) and catalogs shared with Blender
+  (`catalog/*.json`). Golden snapshot tests lock the automatic layouts.
+- `src/history.ts`, `src/useProject.ts` — undo/redo with labels and selection
+  restore; local saving and safe recovery of damaged saves.
+- `src/editor/` — the UI controller (a pure reducer), shortcuts, spatial maths,
+  the gesture state machine and snapping previews.
+- `src/shell/`, `src/onboarding/`, `src/explore/`, `src/ui/` — the workspace
+  chrome, title/gallery/tour, Explore HUD and walkthrough, design tokens and
+  primitives.
+- `src/scene/` — renderer v2: perspective camera rig with inset-aware framing,
+  procedural sky with time of day, image lighting, shadows, materials, building
+  geometry (junctions, openings, cutaway section fill, stairs, roofs, porch),
+  GLB furniture and garden props, quality tiers with lazy post-processing, and a
+  debug bridge (`window.__dreamHome`) for tests.
+- `scripts/blender/` — headless Blender scripts that model the furniture and
+  garden kit; `npm run assets` rebuilds `public/models` and `public/thumbs`
+  (requires Blender 5.1; the web build never needs Blender).
 
-See [rooms-as-pieces research and decisions](docs/ROOMS-AS-PIECES.md), [optional AI recommendation](docs/OPTIONAL-AI.md), [blueprint research](docs/BLUEPRINT-EXPANSION.md) and [verification](docs/VERIFICATION.md). Earlier design notes are retained in `docs/` as historical context.
+See [the diorama sandbox design](docs/DIORAMA-SANDBOX.md) and
+[verification](docs/VERIFICATION.md). Earlier design notes stay in `docs/` as
+history.
 
 ## Verify
 
@@ -54,12 +117,13 @@ npm run test:e2e
 npm run build
 ```
 
-Browser tests use installed Google Chrome in isolated contexts and start or reuse the development server. They cover native touch as well as pointer and keyboard interactions. Visual checks wait for actual WebGL pixels.
+Browser tests use installed Google Chrome, run with reduced motion for stable
+layouts, and cover mouse, keyboard and native touch.
 
 ## Scope
 
-A conceptual prototype to discuss with an architect. One building, rectangular aligned floorplates, rectangular spaces, a uniform sketch margin and fixed 3 m storeys. Limits: 8 floors, 48 rooms per floor, 48 staged room pieces, 64 units, 8 shared vertical spaces and 4 balconies per floor; imports are bounded to 1 MB.
-
-Room and opening edits preserve non-overlap and unit boundaries. Automatic circulation, doors, windows, stairs and construction stages remain schematic and do not establish structural safety, access, local-law compliance or architectural quality. Materials and daylight are more detailed, but this is not an offline photoreal renderer.
-
-Basements, multiple separate buildings, arbitrary plot polygons, furniture catalogs, costs, CAD/BIM output, cloud sync and an offline/PWA guarantee are outside this version. Katha/dhur conversions vary locally, so setup asks for measured sides. Physical Android/iOS testing and sessions with older plot owners are still needed to assess real-device performance and ease of use.
+A conceptual sandbox to discuss with an architect. One building, rectangular
+aligned floorplates, rectangular rooms, fixed 3 m storeys. Doors, windows,
+stairs and checks are illustrative and do not establish structural safety,
+access, local-law compliance or cost. Limits: 8 floors, 48 rooms per floor,
+32 furniture pieces per room, 120 garden items; imports are bounded to 1 MB.

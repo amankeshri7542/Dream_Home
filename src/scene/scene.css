@@ -1,0 +1,110 @@
+.scene-v2 {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: none;
+  background: #e9e4d8;
+  -webkit-tap-highlight-color: transparent;
+}
+.scene-v2:focus-visible {
+  box-shadow: inset 0 0 0 3px rgb(244 188 85 / 85%);
+}
+.scene-v2 canvas {
+  touch-action: none;
+}
+.scene-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+.scene-overlay .scene-room-label,
+.scene-overlay .scene-ghost-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.scene-room-label {
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  white-space: nowrap;
+  max-width: 132px;
+  padding: 3px 9px 4px;
+  border-radius: 999px;
+  background: rgb(255 252 245 / 86%);
+  border: 1px solid rgb(92 72 46 / 14%);
+  box-shadow: 0 2px 8px rgb(60 42 20 / 14%);
+  color: #3a3226;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: background 120ms ease, box-shadow 120ms ease;
+  user-select: none;
+}
+.scene-room-label-name {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 116px;
+}
+.scene-room-label-area {
+  font-size: 9.5px;
+  opacity: 0.66;
+  font-variant-numeric: tabular-nums;
+}
+.scene-room-label.is-compact .scene-room-label-area {
+  display: none;
+}
+.scene-room-label:hover {
+  background: #fffaf0;
+  box-shadow: 0 3px 10px rgb(60 42 20 / 20%);
+}
+.scene-room-label.selected {
+  background: #fff1cf;
+  border-color: #e0a63e;
+  box-shadow: 0 0 0 2px rgb(244 188 85 / 55%), 0 3px 10px rgb(60 42 20 / 18%);
+}
+.scene-ghost-badge {
+  pointer-events: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 18%);
+  background: #4d7a53;
+}
+.scene-ghost-badge[data-status="snap"] {
+  background: #c98c18;
+}
+.scene-ghost-badge[data-status="blocked"] {
+  background: #b3283f;
+}
+.scene-fallback {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 28px;
+  background: #e9e4d8;
+  color: #4a4033;
+}
+.scene-fallback p {
+  max-width: 320px;
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-room-label {
+    transition: none;
+  }
+}

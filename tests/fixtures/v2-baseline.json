@@ -1,0 +1,372 @@
+{
+  "schemaVersion": 2,
+  "name": "Baseline Apartments",
+  "plot": {
+    "width": 1500,
+    "depth": 2100,
+    "setback": 60,
+    "road": "south",
+    "north": 0
+  },
+  "floors": [
+    {
+      "id": "floor-0",
+      "name": "Ground floor",
+      "elevation": 0,
+      "height": 300,
+      "footprint": {
+        "x": 60,
+        "z": 60,
+        "w": 1380,
+        "d": 1980
+      },
+      "rooms": [
+        {
+          "id": "floor-0-floor-0-flat-1-room-1",
+          "unitId": "floor-0-flat-1",
+          "name": "Living / dining",
+          "kind": "living",
+          "bounds": {
+            "x": 60,
+            "z": 1380,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-1-room-2",
+          "unitId": "floor-0-flat-1",
+          "name": "Kitchen",
+          "kind": "kitchen",
+          "bounds": {
+            "x": 60,
+            "z": 1060,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-1-room-3",
+          "unitId": "floor-0-flat-1",
+          "name": "Bedroom 1",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 60,
+            "z": 740,
+            "w": 530,
+            "d": 320
+          },
+          "floorFinish": "stone",
+          "furnishingRotation": 90
+        },
+        {
+          "id": "floor-0-floor-0-flat-1-room-4",
+          "unitId": "floor-0-flat-1",
+          "name": "Bedroom 2",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 60,
+            "z": 420,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-1-room-5",
+          "unitId": "floor-0-flat-1",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 60,
+            "z": 100,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-2-room-6",
+          "unitId": "floor-0-flat-2",
+          "name": "Living / dining",
+          "kind": "living",
+          "bounds": {
+            "x": 810,
+            "z": 1380,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-2-room-7",
+          "unitId": "floor-0-flat-2",
+          "name": "Kitchen",
+          "kind": "kitchen",
+          "bounds": {
+            "x": 810,
+            "z": 1060,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-2-room-8",
+          "unitId": "floor-0-flat-2",
+          "name": "Bedroom 1",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 810,
+            "z": 740,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-2-room-9",
+          "unitId": "floor-0-flat-2",
+          "name": "Bedroom 2",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 810,
+            "z": 420,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-0-floor-0-flat-2-room-10",
+          "unitId": "floor-0-flat-2",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 810,
+            "z": 100,
+            "w": 530,
+            "d": 320
+          }
+        }
+      ],
+      "unitAreas": [
+        {
+          "unitId": "floor-0-flat-1",
+          "bounds": {
+            "x": 60,
+            "z": 60,
+            "w": 630,
+            "d": 1640
+          }
+        },
+        {
+          "unitId": "floor-0-flat-2",
+          "bounds": {
+            "x": 810,
+            "z": 60,
+            "w": 630,
+            "d": 1640
+          }
+        }
+      ],
+      "balconies": []
+    },
+    {
+      "id": "floor-1",
+      "name": "Floor 1",
+      "elevation": 300,
+      "height": 300,
+      "footprint": {
+        "x": 60,
+        "z": 60,
+        "w": 1380,
+        "d": 1980
+      },
+      "rooms": [
+        {
+          "id": "floor-1-floor-1-flat-1-room-2",
+          "unitId": "floor-1-flat-1",
+          "name": "Kitchen",
+          "kind": "kitchen",
+          "bounds": {
+            "x": 60,
+            "z": 1060,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-1-room-3",
+          "unitId": "floor-1-flat-1",
+          "name": "Bedroom 1",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 60,
+            "z": 740,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-1-room-4",
+          "unitId": "floor-1-flat-1",
+          "name": "Bedroom 2",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 60,
+            "z": 420,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-1-room-5",
+          "unitId": "floor-1-flat-1",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 60,
+            "z": 100,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-2-room-6",
+          "unitId": "floor-1-flat-2",
+          "name": "Living / dining",
+          "kind": "living",
+          "bounds": {
+            "x": 810,
+            "z": 1380,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-2-room-7",
+          "unitId": "floor-1-flat-2",
+          "name": "Kitchen",
+          "kind": "kitchen",
+          "bounds": {
+            "x": 810,
+            "z": 1060,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-2-room-8",
+          "unitId": "floor-1-flat-2",
+          "name": "Bedroom 1",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 810,
+            "z": 740,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-2-room-9",
+          "unitId": "floor-1-flat-2",
+          "name": "Bedroom 2",
+          "kind": "bedroom",
+          "bounds": {
+            "x": 810,
+            "z": 420,
+            "w": 530,
+            "d": 320
+          }
+        },
+        {
+          "id": "floor-1-floor-1-flat-2-room-10",
+          "unitId": "floor-1-flat-2",
+          "name": "Bathroom",
+          "kind": "bathroom",
+          "bounds": {
+            "x": 810,
+            "z": 100,
+            "w": 530,
+            "d": 320
+          }
+        }
+      ],
+      "unitAreas": [
+        {
+          "unitId": "floor-1-flat-1",
+          "bounds": {
+            "x": 60,
+            "z": 60,
+            "w": 630,
+            "d": 1640
+          }
+        },
+        {
+          "unitId": "floor-1-flat-2",
+          "bounds": {
+            "x": 810,
+            "z": 60,
+            "w": 630,
+            "d": 1640
+          }
+        }
+      ],
+      "balconies": []
+    }
+  ],
+  "units": [
+    {
+      "id": "floor-0-flat-1",
+      "name": "Flat 1",
+      "use": "residential"
+    },
+    {
+      "id": "floor-0-flat-2",
+      "name": "Flat 2",
+      "use": "residential"
+    },
+    {
+      "id": "floor-1-flat-1",
+      "name": "Flat 1",
+      "use": "residential"
+    },
+    {
+      "id": "floor-1-flat-2",
+      "name": "Flat 2",
+      "use": "residential"
+    }
+  ],
+  "verticalSpaces": [
+    {
+      "id": "main-stairs",
+      "kind": "stairs",
+      "bounds": {
+        "x": 60,
+        "z": 1700,
+        "w": 220,
+        "d": 340
+      },
+      "floorIds": [
+        "floor-0",
+        "floor-1"
+      ],
+      "unitId": null
+    }
+  ],
+  "garden": false,
+  "parking": false,
+  "stagedRooms": [
+    {
+      "room": {
+        "id": "floor-1-floor-1-flat-1-room-1",
+        "unitId": "floor-1-flat-1",
+        "name": "Living / dining",
+        "kind": "living",
+        "bounds": {
+          "x": 60,
+          "z": 1380,
+          "w": 530,
+          "d": 320
+        }
+      },
+      "sourceFloorId": "floor-1"
+    }
+  ],
+  "finish": "brick"
+}

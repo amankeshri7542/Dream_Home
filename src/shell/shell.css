@@ -1,0 +1,1708 @@
+@layer components {
+  /* ------------------------------------------------------------------ */
+  /* Workspace: one full-bleed canvas, chrome floats above it.           */
+  /* ------------------------------------------------------------------ */
+  .dh-app {
+    --dh-inset-top: 56px;
+    --dh-inset-bottom: 140px;
+    --dh-inset-left: 0px;
+    --dh-inset-right: 0px;
+    position: fixed;
+    inset: 0;
+    /* clip, not hidden: focusing a control can never scroll the app sideways. */
+    overflow: clip;
+    background: linear-gradient(
+      180deg,
+      var(--dh-sky-top) 0%,
+      var(--dh-sky-horizon) 72%,
+      var(--dh-paper-2) 100%
+    );
+    isolation: isolate;
+  }
+  .dh-scene-host {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dh-z-canvas);
+  }
+  .dh-scene-host .scene-pane {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+  .dh-scene-host canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    touch-action: none;
+  }
+  /* Labels are handles too: a finger on one drags the room, never the page. */
+  .dh-scene-host :is(.scene-room-label, .scene-ghost-badge) {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dh-scene-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: var(--dh-space-3);
+    color: var(--dh-ink-soft);
+    font-weight: 600;
+  }
+  .dh-scene-loading .dh-brand-mark {
+    animation: dh-breathe 1.6s var(--dh-ease-in-out) infinite;
+  }
+  @keyframes dh-breathe {
+    50% {
+      transform: translateY(-6px) scale(1.04);
+    }
+  }
+
+  /* Shared glass surface */
+  .dh-topbar,
+  .dh-palette,
+  .dh-dock,
+  .dh-modebar,
+  .dh-floors,
+  .dh-inspector,
+  .dh-lens,
+  .dh-popover,
+  .dh-toast {
+    background: var(--dh-glass-bg);
+    border: 1px solid var(--dh-glass-border);
+    box-shadow: var(--dh-shadow-2);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+  .dh-inspector,
+  .dh-lens,
+  .dh-popover {
+    background: var(--dh-glass-solid);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Top bar                                                             */
+  /* ------------------------------------------------------------------ */
+  .dh-topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--dh-z-chrome);
+    display: flex;
+    align-items: center;
+    gap: var(--dh-space-2);
+    min-height: calc(var(--dh-topbar-h) + var(--dh-safe-top));
+    padding: var(--dh-safe-top) calc(8px + var(--dh-safe-right)) 0
+      calc(8px + var(--dh-safe-left));
+    border-width: 0 0 1px;
+    border-radius: 0;
+    box-shadow: 0 1px 0 rgb(74 52 33 / 0.06), 0 8px 24px rgb(74 52 33 / 0.06);
+  }
+  .dh-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--dh-space-2);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .dh-brand {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dh-radius-md);
+    background: transparent;
+    flex: none;
+    transition: transform var(--dh-dur-fast) var(--dh-ease-pop);
+  }
+  .dh-brand:hover {
+    transform: rotate(-4deg) scale(1.05);
+  }
+  .dh-title {
+    min-width: 0;
+  }
+  .dh-title h1 {
+    font-size: 19px;
+    line-height: 1.15;
+  }
+  .dh-title-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dh-title-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--dh-ink-muted);
+    font-size: 12.5px;
+    font-weight: 550;
+    line-height: 1.3;
+  }
+  .dh-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    color: var(--dh-sage-700);
+    font-weight: 650;
+  }
+  .dh-save::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .dh-save.is-unsaved {
+    color: var(--dh-crimson-600);
+  }
+  .dh-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+  }
+  .dh-history {
+    display: flex;
+  }
+  .dh-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    margin: 0 4px;
+    padding: 0 14px;
+    min-height: 44px;
+    border: 1.5px solid var(--dh-terracotta-600);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    color: var(--dh-terracotta-700);
+    font-weight: 700;
+    font-size: 14.5px;
+  }
+  .dh-share:hover {
+    background: var(--dh-terracotta-50);
+  }
+  .dh-app.is-compact .dh-dock .dh-tool,
+  .dh-app.is-compact .dh-palette .dh-tool {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .dh-app.is-compact .dh-dock .dh-tool-label,
+  .dh-app.is-compact .dh-palette .dh-tool-label {
+    font-size: 12.5px;
+  }
+  /* The narrowest phones: slightly smaller labels so six actions fit. */
+  @media (max-width: 359px) {
+    .dh-app.is-compact .dh-dock .dh-tool-label,
+    .dh-app.is-compact .dh-palette .dh-tool-label {
+      font-size: 11px;
+      letter-spacing: -0.015em;
+    }
+    .dh-app.is-compact .dh-dock,
+    .dh-app.is-compact .dh-palette {
+      gap: 0;
+      padding-left: 2px;
+      padding-right: 2px;
+    }
+    .dh-inspector-title h2 {
+      font-size: 19px;
+    }
+    .dh-inspector-head .dh-icon-btn {
+      width: 44px;
+      height: 44px;
+    }
+  }
+  @media (max-width: 430px) {
+    .dh-brand {
+      width: 44px;
+    }
+    .dh-brand .dh-brand-mark {
+      width: 32px;
+      height: 32px;
+    }
+    .dh-title h1 {
+      font-size: 17px;
+    }
+    .dh-share span,
+    .dh-title-meta > :not(.dh-save) {
+      display: none;
+    }
+    .dh-share {
+      width: 44px;
+      padding: 0;
+      justify-content: center;
+    }
+    .dh-title-meta {
+      font-size: 0;
+    }
+    .dh-title-meta .dh-save {
+      font-size: 12px;
+    }
+  }
+  /* The narrowest phones: the home's name may use two short lines. */
+  @media (max-width: 380px) {
+    .dh-title h1 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      white-space: normal;
+      font-size: 15px;
+      line-height: 1.1;
+    }
+  }
+  @media (max-width: 359px) {
+    .dh-history .dh-icon-btn:last-child {
+      display: none;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Mode bar                                                            */
+  /* ------------------------------------------------------------------ */
+  .dh-modebar {
+    display: flex;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 4px;
+    border-radius: var(--dh-radius-lg);
+  }
+  .dh-modebar-top {
+    flex: none;
+    background: var(--dh-paper-2);
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    border-radius: var(--dh-radius-pill);
+  }
+  .dh-modebar-top .dh-tool {
+    flex-direction: row;
+    min-height: 40px;
+    padding: 0 14px;
+    gap: 7px;
+    border-radius: var(--dh-radius-pill);
+  }
+  .dh-modebar-top .dh-tool-label {
+    font-size: 14.5px;
+  }
+  .dh-modebar .dh-tool[aria-current="page"] {
+    background: var(--dh-paper-0);
+    color: var(--dh-terracotta-700);
+    box-shadow: var(--dh-shadow-1);
+  }
+  .dh-modebar-bottom .dh-tool {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Bottom stack (phones): sheet + dock/palette + mode bar              */
+  /* ------------------------------------------------------------------ */
+  .dh-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--dh-z-sheet);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 calc(8px + var(--dh-safe-right))
+      calc(8px + var(--dh-safe-bottom)) calc(8px + var(--dh-safe-left));
+    pointer-events: none;
+  }
+  .dh-bottom > * {
+    pointer-events: auto;
+  }
+  .dh-bottom.is-desktop {
+    left: 50%;
+    right: auto;
+    bottom: 20px;
+    padding: 0;
+    /* Never wider than the clear space between the side panels. */
+    max-width: calc(100vw - var(--dh-inset-left) - var(--dh-inset-right) - 24px);
+    transform: translateX(calc(-50% + (var(--dh-inset-left) - var(--dh-inset-right)) / 2));
+  }
+  .dh-bottom.is-desktop > .dh-dock {
+    max-width: 100%;
+  }
+
+  .dh-palette,
+  .dh-dock {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 4px;
+    border-radius: var(--dh-radius-lg);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .dh-palette::-webkit-scrollbar,
+  .dh-dock::-webkit-scrollbar {
+    display: none;
+  }
+  .dh-palette .dh-tool,
+  .dh-dock .dh-tool {
+    flex: 1 0 auto;
+    min-width: 58px;
+  }
+  .dh-tool-primary .dh-tool-icon {
+    width: 36px;
+    height: 28px;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-terracotta-600);
+    color: var(--dh-paper-0);
+  }
+  .dh-tool-primary {
+    color: var(--dh-terracotta-700);
+  }
+  .dh-tool-done {
+    color: var(--dh-sage-700);
+  }
+  .dh-tool-done .dh-tool-icon {
+    width: 36px;
+    height: 28px;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-sage-600);
+    color: var(--dh-paper-0);
+  }
+  .dh-palette-rail {
+    position: absolute;
+    top: calc(var(--dh-topbar-h) + 16px);
+    left: calc(16px + var(--dh-safe-left));
+    z-index: var(--dh-z-chrome);
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 6px;
+    gap: 4px;
+    border-radius: var(--dh-radius-xl);
+    overflow: visible;
+  }
+  .dh-palette-rail .dh-tool {
+    flex: none;
+    width: 64px;
+    min-height: 62px;
+  }
+  .dh-dock {
+    animation: dh-rise var(--dh-dur-base) var(--dh-ease-pop);
+  }
+  .dh-dock-more {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    min-width: 54px;
+  }
+  .dh-dock-more > .dh-tool {
+    flex: 1;
+  }
+  .dh-menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+    padding: 6px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-glass-solid);
+    border: 1px solid var(--dh-line);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-pop var(--dh-dur-base) var(--dh-ease-pop);
+  }
+  .dh-menu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--dh-radius-sm);
+    background: transparent;
+    font-size: var(--dh-text-label);
+    font-weight: 600;
+    text-align: left;
+  }
+  .dh-menu button:hover {
+    background: var(--dh-paper-2);
+  }
+  .dh-menu button.is-danger {
+    color: var(--dh-crimson-700);
+  }
+  @keyframes dh-rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+  }
+  @keyframes dh-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.92) translateY(6px);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Inspector: sheet on phones, side panel on desktop                   */
+  /* ------------------------------------------------------------------ */
+  .dh-inspector {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: var(--dh-radius-xl);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-rise var(--dh-dur-base) var(--dh-ease-spring);
+  }
+  .dh-inspector.is-sheet {
+    max-height: calc(100dvh - var(--dh-topbar-h) - 210px);
+  }
+  .dh-inspector.is-sheet[data-snap="peek"] {
+    max-height: 120px;
+  }
+  .dh-inspector.is-sheet[data-snap="medium"] {
+    height: min(42dvh, 420px);
+  }
+  .dh-inspector.is-sheet[data-snap="expanded"] {
+    height: min(64dvh, 680px);
+  }
+  .dh-inspector.is-panel {
+    position: absolute;
+    top: calc(var(--dh-topbar-h) + 16px);
+    right: calc(16px + var(--dh-safe-right));
+    bottom: 16px;
+    z-index: var(--dh-z-sheet);
+    width: var(--dh-panel-w);
+  }
+  .dh-inspector-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-bottom: 96px;
+    padding: 4px 16px 16px;
+  }
+  .dh-sheet-handle {
+    display: grid;
+    place-items: center;
+    height: 22px;
+    flex: none;
+    cursor: grab;
+    touch-action: none;
+  }
+  .dh-sheet-handle i {
+    width: 42px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--dh-line-strong);
+  }
+  .dh-inspector.is-panel .dh-inspector-scroll {
+    padding-top: 12px;
+  }
+  .dh-inspector-head {
+    position: sticky;
+    top: -4px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--dh-space-2);
+    margin: 0 -16px 8px;
+    padding: 6px 12px 10px 16px;
+    background: #fffcf7;
+    border-bottom: 1px solid var(--dh-line);
+  }
+  .dh-inspector[data-snap="peek"] .dh-inspector-head {
+    border-bottom-color: transparent;
+    margin-bottom: 0;
+  }
+  .dh-chip-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-2);
+    color: var(--dh-ink);
+    box-shadow: inset 0 -3px 0 rgb(46 38 32 / 0.08);
+  }
+  .dh-inspector-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .dh-inspector-title h2 {
+    font-size: var(--dh-text-xl);
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.12;
+  }
+  .dh-inspector-title p {
+    color: var(--dh-ink-muted);
+    font-size: 14px;
+    font-weight: 550;
+  }
+  .dh-kicker {
+    display: block;
+    color: var(--dh-terracotta-700);
+    font-size: 11.5px;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .dh-inspector-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dh-space-4);
+  }
+  .dh-inspector-body[hidden] {
+    display: none;
+  }
+  .dh-lead {
+    color: var(--dh-ink-soft);
+    font-size: 15px;
+  }
+  .dh-note {
+    color: var(--dh-ink-muted);
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .dh-room-stat {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 14px 16px;
+    border-radius: var(--dh-radius-lg);
+    background: linear-gradient(135deg, var(--dh-oak-100), var(--dh-paper-0));
+  }
+  .dh-room-stat strong {
+    font-family: var(--dh-font-display);
+    font-size: 34px;
+    line-height: 1;
+  }
+  .dh-room-stat strong small {
+    margin-left: 6px;
+    font-family: var(--dh-font-ui);
+    font-size: 14px;
+    color: var(--dh-ink-muted);
+  }
+  .dh-room-stat > span {
+    flex: 1;
+    color: var(--dh-ink-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .dh-room-stat .dh-segmented {
+    flex: none;
+  }
+  .dh-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-sage-100);
+    color: var(--dh-ink);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .dh-nudge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .dh-nudge span {
+    display: flex;
+    flex-direction: column;
+  }
+  .dh-nudge small {
+    color: var(--dh-ink-muted);
+  }
+  .dh-nudge div {
+    display: flex;
+    gap: 4px;
+  }
+  .dh-danger-zone {
+    padding-top: var(--dh-space-3);
+    border-top: 1px solid var(--dh-line);
+  }
+  .dh-inline-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px 8px 8px 12px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-crimson-100);
+    color: var(--dh-crimson-700);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .dh-inline-error span {
+    flex: 1;
+  }
+  .dh-stepper-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 650;
+  }
+  .dh-stepper-row div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dh-stepper-row strong {
+    min-width: 28px;
+    text-align: center;
+    font-size: 20px;
+  }
+  .dh-room-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Camera HUD, floors, popovers                                        */
+  /* ------------------------------------------------------------------ */
+  .dh-camera-hud {
+    position: absolute;
+    right: calc(10px + var(--dh-safe-right));
+    bottom: calc(var(--dh-inset-bottom) + 10px);
+    z-index: calc(var(--dh-z-chrome) + 1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dh-hide-chrome {
+    position: absolute;
+    left: calc(10px + var(--dh-safe-left));
+    bottom: calc(var(--dh-inset-bottom) + 10px);
+    z-index: var(--dh-z-hud);
+  }
+  .dh-show-chrome {
+    position: absolute;
+    top: calc(12px + var(--dh-safe-top));
+    right: calc(12px + var(--dh-safe-right));
+    z-index: var(--dh-z-chrome);
+  }
+  .dh-lens-floors {
+    display: flex;
+  }
+  .dh-popover {
+    position: absolute;
+    right: calc(var(--dh-inset-right) + 16px);
+    bottom: 84px;
+    z-index: calc(var(--dh-z-sheet) + 2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(340px, calc(100vw - 92px));
+    max-height: calc(100dvh - var(--dh-inset-top) - var(--dh-inset-bottom) - 24px);
+    padding: 12px 16px 16px;
+    overflow-y: auto;
+    border-radius: var(--dh-radius-xl);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-pop var(--dh-dur-base) var(--dh-ease-pop);
+    transform-origin: bottom right;
+  }
+  .dh-popover-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .dh-popover-head h2 {
+    font-size: var(--dh-text-lg);
+  }
+  .dh-view-presets {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .dh-view-presets button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 0 12px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    font-size: 14.5px;
+    font-weight: 650;
+    text-align: left;
+    box-shadow: var(--dh-shadow-1);
+  }
+  .dh-view-presets button:hover {
+    background: var(--dh-oak-100);
+  }
+  .dh-finish-choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .dh-finish-choices legend {
+    margin-bottom: 6px;
+    padding: 0;
+    font-weight: 700;
+    font-size: var(--dh-text-label);
+  }
+  .dh-finish-choices button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-height: 72px;
+    padding: 8px 4px;
+    border: 2px solid transparent;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    box-shadow: var(--dh-shadow-1);
+    font-size: 12.5px;
+    font-weight: 650;
+  }
+  .dh-finish-choices button i {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-shadow: inset 0 -5px 8px rgb(46 38 32 / 0.18);
+  }
+  .dh-finish-choices button[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+  }
+  .dh-switches {
+    display: flex;
+    flex-direction: column;
+  }
+  .dh-stage-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .dh-stage-grid button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 56px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .dh-stage-grid button i {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--dh-paper-2);
+    font-size: 12px;
+    font-style: normal;
+  }
+  .dh-stage-grid button[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+  }
+  .dh-stage-grid button[aria-pressed="true"] i {
+    background: var(--dh-terracotta-600);
+    color: var(--dh-paper-0);
+  }
+
+  .dh-floors {
+    position: absolute;
+    top: calc(var(--dh-inset-top) + 10px);
+    right: calc(10px + var(--dh-safe-right));
+    z-index: var(--dh-z-hud);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: var(--dh-radius-pill);
+  }
+  .dh-floors .dh-icon-btn {
+    width: 44px;
+    height: 40px;
+  }
+  .dh-floor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: min(40dvh, 300px);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .dh-floor-list button {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border: 0;
+    border-radius: var(--dh-radius-pill);
+    background: transparent;
+    font-weight: 750;
+    font-size: 15px;
+    color: var(--dh-ink-soft);
+  }
+  .dh-floor-list button:hover {
+    background: var(--dh-paper-2);
+  }
+  .dh-floor-list button[aria-checked="true"] {
+    background: var(--dh-terracotta-600);
+    color: var(--dh-paper-0);
+    box-shadow: 0 4px 10px rgb(181 86 47 / 0.3);
+  }
+  .dh-floor-list .dh-floor-all {
+    font-size: 12.5px;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Plan lens                                                           */
+  /* ------------------------------------------------------------------ */
+  .dh-lens {
+    position: absolute;
+    z-index: calc(var(--dh-z-chrome) - 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--dh-radius-xl);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-pop var(--dh-dur-base) var(--dh-ease-out);
+  }
+  .dh-lens.is-overlay {
+    top: calc(var(--dh-inset-top) + 8px);
+    bottom: calc(var(--dh-inset-bottom) + 8px);
+    left: calc(8px + var(--dh-safe-left));
+    right: calc(8px + var(--dh-safe-right));
+  }
+  .dh-app.is-compact[data-lens="open"] .dh-camera-hud,
+  .dh-app.is-compact[data-lens="open"] .dh-floors,
+  .dh-app.is-compact[data-lens="open"] .dh-hide-chrome,
+  .dh-app.is-compact:has(.dh-inspector:is([data-snap="medium"], [data-snap="expanded"]))
+    .dh-camera-hud,
+  .dh-app.is-compact:has(.dh-inspector:is([data-snap="medium"], [data-snap="expanded"]))
+    .dh-hide-chrome {
+    display: none;
+  }
+  /* Phones: the elevator rides on the left under the checklist, clear of the
+     camera buttons on the right. */
+  .dh-app.is-compact .dh-floors {
+    right: auto;
+    left: calc(10px + var(--dh-safe-left));
+    top: calc(var(--dh-inset-top) + 62px);
+  }
+  .dh-app.is-compact .dh-floor-list {
+    max-height: max(
+      84px,
+      calc(100dvh - var(--dh-inset-top) - var(--dh-inset-bottom) - 240px)
+    );
+  }
+  .dh-lens.is-docked {
+    top: calc(var(--dh-topbar-h) + 16px);
+    bottom: 16px;
+    left: calc(16px + 76px + 12px + var(--dh-safe-left));
+    width: min(46vw, 640px);
+  }
+  /* With the details panel open too, the plan narrows so the 3D view keeps
+     at least ~380 px between them for the home and its action bar. */
+  .dh-app.is-desktop:has(.dh-inspector) .dh-lens.is-docked {
+    width: clamp(320px, calc(100vw - 104px - 400px - 400px), 640px);
+  }
+  .dh-lens.is-primary {
+    top: calc(var(--dh-inset-top) + 8px);
+    bottom: calc(var(--dh-inset-bottom) + 8px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+  .dh-lens-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 14px;
+    border-bottom: 1px solid var(--dh-line);
+  }
+  .dh-lens-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .dh-lens-title small {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--dh-ink-muted);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dh-lens-body {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+  .dh-lens-body > * {
+    height: 100%;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Notifications & confirm                                             */
+  /* ------------------------------------------------------------------ */
+  .dh-notify {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--dh-inset-bottom) + 12px);
+    z-index: var(--dh-z-notify);
+    width: min(540px, calc(100vw - 24px));
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  /* Messages never block the home underneath; only their buttons are tappable. */
+  .dh-notify .dh-toast {
+    pointer-events: none;
+  }
+  .dh-notify .dh-toast :is(button, a) {
+    pointer-events: auto;
+  }
+  .dh-app.is-desktop .dh-notify {
+    top: calc(var(--dh-topbar-h) + 14px);
+    bottom: auto;
+  }
+  .dh-toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 6px 6px 6px 14px;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-glass-solid);
+    font-size: 14.5px;
+    font-weight: 600;
+    pointer-events: auto;
+    animation: dh-pop var(--dh-dur-slow) var(--dh-ease-pop);
+  }
+  .dh-toast span {
+    flex: 1;
+  }
+  .dh-toast > svg {
+    flex: none;
+  }
+  .dh-toast.is-success > svg {
+    color: var(--dh-sage-600);
+  }
+  .dh-toast.is-info > svg {
+    color: var(--dh-oak-700);
+  }
+  .dh-toast.is-error {
+    background: var(--dh-crimson-100);
+    color: var(--dh-crimson-700);
+  }
+  .dh-toast-action {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-ink);
+    color: var(--dh-paper-0);
+    font-weight: 700;
+  }
+  .dh-confirm {
+    width: min(420px, calc(100vw - 32px));
+    padding: 24px;
+    border: 0;
+    border-radius: var(--dh-radius-xl);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink);
+    box-shadow: var(--dh-shadow-3);
+  }
+  .dh-confirm::backdrop {
+    background: rgb(46 38 32 / 0.36);
+    backdrop-filter: blur(3px);
+  }
+  .dh-confirm h2 {
+    margin-bottom: 8px;
+    font-family: var(--dh-font-display);
+    font-size: var(--dh-text-xl);
+  }
+  .dh-confirm p {
+    color: var(--dh-ink-soft);
+  }
+  .dh-confirm-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  /* Photos */
+  .dh-photo {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 20px 20px;
+  }
+  .dh-photo img {
+    width: 100%;
+    max-height: 60dvh;
+    object-fit: contain;
+    border-radius: var(--dh-radius-lg);
+    box-shadow: var(--dh-shadow-2);
+    background: var(--dh-paper-2);
+  }
+  .dh-photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Shortcuts */
+  .dh-shortcuts {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 20px 20px;
+  }
+  .dh-shortcuts h3 {
+    margin-bottom: 6px;
+    font-size: var(--dh-text-label);
+  }
+  .dh-shortcuts dl {
+    margin: 0;
+  }
+  .dh-shortcuts dl div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--dh-line);
+  }
+  .dh-shortcuts dt {
+    display: flex;
+    gap: 4px;
+  }
+  .dh-shortcuts dd {
+    margin: 0;
+    color: var(--dh-ink-soft);
+    text-align: right;
+  }
+  .dh-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    font-weight: 600;
+  }
+  .dh-check input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--dh-terracotta-600);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Desktop arrangement                                                 */
+  /* ------------------------------------------------------------------ */
+  .dh-app.is-desktop .dh-topbar {
+    padding-left: 16px;
+    padding-right: 16px;
+    gap: 16px;
+  }
+  .dh-app.is-desktop .dh-topbar-brand {
+    flex: 1 1 0;
+  }
+  .dh-app.is-desktop .dh-topbar-actions {
+    flex: 1 1 0;
+    justify-content: flex-end;
+  }
+  .dh-app.is-desktop .dh-title h1 {
+    font-size: 21px;
+  }
+  .dh-app.is-desktop .dh-camera-hud {
+    flex-direction: row;
+    right: calc(var(--dh-inset-right) + 16px);
+    bottom: 20px;
+    transition: bottom var(--dh-dur-base) var(--dh-ease-out);
+  }
+  /* The selection action bar owns the bottom edge; camera buttons sit above it. */
+  .dh-app.is-desktop[data-dock] .dh-camera-hud {
+    bottom: 96px;
+  }
+  .dh-app.is-desktop[data-dock] .dh-hide-chrome {
+    bottom: 156px;
+  }
+  .dh-app.is-desktop[data-dock] .dh-popover {
+    bottom: 160px;
+  }
+  .dh-app.is-compact .dh-popover {
+    position: fixed;
+    left: calc(8px + var(--dh-safe-left));
+    right: calc(8px + var(--dh-safe-right));
+    bottom: calc(var(--dh-inset-bottom) + 8px);
+    width: auto;
+    max-height: calc(100dvh - var(--dh-inset-top) - var(--dh-inset-bottom) - 16px);
+    transform-origin: bottom center;
+  }
+  .dh-app.is-desktop .dh-hide-chrome {
+    left: auto;
+    right: calc(var(--dh-inset-right) + 16px);
+    bottom: 80px;
+  }
+  .dh-app.is-desktop .dh-floors {
+    top: calc(var(--dh-topbar-h) + 16px);
+    right: calc(var(--dh-inset-right) + 16px);
+  }
+  .dh-app.is-desktop .dh-lens.is-docked ~ .dh-palette-rail {
+    box-shadow: var(--dh-shadow-3);
+  }
+
+  /* Focused chrome-hidden view */
+  .dh-app[data-chrome-hidden] .dh-notify {
+    display: none;
+  }
+}
+
+@layer components {
+  /* Messages never cover the camera buttons on phones. */
+  .dh-app.is-compact .dh-notify {
+    left: calc(8px + var(--dh-safe-left));
+    right: calc(66px + var(--dh-safe-right));
+    width: auto;
+    transform: none;
+  }
+  /* Tablets keep a compact, centred palette instead of stretched buttons. */
+  @media (min-width: 600px) {
+    .dh-app.is-compact .dh-bottom {
+      align-items: center;
+    }
+    .dh-app.is-compact .dh-bottom > :not(.dh-mode-hint) {
+      width: min(560px, 100%);
+    }
+  }
+  .dh-mode-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: center;
+    margin: 0;
+    padding: 8px 14px;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-glass-solid);
+    box-shadow: var(--dh-shadow-2);
+    color: var(--dh-ink-soft);
+    font-size: 14px;
+    font-weight: 650;
+    animation: dh-pop var(--dh-dur-slow) var(--dh-ease-pop);
+  }
+  .dh-app.is-desktop .dh-mode-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(calc(-50% + (var(--dh-inset-left) - var(--dh-inset-right)) / 2));
+    z-index: var(--dh-z-hud);
+  }
+  .dh-app.is-desktop[data-dock] .dh-mode-hint {
+    bottom: 96px;
+  }
+}
+
+@layer components {
+  /* Home checklist */
+  .dh-checklist {
+    position: absolute;
+    top: calc(var(--dh-inset-top) + 10px);
+    left: calc(10px + var(--dh-safe-left));
+    z-index: calc(var(--dh-z-chrome) + 1);
+  }
+  /* An open checklist sits above the camera buttons it may overlap. */
+  .dh-checklist:has(.dh-checklist-pop) {
+    z-index: calc(var(--dh-z-chrome) + 3);
+  }
+  .dh-app.is-desktop .dh-checklist {
+    left: auto;
+    right: calc(var(--dh-inset-right) + 84px);
+    top: calc(var(--dh-topbar-h) + 16px);
+  }
+  .dh-checklist-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--dh-glass-border);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-glass-bg);
+    box-shadow: var(--dh-shadow-2);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    font-weight: 750;
+    color: var(--dh-ink-soft);
+  }
+  .dh-checklist-pill-label {
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .dh-checklist-pill.is-complete {
+    background: var(--dh-sun-400);
+    color: var(--dh-ink);
+    animation: dh-pop var(--dh-dur-slow) var(--dh-ease-pop);
+  }
+  .dh-checklist-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: min(340px, calc(100vw - 24px));
+    max-height: calc(100dvh - var(--dh-inset-top) - var(--dh-inset-bottom) - 80px);
+    overflow-y: auto;
+    padding: 12px 16px 16px;
+    border-radius: var(--dh-radius-xl);
+    background: var(--dh-glass-solid);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-pop var(--dh-dur-base) var(--dh-ease-pop);
+  }
+  .dh-app.is-desktop .dh-checklist-pop {
+    left: auto;
+    right: 0;
+  }
+  .dh-checklist-pop h3 {
+    margin: 14px 0 4px;
+    font-size: var(--dh-text-label);
+  }
+  .dh-checklist-pop ul {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .dh-checklist-pop li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    border-bottom: 1px solid var(--dh-line);
+    font-size: 14.5px;
+  }
+  .dh-checklist-pop li > span:nth-child(2) {
+    flex: 1;
+  }
+  .dh-checklist-pop li.is-done > span:nth-child(2) {
+    color: var(--dh-ink-muted);
+  }
+  .dh-check-mark {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border: 2px solid var(--dh-line-strong);
+    border-radius: 50%;
+  }
+  li.is-done .dh-check-mark {
+    border-color: var(--dh-sage-600);
+    background: var(--dh-sage-600);
+    color: var(--dh-paper-0);
+  }
+  li.is-done .dh-check-mark.is-quest {
+    border-color: var(--dh-sun-400);
+    background: var(--dh-sun-400);
+    color: var(--dh-ink);
+  }
+  .dh-checklist-pop li button {
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+    font-weight: 700;
+    font-size: 13.5px;
+  }
+
+  /* Mode panels: lists, catalogs and swatches */
+  .dh-opening-list,
+  .dh-room-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dh-list-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 8px 12px 8px 8px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-0);
+    box-shadow: var(--dh-shadow-1);
+    text-align: left;
+  }
+  .dh-list-card > span:nth-child(2) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .dh-list-card small {
+    color: var(--dh-ink-muted);
+    font-size: 13px;
+  }
+  .dh-list-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-oak-100);
+  }
+  .dh-list-icon.is-window {
+    background: #dbe9ee;
+  }
+  .dh-kind-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .dh-kind-grid legend {
+    margin-bottom: 8px;
+    padding: 0;
+    font-weight: 700;
+  }
+  .dh-kind-grid button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-height: 64px;
+    padding: 8px 10px;
+    border: 2px solid transparent;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    box-shadow: var(--dh-shadow-1);
+    text-align: left;
+  }
+  .dh-kind-grid button small {
+    color: var(--dh-ink-muted);
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+  .dh-kind-grid button[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+  }
+  .dh-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .dh-chips button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    font-weight: 650;
+    font-size: 14px;
+  }
+  .dh-chips button[aria-checked="true"] {
+    border-color: var(--dh-ink);
+    background: var(--dh-ink);
+    color: var(--dh-paper-0);
+  }
+  .dh-catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
+  }
+  .dh-catalog-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 116px;
+    padding: 8px 6px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-lg);
+    background: linear-gradient(180deg, var(--dh-paper-0), var(--dh-paper-1));
+    box-shadow: var(--dh-shadow-1);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-align: center;
+    transition: transform var(--dh-dur-fast) var(--dh-ease-pop);
+  }
+  .dh-catalog-card:active {
+    transform: scale(0.95);
+  }
+  @media (hover: hover) {
+    .dh-catalog-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--dh-shadow-2);
+    }
+  }
+  .dh-catalog-card img,
+  .dh-furniture-chip img,
+  .dh-furniture-hero img,
+  .dh-chip-icon img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+  }
+  .dh-chip-icon img {
+    width: 40px;
+    height: 40px;
+  }
+  .dh-thumb-fallback {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--dh-oak-100);
+    font-family: var(--dh-font-display);
+    font-size: 26px;
+  }
+  .dh-furniture-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 6px;
+  }
+  .dh-furniture-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    font-size: 12.5px;
+    font-weight: 650;
+    text-align: center;
+  }
+  .dh-furniture-chip img {
+    width: 56px;
+    height: 56px;
+  }
+  .dh-furniture-hero {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--dh-radius-lg);
+    background: linear-gradient(135deg, var(--dh-oak-100), var(--dh-paper-0));
+  }
+  .dh-furniture-hero img {
+    width: 96px;
+    height: 96px;
+  }
+  .dh-roof-styles,
+  .dh-fences {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .dh-fences {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+  .dh-roof-styles legend,
+  .dh-fences legend {
+    margin-bottom: 8px;
+    padding: 0;
+    font-weight: 700;
+  }
+  .dh-roof-styles button,
+  .dh-fences button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 76px;
+    padding: 6px 4px;
+    border: 2px solid transparent;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    box-shadow: var(--dh-shadow-1);
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .dh-roof-styles button:disabled {
+    opacity: 0.4;
+  }
+  .dh-roof-styles button[aria-pressed="true"],
+  .dh-fences button[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+  }
+  .dh-fences button i {
+    width: 34px;
+    height: 20px;
+    border-radius: 6px;
+    border: 1px dashed var(--dh-line-strong);
+  }
+  .dh-rename input {
+    font-family: var(--dh-font-display);
+    font-size: 18px;
+  }
+}
+
+@layer components {
+  .dh-reveal {
+    position: absolute;
+    top: calc(var(--dh-inset-top) + 64px);
+    left: 50%;
+    z-index: var(--dh-z-notify);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-glass-solid);
+    box-shadow: var(--dh-shadow-3);
+    color: var(--dh-ink);
+    font-family: var(--dh-font-display);
+    font-size: 19px;
+    font-weight: 650;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    animation: dh-caption var(--dh-dur-slow) var(--dh-ease-pop);
+    pointer-events: none;
+  }
+  .dh-reveal.is-done {
+    background: var(--dh-sun-400);
+  }
+  .dh-reveal.is-done svg {
+    animation: dh-spin 1.2s var(--dh-ease-out);
+  }
+  @keyframes dh-caption {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 10px) scale(0.94);
+    }
+  }
+  @keyframes dh-spin {
+    from {
+      transform: rotate(-90deg) scale(0.4);
+    }
+  }
+
+  /* The floor plan covers the top of a phone screen; the checklist waits. */
+  .dh-app.is-compact[data-lens="open"] .dh-checklist {
+    display: none;
+  }
+
+  /* Celebration: confetti and a "ready to move in" card. */
+  .dh-celebrate {
+    position: fixed;
+    inset: 0;
+    z-index: var(--dh-z-notify);
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    pointer-events: none;
+  }
+  .dh-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .dh-confetti i {
+    position: absolute;
+    top: -16px;
+    width: 9px;
+    height: 14px;
+    border-radius: 2px;
+    opacity: 0;
+    animation-name: dh-confetti;
+    animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1);
+    animation-fill-mode: forwards;
+  }
+  .dh-confetti i.is-round {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  @keyframes dh-confetti {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) rotate(0);
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--drift), 105vh) rotate(var(--spin));
+    }
+  }
+  .dh-celebrate-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: min(380px, 100%);
+    padding: 28px 24px 20px;
+    border-radius: var(--dh-radius-xl);
+    background: var(--dh-glass-solid);
+    border: 1px solid var(--dh-glass-border);
+    box-shadow: var(--dh-shadow-3);
+    text-align: center;
+    pointer-events: auto;
+    animation: dh-pop var(--dh-dur-slow) var(--dh-ease-spring);
+  }
+  .dh-celebrate-card h2 {
+    font-size: var(--dh-text-xl);
+  }
+  .dh-celebrate-card p {
+    color: var(--dh-ink-soft);
+  }
+  .dh-celebrate-badge {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-top: -60px;
+    border-radius: 50%;
+    background: var(--dh-sun-400);
+    color: var(--dh-ink);
+    box-shadow: 0 8px 20px rgb(216 155 35 / 0.4);
+  }
+  .dh-celebrate-actions {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    gap: 4px;
+    margin-top: 6px;
+  }
+}

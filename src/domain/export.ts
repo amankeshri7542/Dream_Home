@@ -1,5 +1,6 @@
 import type { Project } from "./types";
 import { ROOM_META } from "./types";
+import { isWindow } from "./walls";
 import {
   balconyBounds,
   deriveWalls,
@@ -101,9 +102,14 @@ export function buildPlanSvg(
     .map((wall) => {
       const point = (offset: number) =>
         `${wall.x + (wall.axis === "x" ? offset : 0)} ${wall.z + (wall.axis === "z" ? offset : 0)}`;
-      const from = wall.opening ? (wall.length - wall.opening.width) / 2 : 0,
-        to = wall.opening ? (wall.length + wall.opening.width) / 2 : 0;
-      return `<path d="M${point(0)} L${point(wall.length)}" stroke="#4e6556" stroke-width="10"/>${wall.opening ? `<path data-opening="${wall.opening.kind}" d="M${point(from)} L${point(to)}" stroke="${wall.opening.kind === "door" ? "#fffdf5" : "#8ebdce"}" stroke-width="12"/>` : ""}`;
+      return `<path d="M${point(0)} L${point(wall.length)}" stroke="#4e6556" stroke-width="10"/>${wall.openings
+        .map((opening) => {
+          const kind = isWindow(opening.kind) ? "window" : "door",
+            from = Math.max(0, opening.offset - opening.width / 2),
+            to = Math.min(wall.length, opening.offset + opening.width / 2);
+          return `<path data-opening="${kind}" data-opening-kind="${opening.kind}" d="M${point(from)} L${point(to)}" stroke="${kind === "door" ? "#fffdf5" : "#8ebdce"}" stroke-width="12"/>`;
+        })
+        .join("")}`;
     })
     .join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="${height}" viewBox="0 0 1200 ${height}"><rect width="1200" height="${height}" fill="#fbfcf7"/><g font-family="Arial, sans-serif" fill="#284b3b">

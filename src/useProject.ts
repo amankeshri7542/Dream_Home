@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createHistory,
+  pushHistory,
+  redoHistory,
+  redoLabel,
+  undoHistory,
+  undoLabel,
+  type History,
+  type HistoryMeta,
+} from "./history";
 import { createPreset, parseProject } from "./domain/model";
 import { createStarter } from "./domain/starters";
 import type { EditResult, Project } from "./domain/types";
@@ -43,31 +53,27 @@ function sample() {
 }
 export function useProject() {
   const [boot] = useState(load);
-  const [history, setHistory] = useState<{
-    past: Project[];
-    present: Project;
-    future: Project[];
-  }>({ past: [], present: boot.project, future: [] });
+  const historyRef = useRef<History>(createHistory(boot.project));
+  const [history, setHistory] = useState<History>(historyRef.current);
   const [error, setError] = useState(boot.error);
   const [canSave, setCanSave] = useState(!boot.error);
   const [saved, setSaved] = useState(!boot.error);
-  const commit = useCallback((project: Project) => {
-    setHistory((h) =>
-      JSON.stringify(h.present) === JSON.stringify(project)
-        ? h
-        : {
-            past: [...h.past.slice(-49), h.present],
-            present: project,
-            future: [],
-          },
-    );
-    setCanSave(true);
-    setError("");
+  const write = useCallback((next: History) => {
+    historyRef.current = next;
+    setHistory(next);
   }, []);
+  const commit = useCallback(
+    (project: Project, meta?: HistoryMeta) => {
+      write(pushHistory(historyRef.current, project, meta, Date.now()));
+      setCanSave(true);
+      setError("");
+    },
+    [write],
+  );
   const apply = useCallback(
-    (result: EditResult) => {
+    (result: EditResult, meta?: HistoryMeta) => {
       if (result.ok) {
-        commit(result.project);
+        commit(result.project, meta);
         return true;
       }
       setError(result.error);
@@ -75,30 +81,27 @@ export function useProject() {
     },
     [commit],
   );
+  /** Starts a fresh history at `project` (first-run starting homes). */
+  const resetHistory = useCallback(
+    (project: Project) => {
+      write({ ...createHistory(project), revision: historyRef.current.revision + 1 });
+      setCanSave(true);
+      setError("");
+    },
+    [write],
+  );
   const undo = useCallback(() => {
-    setHistory((h) =>
-      h.past.length
-        ? {
-            past: h.past.slice(0, -1),
-            present: h.past[h.past.length - 1],
-            future: [h.present, ...h.future],
-          }
-        : h,
-    );
+    const { h, restored } = undoHistory(historyRef.current);
+    if (h !== historyRef.current) write(h);
     setError("");
-  }, []);
+    return restored;
+  }, [write]);
   const redo = useCallback(() => {
-    setHistory((h) =>
-      h.future.length
-        ? {
-            past: [...h.past, h.present],
-            present: h.future[0],
-            future: h.future.slice(1),
-          }
-        : h,
-    );
+    const { h, restored } = redoHistory(historyRef.current);
+    if (h !== historyRef.current) write(h);
     setError("");
-  }, []);
+    return restored;
+  }, [write]);
   useEffect(() => {
     if (!canSave) return;
     try {
@@ -111,12 +114,16 @@ export function useProject() {
   }, [history.present, canSave]);
   return {
     project: history.present,
+    revision: history.revision,
     commit,
     apply,
+    resetHistory,
     undo,
     redo,
     canUndo: !!history.past.length,
     canRedo: !!history.future.length,
+    undoLabel: undoLabel(history),
+    redoLabel: redoLabel(history),
     error,
     setError,
     saved,
