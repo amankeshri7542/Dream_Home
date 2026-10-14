@@ -68,6 +68,50 @@ export const furnitureCatalogItem = (id: string) => CATALOG.get(id);
 /** Catalog items whose suggested rooms include this room kind. */
 export const suggestedFurniture = (kind: RoomKind) =>
   FURNITURE_CATALOG.filter((item) => item.rooms.includes(kind));
+
+/** Pieces that look at home in any room: plants, rugs, lamps, a mirror… */
+const GOES_ANYWHERE = new Set([
+  "plant-floor",
+  "plant-small",
+  "rug-rect",
+  "rug-round",
+  "floor-lamp",
+  "pendant-light",
+  "mirror",
+  "bookshelf",
+  "side-table",
+]);
+/** Friendly names for where a piece belongs ("a bedroom", "a kitchen"). */
+const KIND_PLACE: Record<RoomKind, string> = {
+  bedroom: "a bedroom",
+  living: "a living room",
+  kitchen: "a kitchen",
+  bathroom: "a bathroom",
+  dining: "a dining room",
+  utility: "a study or utility room",
+  shop: "a shop",
+};
+/** Whether a catalog piece belongs in a room of this kind (no beds in kitchens). */
+export function furnitureFitsRoom(catalogId: string, kind: RoomKind): boolean {
+  const entry = CATALOG.get(catalogId);
+  if (!entry) return false;
+  return entry.rooms.includes(kind) || GOES_ANYWHERE.has(catalogId);
+}
+/** "A double bed belongs in a bedroom." — or null when it fits. */
+export function furnitureMisfit(catalogId: string, kind: RoomKind): string | null {
+  if (furnitureFitsRoom(catalogId, kind)) return null;
+  const entry = CATALOG.get(catalogId);
+  if (!entry) return "Choose furniture from the catalog.";
+  const home = entry.rooms[0];
+  return home
+    ? `A ${entry.label.toLowerCase()} belongs in ${KIND_PLACE[home]}.`
+    : `A ${entry.label.toLowerCase()} can’t go in ${KIND_PLACE[kind]}.`;
+}
+/** Short badge text while dragging: "A bed can’t go in a kitchen". */
+export function furnitureMisfitShort(catalogId: string, kind: RoomKind): string {
+  const label = CATALOG.get(catalogId)?.label.toLowerCase() ?? "piece";
+  return `A ${label} can’t go in ${KIND_PLACE[kind]}`;
+}
 export function finishColor(
   entry: FurnitureCatalogItem,
   finish: string | undefined,
@@ -1362,10 +1406,37 @@ export function reconcileFurniture(
     const sized =
       prev.bounds.w !== room.bounds.w || prev.bounds.d !== room.bounds.d;
     if (!sized && prev.kind === room.kind) return room;
-    const source =
+    let source =
       sized && prev.furniture === room.furniture
         ? reframeForResize(prev, room, room.furniture)
         : room.furniture;
+    // A new use keeps only the pieces that belong in it: a bedroom turned
+    // into a kitchen loses its bed. If nothing is left, the room furnishes
+    // itself automatically for its new use.
+    if (prev.kind !== room.kind) {
+      const misfits = source.filter((item) => !furnitureFitsRoom(item.catalogId, room.kind));
+      if (misfits.length) {
+        for (const item of misfits)
+          notices.push(
+            makeIssue(
+              "furniture-removed",
+              `${furnitureLabel(item)} doesn’t belong in ${room.name}, so it was taken out.`,
+              {
+                severity: "notice",
+                source: furnitureRef(floorId, room.id, item.id),
+                floorIds: floorId ? [floorId] : [],
+              },
+            ),
+          );
+        source = source.filter((item) => furnitureFitsRoom(item.catalogId, room.kind));
+        if (!source.length) {
+          changed = true;
+          const { furniture: _gone, ...rest } = room;
+          void _gone;
+          return rest;
+        }
+      }
+    }
     const { items, removed } = fitFurniture(room, source);
     const same =
       items.length === room.furniture.length &&

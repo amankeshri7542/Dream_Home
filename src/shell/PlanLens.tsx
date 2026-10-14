@@ -27,27 +27,19 @@ export function PlanLens({
   if ((!state.lens && !primary) || state.mode === "explore") return null;
   const tool = state.tool;
   const hint =
-    tool === "move"
-      ? "Drag a space to move it. Drop a room onto another to swap their uses."
-      : tool === "resize"
-        ? "Pull any edge or corner. The opposite side stays put."
-        : state.tray.selected
+    tool !== "select"
+      ? "Drag a room to move it, or pull a dot to resize it. Drop a room on another to swap them."
+      : state.tray.selected
           ? "Tap an empty spot to place the piece."
           : "Tap a space to select it.";
-  const changeOnPlan = (id: string, bounds: Rect) => {
+  const changeOnPlan = (id: string, bounds: Rect, kind: "move" | "resize") => {
     const name =
       targetForId(project, id, activeFloor.id) &&
       activeFloor.rooms.find((r) => r.id === id)?.name;
     run(
-      transformComponent(
-        project,
-        activeFloor.id,
-        id,
-        bounds,
-        tool === "resize" ? "resize" : "move",
-      ),
-      `${tool === "resize" ? "Resize" : "Move"} ${name ?? "space"}`,
-      { notice: tool === "resize" ? "Space resized. Undo is always here." : "Space updated. Undo is always here." },
+      transformComponent(project, activeFloor.id, id, bounds, kind),
+      `${kind === "resize" ? "Resize" : "Move"} ${name ?? "space"}`,
+      { notice: kind === "resize" ? "Resized! Undo is always here." : "Moved! Undo is always here." },
     );
   };
   return (

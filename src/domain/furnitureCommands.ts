@@ -11,6 +11,7 @@ import {
   findRoom,
   fitsRoom,
   furnitureCatalogItem,
+  furnitureMisfit,
   furnitureCollisions,
   furnitureFootprint,
   furnitureIdSeed,
@@ -201,6 +202,8 @@ export function addFurniture(
     return { ok: false, error: "Choose furniture from the catalog." };
   const prep = prepare(project, floorId, roomId);
   if (!prep) return missingRoom;
+  const misfit = furnitureMisfit(catalogId, prep.room.kind);
+  if (misfit) return { ok: false, error: misfit };
   const full = roomFull(prep.p, prep.items);
   if (full) return full;
   const spot = at
@@ -263,6 +266,8 @@ export function moveFurniture(
   );
   const target = prepare(without, floorId, to.roomId);
   if (!target) return missingRoom;
+  const misfit = furnitureMisfit(item.catalogId, target.room.kind);
+  if (misfit) return { ok: false, error: misfit };
   if (target.items.length >= LIMITS.furniturePerRoom)
     return { ok: false, error: `${target.room.name} already holds 32 pieces of furniture.` };
   return finalizeEdit(

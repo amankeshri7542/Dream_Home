@@ -38,7 +38,8 @@ type Props = {
   floor: Floor;
   selected: string | null;
   onSelect: (id: string | null) => void;
-  onMove: (id: string, bounds: Rect) => void;
+  /** A finished edit; `kind` says whether the gesture moved or resized. */
+  onMove: (id: string, bounds: Rect, kind: "move" | "resize") => void;
   view: ViewSettings;
   language?: Language;
   unit?: Unit;
@@ -456,7 +457,7 @@ export default function Plan({
     clearGesture();
     // Selection can open the app's controls; it happens only after the final coordinate is resolved.
     if (next?.valid) {
-      onMove(next.id, next.bounds);
+      onMove(next.id, next.bounds, start.kind === "resize" ? "resize" : "move");
       report({
         valid: true,
         message: start.kind === "resize" ? "Space resized" : "Space updated",
@@ -482,16 +483,18 @@ export default function Plan({
       "resize",
     );
     if (result.ok) {
-      onMove(selectedRoom.id, bounds);
+      onMove(selectedRoom.id, bounds, "resize");
       report({ valid: true, message: "Room resized" });
     } else report({ valid: false, message: result.error });
   }
   const hint = stagedRoomId
     ? "Tap a clear spot to place your room"
-    : activeTool === "move"
-      ? "Drag a space · drop on a room to swap uses"
-      : activeTool === "resize"
-        ? "Drag any corner or edge · opposite side stays in place"
+    : activeTool === "resize"
+      ? selectedRoom
+        ? "Drag a room to move it · pull a dot to resize"
+        : "Tap a room, then drag it to move or pull a dot to resize"
+      : activeTool === "move"
+        ? "Drag a space · drop on a room to swap uses"
         : "Tap a room, balcony or courtyard";
   return (
     <div
@@ -598,7 +601,7 @@ export default function Plan({
               onPointerDown={(event) =>
                 begin(
                   event,
-                  activeTool === "move" ? "move" : "select",
+                  activeTool !== "select" ? "move" : "select",
                   planItems(project, floor).find(
                     (original) => original.id === room.id,
                   ),
@@ -663,7 +666,7 @@ export default function Plan({
             onPointerDown={(event) =>
               begin(
                 event,
-                activeTool === "move" ? "move" : "select",
+                activeTool !== "select" ? "move" : "select",
                 planItems(project, floor).find((item) => item.id === space.id),
               )
             }
@@ -742,7 +745,7 @@ export default function Plan({
               onPointerDown={(event) =>
                 begin(
                   event,
-                  activeTool === "move" ? "move" : "select",
+                  activeTool !== "select" ? "move" : "select",
                   planItems(project, floor).find(
                     (item) => item.id === balcony.id,
                   ),
@@ -820,6 +823,8 @@ export default function Plan({
         >
           ROAD
         </text>
+        {/* Edit in 2D: the selected piece shows its resize dots; dragging
+            its body still moves it. (Move keeps the body free of dots.) */}
         {activeTool === "resize" &&
           selectedRoom &&
           (() => {

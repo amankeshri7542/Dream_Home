@@ -1,7 +1,7 @@
 // Friendly, non-blocking advice: warnings with one-tap fixes, and the "Home
 // checklist" (essentials plus playful quests) derived from project data.
 import { balconyBounds, floorForGeometry } from "./core";
-import { furnitureDoorConflicts, furnitureLabel } from "./furniture";
+import { furnitureDoorConflicts, furnitureLabel, furnitureMisfit } from "./furniture";
 import { makeIssue } from "./issues";
 import { openingSide, roomHasPassage } from "./openings";
 import type { ComponentRef, EditIssue, IssueFix, Project } from "./types";
@@ -105,6 +105,21 @@ export function projectAdvisories(
       }
     }
     if (floor.rooms.some((r) => r.furniture?.length)) {
+      // Pieces in the wrong kind of room (older saves can have a bed in a kitchen).
+      for (const room of floor.rooms)
+        for (const item of room.furniture ?? []) {
+          const misfit = furnitureMisfit(item.catalogId, room.kind);
+          if (!misfit) continue;
+          const target: ComponentRef = { kind: "furniture", id: item.id, floorId: floor.id, roomId: room.id };
+          out.push(
+            makeIssue("furniture-wrong-room", `${misfit} It's in ${room.name}.`, {
+              severity: "warning",
+              source: target,
+              floorIds,
+              fixes: [{ kind: "edit", target, focus: "move" }],
+            }),
+          );
+        }
       const walls = deriveWalls(geo, project.plot.road);
       for (const room of floor.rooms)
         for (const item of furnitureDoorConflicts(room, walls)) {

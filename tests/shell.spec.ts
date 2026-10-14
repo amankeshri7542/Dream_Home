@@ -109,7 +109,7 @@ test("primary touch targets are at least 48 px on phones", async ({ page }) => {
   const targets = [
     tool(page, "Add space"),
     tool(page, "Move"),
-    tool(page, "Resize"),
+    tool(page, "Edit in 2D"),
     tool(page, "Rooms"),
     page.getByRole("button", { name: "Undo last change" }),
     page.getByRole("button", { name: "Fit home" }),
@@ -146,3 +146,33 @@ test("removing a room asks first and offers setting it aside instead", async ({ 
     )
     .toBe(0);
 });
+
+for (const [name, size] of [
+  ["phone", { width: 390, height: 844 }],
+  ["desktop", { width: 1440, height: 1000 }],
+] as const)
+  test(`the action bar's More menu opens and works while editing in 2D (${name})`, async ({ page }) => {
+    await page.setViewportSize(size);
+    const project = createPreset("compact");
+    await seed(page, project);
+    const room = project.floors[0].rooms[0];
+    await page.locator(".scene-room-label").filter({ hasText: room.name }).click();
+    await dock(page, "Edit in 2D").click();
+    await expect(page.locator(".plan-svg")).toBeVisible();
+    await dock(page, "More").click();
+    const menu = page.getByRole("menu", { name: `More for ${room.name}` });
+    // Every item is really on screen, not clipped by the scrolling bar.
+    for (const item of await menu.getByRole("menuitem").all()) {
+      await expect(item).toBeInViewport({ ratio: 1 });
+      const box = (await item.boundingBox())!;
+      const hit = await page.evaluate(
+        ([x, y]) => document.elementFromPoint(x, y)?.closest("[role=menuitem]")?.textContent ?? "",
+        [box.x + box.width / 2, box.y + box.height / 2],
+      );
+      expect(hit).toBe(await item.textContent());
+    }
+    // "All details" leaves the plan and shows the room's details.
+    await menu.getByRole("menuitem", { name: "All details" }).click();
+    await expect(page.locator(".plan-svg")).toHaveCount(0);
+    await expect(page.getByLabel("Room width", { exact: false }).first()).toBeVisible();
+  });

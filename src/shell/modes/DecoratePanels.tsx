@@ -4,6 +4,7 @@ import {
   FURNITURE_CATALOG,
   FURNITURE_FINISHES,
   furnitureCatalogItem,
+  furnitureFitsRoom,
   furnitureLabel,
   resolveFurniture,
   suggestedFurniture,
@@ -81,11 +82,17 @@ export function FurnitureCatalog({ room, floorId }: { room: Room; floorId: strin
     () => suggestedFurniture(room.kind).filter((i) => !HIDDEN.has(i.id)),
     [room.kind],
   );
-  const categories = [...new Set(FURNITURE_CATALOG.map((i) => i.category))];
+  // Only pieces that belong in this kind of room: a kitchen never offers beds.
+  const fitting = useMemo(
+    () =>
+      FURNITURE_CATALOG.filter((i) => !HIDDEN.has(i.id) && furnitureFitsRoom(i.id, room.kind)),
+    [room.kind],
+  );
+  const categories = [...new Set(fitting.map((i) => i.category))];
   const items =
-    category === "suggested"
+    category === "suggested" || !categories.includes(category)
       ? suggested
-      : FURNITURE_CATALOG.filter((i) => i.category === category && !HIDDEN.has(i.id));
+      : fitting.filter((i) => i.category === category);
   return (
     <div className="dh-catalog-picker">
       <div className="dh-chips" role="radiogroup" aria-label="Furniture categories">
@@ -299,7 +306,7 @@ export function FurnitureInspector() {
           }
         />
       )}
-      {floor.rooms.length > 1 && (
+      {floor.rooms.some((r) => r.id !== room.id && furnitureFitsRoom(item.catalogId, r.kind)) && (
         <Field label="Move to another room">
           <select
             aria-label="Move to another room"
@@ -324,7 +331,7 @@ export function FurnitureInspector() {
           >
             <option value="">Choose a room</option>
             {floor.rooms
-              .filter((r) => r.id !== room.id)
+              .filter((r) => r.id !== room.id && furnitureFitsRoom(item.catalogId, r.kind))
               .map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name} ({ROOM_META[r.kind].label})

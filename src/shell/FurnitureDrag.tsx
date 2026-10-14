@@ -6,7 +6,13 @@ import { useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2 } from "three";
 import { floorForGeometry } from "../domain/core";
-import { furnitureFootprint, furnitureLabel, resolveFurniture } from "../domain/furniture";
+import {
+  furnitureFitsRoom,
+  furnitureFootprint,
+  furnitureLabel,
+  furnitureMisfitShort,
+  resolveFurniture,
+} from "../domain/furniture";
 import { inside } from "../domain/geometry";
 import { moveFurniture } from "../domain/furnitureCommands";
 import { deriveWalls } from "../domain/model";
@@ -31,8 +37,16 @@ const GRAB_HEIGHTS = [0.45, 0.02];
 const GRAB_MARGIN = 15;
 
 /** Short words for the floating badge. */
-export function furnitureGhostLabel(result: EditResult, moving: string, into: Room | null) {
+export function furnitureGhostLabel(
+  result: EditResult,
+  moving: string,
+  into: Room | null,
+  catalogId?: string,
+) {
   if (result.ok) return into ? `Move to ${into.name}` : "Drop it here";
+  // Not a piece for that room (a bed in a kitchen).
+  if (into && catalogId && !furnitureFitsRoom(catalogId, into.kind))
+    return furnitureMisfitShort(catalogId, into.kind);
   const issue = result.issues?.[0];
   if (issue?.code === "furniture-overlap") {
     const m = /^(.+) overlaps (.+)\. Leave/.exec(issue.message);
@@ -143,7 +157,7 @@ export function FurnitureDrag(props: Props) {
         floorId: d.floorId,
         bounds: fp,
         status: result.ok ? "valid" : "blocked",
-        label: furnitureGhostLabel(result, d.label, into.id !== d.room.id ? into : null),
+        label: furnitureGhostLabel(result, d.label, into.id !== d.room.id ? into : null, d.item.catalogId),
         guides: [],
         blockers: [],
       });

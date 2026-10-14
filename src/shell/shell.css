@@ -396,8 +396,12 @@
   .dh-dock {
     animation: dh-rise var(--dh-dur-base) var(--dh-ease-pop);
   }
-  .dh-dock-more {
+  .dh-dock-wrap {
     position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .dh-dock-more {
     display: flex;
     flex: 1 1 0;
     min-width: 54px;

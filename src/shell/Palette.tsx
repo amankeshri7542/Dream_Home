@@ -17,7 +17,9 @@ export function ModeHint() {
     return (
       <p className="dh-mode-hint is-tool" role="note">
         <Icon.move size={16} aria-hidden />
-        {selected ? "Drag the glowing piece to a new spot" : "Drag any room to a new spot"}
+        {selected
+          ? "Drag the glowing piece to a new spot"
+          : "Drag any room to a new spot"}
       </p>
     );
   const hint = MODE_HINTS[state.mode];
@@ -35,7 +37,8 @@ function ModeTools({ rail }: { rail: boolean }) {
   const common = {
     className: `dh-palette ${rail ? "dh-palette-rail" : ""}`,
     role: "toolbar",
-    "aria-orientation": (rail ? "vertical" : "horizontal") as "vertical" | "horizontal",
+    "aria-orientation": (rail ? "vertical" : "horizontal") as
+      "vertical" | "horizontal",
     "data-chrome": "palette",
     ...(rail ? { "data-inset": "left" } : {}),
   };
@@ -141,7 +144,7 @@ export function ToolPalette({ rail }: { rail: boolean }) {
       />
       <ToolButton
         icon={Icon.resize}
-        label="Resize"
+        label="Edit in 2D"
         pressed={state.tool === "resize"}
         onClick={() =>
           dispatch({
@@ -194,113 +197,137 @@ export function ActionDock() {
   const building = state.mode === "build";
   const room = building && target.kind === "room";
   const spatial =
-    building && (room || target.kind === "balcony" || target.kind === "vertical");
+    building &&
+    (room || target.kind === "balcony" || target.kind === "vertical");
+  // Leave any tool and close the plan, so what a menu item reveals is visible.
+  const leaveTool = () => {
+    if (state.lens) dispatch({ type: "lens", open: false });
+    if (state.tool !== "select") dispatch({ type: "set-tool", tool: "select" });
+  };
   return (
-    <div
-      className="dh-dock"
-      role="toolbar"
-      aria-label={`${selected.name} actions`}
-      data-chrome="dock"
-      data-transform-state={state.tool === "select" ? "idle" : state.tool}
-    >
-      {spatial && (
-        <>
+    // The menu lives beside the toolbar, not inside it: the toolbar scrolls
+    // sideways on small phones, and a scroll box would clip the menu.
+    <div className="dh-dock-wrap" ref={moreRef}>
+      <div
+        className="dh-dock"
+        role="toolbar"
+        aria-label={`${selected.name} actions`}
+        data-chrome="dock"
+        data-transform-state={state.tool === "select" ? "idle" : state.tool}
+      >
+        {spatial && (
+          <>
+            <ToolButton
+              icon={Icon.move}
+              label="Move"
+              pressed={state.tool === "move"}
+              onClick={() =>
+                dispatch({
+                  type: "set-tool",
+                  tool: state.tool === "move" ? "select" : "move",
+                  // Pieces move right in 3D; the floor plan stays one tap away.
+                  lens: false,
+                })
+              }
+            />
+            <ToolButton
+              icon={Icon.resize}
+              label="Edit in 2D"
+              pressed={state.tool === "resize"}
+              onClick={() =>
+                dispatch({
+                  type: "set-tool",
+                  tool: state.tool === "resize" ? "select" : "resize",
+                })
+              }
+            />
+          </>
+        )}
+        {room && state.tool === "select" && (
+          <>
+            <ToolButton
+              icon={Icon.rotate}
+              label="Rotate"
+              onClick={actions.rotate}
+            />
+            <ToolButton
+              icon={Icon.duplicate}
+              label="Duplicate"
+              onClick={actions.duplicate}
+            />
+            <ToolButton
+              icon={Icon.tray}
+              label="Set aside"
+              onClick={actions.setAside}
+            />
+          </>
+        )}
+        <div className="dh-dock-more">
           <ToolButton
-            icon={Icon.move}
-            label="Move"
-            pressed={state.tool === "move"}
-            onClick={() =>
-              dispatch({
-            type: "set-tool",
-            tool: state.tool === "move" ? "select" : "move",
-            // Pieces move right in 3D; the floor plan stays one tap away.
-            lens: false,
-          })
-            }
+            icon={Icon.more}
+            label="More actions"
+            caption="More"
+            aria-expanded={more}
+            aria-haspopup="menu"
+            onClick={() => setMore(!more)}
           />
+        </div>
+        {state.tool !== "select" && (
           <ToolButton
-            icon={Icon.resize}
-            label="Resize"
-            pressed={state.tool === "resize"}
-            onClick={() =>
-              dispatch({
-                type: "set-tool",
-                tool: state.tool === "resize" ? "select" : "resize",
-              })
-            }
+            icon={Icon.check}
+            label="Done"
+            className="dh-tool-done"
+            onClick={() => dispatch({ type: "set-tool", tool: "select" })}
           />
-        </>
-      )}
-      {room && state.tool === "select" && (
-        <>
-          <ToolButton icon={Icon.rotate} label="Rotate" onClick={actions.rotate} />
-          <ToolButton
-            icon={Icon.duplicate}
-            label="Duplicate"
-            onClick={actions.duplicate}
-          />
-          <ToolButton icon={Icon.tray} label="Set aside" onClick={actions.setAside} />
-        </>
-      )}
-      <div className="dh-dock-more" ref={moreRef}>
-        <ToolButton
-          icon={Icon.more}
-          label="More actions"
-          caption="More"
-          aria-expanded={more}
-          aria-haspopup="menu"
-          onClick={() => setMore(!more)}
-        />
-        {more && (
-          <div className="dh-menu" role="menu" aria-label={`More for ${selected.name}`}>
-            {spatial && (
-              <button
-                role="menuitem"
-                type="button"
-                onClick={() => {
-                  setMore(false);
-                  actions.focus();
-                }}
-              >
-                <Icon.focusRoom size={18} aria-hidden />
-                Focus on {room ? "room" : "space"}
-              </button>
-            )}
+        )}
+      </div>
+      {more && (
+        <div
+          className="dh-menu"
+          role="menu"
+          aria-label={`More for ${selected.name}`}
+        >
+          {spatial && (
             <button
               role="menuitem"
               type="button"
               onClick={() => {
                 setMore(false);
-                dispatch({ type: "sheet", snap: "expanded" });
+                leaveTool();
+                actions.focus();
               }}
             >
-              <Icon.viewOptions size={18} aria-hidden />
-              All details
+              <Icon.focusRoom size={18} aria-hidden />
+              Focus on {room ? "room" : "space"}
             </button>
-            {spatial && (
-              <button
-                role="menuitem"
-                type="button"
-                className="is-danger"
-                onClick={() => {
-                  setMore(false);
-                  actions.requestRemove();
-                }}
-              >
-                <Icon.remove size={18} aria-hidden />
-                Remove…
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-      {state.tool !== "select" && (
-        <ToolButton
-          icon={Icon.check}
-          label="Done"
-          className="dh-tool-done"
-          onClick={() => dispatch({ type: "set-tool", tool: "select" })}
-        />
+          )}
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => {
+              setMore(false);
+              leaveTool();
+              dispatch({ type: "sheet", snap: "expanded" });
+            }}
+          >
+            <Icon.viewOptions size={18} aria-hidden />
+            All details
+          </button>
+          {spatial && (
+            <button
+              role="menuitem"
+              type="button"
+              className="is-danger"
+              onClick={() => {
+                setMore(false);
+                actions.requestRemove();
+              }}
+            >
+              <Icon.remove size={18} aria-hidden />
+              Remove…
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

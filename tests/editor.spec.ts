@@ -645,7 +645,7 @@ test("resize handle grows a room and rejects footprint overflow, retaining a usa
 }) => {
   await page.setViewportSize(mobile);
   await seed(page, sparseHome(), "m");
-  await builderTool(page, "Resize").click();
+  await builderTool(page, "Edit in 2D").click();
   await page.locator(".plan-room").first().locator("rect").first().click();
   const handle = page.locator(".plan-resize-handle[data-resize-handle=se]");
   await expect(handle).toBeVisible();
@@ -775,7 +775,7 @@ test("short mobile multi-floor plan keeps selection, floors and zoom reachable",
 }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   await seed(page, createPreset("courtyard"), "m");
-  await builderTool(page, "Resize").click();
+  await builderTool(page, "Edit in 2D").click();
   await page.locator(".plan-room").first().locator("rect").first().click();
   await chooseFloor(page, "Floor 1");
   await page.locator(".plan-room").first().locator("rect").first().click();
@@ -993,7 +993,7 @@ test("all room edges and corners have keyboard resizing with fixed opposite anch
   await page.setViewportSize(mobile);
   const fixture = sparseHome();
   await seed(page, fixture, "m");
-  await builderTool(page, "Resize").click();
+  await builderTool(page, "Edit in 2D").click();
   await page.locator(".plan-room").first().locator("rect").first().click();
   await expect(page.locator(".plan-resize-handle")).toHaveCount(8);
   const original = fixture.floors[0].rooms[0].bounds;
@@ -1181,7 +1181,7 @@ test("native phone touch restores a tray piece and resizes its top left corner",
     ).toEqual(room);
     await page
       .getByRole("toolbar", { name: /actions$/ })
-      .getByRole("button", { name: "Resize", exact: true })
+      .getByRole("button", { name: "Edit in 2D", exact: true })
       .tap();
     const corner = page.locator('[data-resize-handle="nw"]');
     await expect(corner).toBeVisible();
@@ -1215,4 +1215,42 @@ test("native phone touch restores a tray piece and resizes its top left corner",
   } finally {
     await context.close();
   }
+});
+
+test("Edit in 2D moves a room by its body and resizes it by its dots, one undo step each", async ({
+  page,
+}) => {
+  await page.setViewportSize(mobile);
+  const fixture = sparseHome();
+  await seed(page, fixture, "m");
+  await builderTool(page, "Edit in 2D").click();
+  const rect = page.locator(".plan-room").first().locator("rect").first();
+  await rect.click();
+  await expect(page.locator(".plan-resize-handle")).toHaveCount(8);
+  const original = fixture.floors[0].rooms[0].bounds;
+  const scale = await page
+    .locator(".plan-svg")
+    .evaluate((el) => (el as SVGSVGElement).getScreenCTM()!.a);
+  // Body: move 80 cm to the right.
+  const box = (await rect.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 80 * scale, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await stored(page)).floors[0].rooms[0].bounds)
+    .toEqual({ ...original, x: original.x + 80 });
+  // Dot: pull the right edge 50 cm narrower.
+  const handle = (await page.locator('[data-resize-handle="e"]').boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2 - 50 * scale, handle.y + handle.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await stored(page)).floors[0].rooms[0].bounds)
+    .toEqual({ ...original, x: original.x + 80, w: original.w - 50 });
+  await undo(page);
+  expect((await stored(page)).floors[0].rooms[0].bounds).toEqual({ ...original, x: original.x + 80 });
+  await undo(page);
+  expect((await stored(page)).floors[0].rooms[0].bounds).toEqual(original);
 });

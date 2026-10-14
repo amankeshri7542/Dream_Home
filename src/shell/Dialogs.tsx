@@ -209,7 +209,7 @@ function HelpDialog({ onClose }: { onClose: () => void }) {
     {
       icon: Icon.move,
       title: "Tap, then change",
-      body: "Tap any room to select it. Use Move or Resize, or the arrows and sizes in its details. Green means it fits; red shows what’s in the way.",
+      body: "Tap any room to select it. Press Move and drag it in 3D, or Edit in 2D to move and resize it on the floor plan. Green means it fits; red shows what’s in the way.",
     },
     {
       icon: Icon.tray,

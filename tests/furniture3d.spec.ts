@@ -87,3 +87,19 @@ test("decorate: a bed dragged onto other furniture is refused with a reason", as
   await page.mouse.up();
   expect(await stored(page)).toEqual(project);
 });
+
+test("decorate: a kitchen's catalog never offers beds", async ({ page }) => {
+  await page.setViewportSize(mobile);
+  const project = createPreset("compact");
+  await seed(page, project);
+  await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Decorate", exact: true }).click();
+  const kitchen = project.floors[0].rooms.find((r) => r.kind === "kitchen")!;
+  await page.locator(".scene-room-label").filter({ hasText: kitchen.name }).click();
+  const chips = page.getByRole("radiogroup", { name: "Furniture categories" });
+  await expect(chips).toBeVisible();
+  await expect(chips.getByRole("radio", { name: "Beds" })).toHaveCount(0);
+  for (const chip of await chips.getByRole("radio").all()) {
+    await chip.click();
+    await expect(page.getByRole("button", { name: /^Add (double|single) bed/ })).toHaveCount(0);
+  }
+});

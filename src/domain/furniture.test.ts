@@ -12,6 +12,7 @@ import {
   FURNITURE_FINISHES,
   autoFurniture,
   autoLayoutKind,
+  furnitureFitsRoom,
   furnitureFootprint,
   furnitureParts,
   hasFurnitureParts,
@@ -329,11 +330,44 @@ describe("furniture commands", () => {
   });
   it("re-parents an item into another room on the same floor", () => {
     let p = ok(clearFurniture(ok(customizeFurniture(home(), "f0", "bed")), "f0", "living"));
-    const bedside = items(p).find((i) => i.catalogId === "bedside-table")!;
-    p = ok(moveFurniture(p, "f0", "bed", bedside.id, { roomId: "living", x: 100, z: 100 }));
-    expect(items(p).some((i) => i.id === bedside.id)).toBe(false);
-    expect(items(p, 1).find((i) => i.id === bedside.id)).toMatchObject({ x: 100, z: 100 });
+    p = ok(addFurniture(p, "f0", "bed", "plant-floor"));
+    const plant = items(p).find((i) => i.catalogId === "plant-floor")!;
+    p = ok(moveFurniture(p, "f0", "bed", plant.id, { roomId: "living", x: 100, z: 100 }));
+    expect(items(p).some((i) => i.id === plant.id)).toBe(false);
+    expect(items(p, 1).find((i) => i.id === plant.id)).toMatchObject({ x: 100, z: 100 });
     expect(errors(p)).toEqual([]);
+  });
+  it("keeps furniture in rooms where it belongs (no beds in kitchens)", () => {
+    expect(furnitureFitsRoom("bed-double", "kitchen")).toBe(false);
+    expect(furnitureFitsRoom("bed-double", "bedroom")).toBe(true);
+    expect(furnitureFitsRoom("plant-small", "shop")).toBe(true);
+    const p = ok(clearFurniture(ok(customizeFurniture(home(), "f0", "bed")), "f0", "living"));
+    const add = addFurniture(p, "f0", "kitchen", "bed-double");
+    expect(!add.ok && add.error).toBe("A double bed belongs in a bedroom.");
+    const bedside = items(p).find((i) => i.catalogId === "bedside-table")!;
+    const move = moveFurniture(p, "f0", "bed", bedside.id, { roomId: "living", x: 100, z: 100 });
+    expect(!move.ok && move.error).toBe("A bedside table belongs in a bedroom.");
+  });
+  it("a room that changes use drops pieces that no longer belong", () => {
+    let p = ok(customizeFurniture(home(), "f0", "bed"));
+    p = ok(addFurniture(p, "f0", "bed", "plant-floor"));
+    const changed = updateRoom(p, "f0", "bed", { kind: "kitchen", name: "Kitchen" });
+    expect(changed.ok).toBe(true);
+    const kitchen = ok(changed).floors[0].rooms.find((r) => r.id === "bed")!;
+    expect(kitchen.furniture!.map((i) => i.catalogId)).toEqual(["plant-floor"]);
+    expect(changed.ok && changed.notices?.some((n) => n.code === "furniture-removed")).toBe(true);
+    // With nothing left that fits, the room furnishes itself for its new use.
+    const bare = ok(updateRoom(ok(customizeFurniture(home(), "f0", "bed")), "f0", "bed", { kind: "kitchen", name: "Kitchen" }));
+    expect(bare.floors[0].rooms.find((r) => r.id === "bed")!.furniture).toBeUndefined();
+  });
+  it("automatic layouts only ever use pieces that belong in the room", () => {
+    for (const { project } of corpus())
+      for (const floor of project.floors) {
+        const walls = deriveWalls(floorForGeometry(project, floor.id), project.plot.road);
+        for (const r of floor.rooms)
+          for (const item of autoFurniture(r, walls))
+            expect(furnitureFitsRoom(item.catalogId, r.kind), `${r.name}: ${item.catalogId}`).toBe(true);
+      }
   });
   it("fails cleanly when nothing fits", () => {
     const r = room("tiny", { x: 0, z: 0, w: 200, d: 200 });

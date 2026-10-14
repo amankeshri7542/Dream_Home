@@ -3,8 +3,8 @@
 This file is updated after every milestone. If work stops (for example because a usage limit is hit), start at **Resume here**.
 
 ## Resume here
-- **Current milestone:** M1, the three bugs.
-- **Next action:** fix the dock "More" menu clipping (`src/shell/Palette.tsx`, `src/shell/shell.css`).
+- **Current milestone:** M2, attached bathroom (en-suite).
+- **Next action:** add `Room.attachedTo` to `src/domain/types.ts`, then whitelist it in `persist.ts` (`checkRoomExtras` / `copyRoomExtras`).
 
 ## Decisions (owner, 14 Oct 2026)
 - Push straight to `main`. Vercel deploys from it.
@@ -15,10 +15,10 @@ This file is updated after every milestone. If work stops (for example because a
 
 ## Milestones
 - [x] **M0** Ship the diorama sandbox to `main`, start this log.
-- [ ] **M1** Bugs:
-  - [ ] dock "More" menu is clipped, and "All details" does nothing in tool mode
-  - [ ] the 2D plan moves and resizes in one tool ("Plan edit")
-  - [ ] furniture must fit the room kind (no beds in kitchens)
+- [x] **M1** Bugs:
+  - [x] dock "More" menu is clipped, and "All details" does nothing in tool mode (the menu now sits beside the scrolling bar)
+  - [x] the 2D plan moves and resizes in one tool, renamed "Edit in 2D": drag the body to move, pull a dot to resize
+  - [x] furniture must fit the room kind (no beds in kitchens): `furnitureFitsRoom` / `furnitureMisfit` in `src/domain/furniture.ts`
 - [ ] **M2** Attached bathroom (en-suite): `Room.attachedTo`, a door rule, "Add attached bathroom", and templates.
 - [ ] **M3** Indian homes:
   - [ ] style presets and bright facades
@@ -46,3 +46,11 @@ This file is updated after every milestone. If work stops (for example because a
   - Fixed a flaky furniture test by stepping into the room before tapping.
   - Shrank the renderer screenshots from 13 MB to 2.9 MB (PNG to JPEG).
   - Committed and pushed to `main`.
+- **2026-10-14 (M1):**
+  - Fixed the clipped More menu.
+  - "Edit in 2D" now moves and resizes in one tool; `Plan.onMove` reports the gesture kind.
+  - Added the furniture/room rule:
+    - catalog chips are filtered to fitting pieces;
+    - changing a room's use drops pieces that no longer belong (or re-furnishes it automatically);
+    - a new `furniture-wrong-room` advisory for old saves.
+  - Checks: 547 unit tests, 79 browser tests, build green.
