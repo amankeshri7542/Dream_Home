@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEditor } from "../editor/EditorProvider";
 import { useSelectionActions } from "../editor/actions";
 import { Icon, roomIcon } from "../ui/icons";
@@ -186,6 +186,31 @@ export function ActionDock() {
   const actions = useSelectionActions();
   const [more, setMore] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Keyboard users land on the first item when the menu opens.
+  useEffect(() => {
+    if (more) menuRef.current?.querySelector<HTMLElement>("[role='menuitem']")?.focus();
+  }, [more]);
+  /** Arrow keys move through the menu; Escape closes only the menu. */
+  const menuKeys = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = [...(menuRef.current?.querySelectorAll<HTMLElement>("[role='menuitem']") ?? [])];
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    const go = (i: number) => {
+      e.preventDefault();
+      items[(i + items.length) % items.length]?.focus();
+    };
+    if (e.key === "ArrowDown") go(at + 1);
+    else if (e.key === "ArrowUp") go(at - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(items.length - 1);
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setMore(false);
+      moreButton.current?.focus();
+    } else if (e.key === "Tab") setMore(false);
+  };
   useEffect(() => {
     if (!more) return;
     const close = (e: PointerEvent) => {
@@ -266,6 +291,7 @@ export function ActionDock() {
         )}
         <div className="dh-dock-more">
           <ToolButton
+            ref={moreButton}
             icon={Icon.more}
             label="More actions"
             caption="More"
@@ -285,9 +311,11 @@ export function ActionDock() {
       </div>
       {more && (
         <div
+          ref={menuRef}
           className="dh-menu"
           role="menu"
           aria-label={`More for ${selected.name}`}
+          onKeyDown={menuKeys}
         >
           {spatial && (
             <button

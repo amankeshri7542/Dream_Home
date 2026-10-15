@@ -48,10 +48,15 @@ export function RoomInspector() {
             <BathIcon size={16} aria-hidden />
             Has its own bathroom: {ensuite.name}
           </p>
-        ) : (
+        ) : actions.canAddEnsuite ? (
           <Button icon={BathIcon} full onClick={actions.addEnsuite}>
             Add attached bathroom
           </Button>
+        ) : (
+          <p className="dh-tip">
+            <BathIcon size={16} aria-hidden />
+            No space for an attached bathroom yet. Make this bedroom bigger or free up the floor beside it.
+          </p>
         ))}
       {host && (
         <p className="dh-tip">

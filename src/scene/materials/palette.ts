@@ -57,6 +57,8 @@ export type Look = {
 export type FacadeLook = Look & {
   /** Stone used for sills, lintels and the plinth band. */
   stone: string;
+  /** Optional accent band at each floor line and on the parapet (two-tone). */
+  band?: string;
 };
 
 export const FACADE_LOOKS: Record<ExteriorFinishId, FacadeLook> = {
@@ -69,6 +71,14 @@ export const FACADE_LOOKS: Record<ExteriorFinishId, FacadeLook> = {
   stone: { texture: "ashlar", color: EXTERIOR_FINISHES.stone.color, tile: [1.6, 1.2], roughness: 0.88, bumpScale: 1.8, stone: "#e6dcc8" },
   concrete: { texture: "boardConcrete", color: EXTERIOR_FINISHES.concrete.color, tile: [2.4, 1.2], roughness: 0.86, bumpScale: 1.0, stone: "#d9d4ca" },
   charcoal: { texture: "render", color: EXTERIOR_FINISHES.charcoal.color, tile: [2, 2], roughness: 0.9, bumpScale: 0.5, stone: "#b9b2a6" },
+  saffron: { texture: "plaster", color: EXTERIOR_FINISHES.saffron.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#e9e0cf" },
+  peach: { texture: "plaster", color: EXTERIOR_FINISHES.peach.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#e8dfcf" },
+  mint: { texture: "plaster", color: EXTERIOR_FINISHES.mint.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#e6e1d6" },
+  sky: { texture: "plaster", color: EXTERIOR_FINISHES.sky.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#e6e1d6" },
+  lime: { texture: "plaster", color: EXTERIOR_FINISHES.lime.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#e8e2d2" },
+  rose: { texture: "plaster", color: EXTERIOR_FINISHES.rose.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#ebe2d6" },
+  ochre: { texture: "stucco", color: EXTERIOR_FINISHES.ochre.color, tile: [1.5, 1.5], roughness: 0.94, bumpScale: 1.0, stone: "#e6dcc8" },
+  "two-tone": { texture: "plaster", color: EXTERIOR_FINISHES["two-tone"].color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#d9d3c8", band: "#b9603f" },
 };
 
 export const FLOOR_LOOKS: Record<FloorMaterialId, Look> = {

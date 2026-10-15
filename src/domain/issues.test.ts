@@ -46,7 +46,7 @@ describe("structured validation issues", () => {
       floorId: p.floors[0].id,
     });
     expect(issue.blockers.map((x) => x.id)).toContain(a.id);
-    expect(result.error).toMatch(/overlaps another room/);
+    expect(result.error).toMatch(/would overlap/);
   });
 
   it("strict moves never swap uses but offer the swap as a fix", () => {

@@ -224,23 +224,47 @@ export default function Plan({
       viewport.width / (width + 360),
       viewport.height / (depth + 360),
     );
-    // Eight targets need room around them. Reframe only on selection/tool change,
-    // so neither dragging nor an explicit Fit action causes a camera jump.
-    const desired = 110 / (Math.min(b.w, b.d) * baseScale);
-    const fitting = Math.min(
-      (viewport.width - 70) / (b.w * baseScale),
-      (viewport.height - 110) / (b.d * baseScale),
-    );
-    const nextZoom = Math.max(1, Math.min(MAX_ZOOM, desired, fitting));
+    // Eight targets need room around them, and rooms are also moved here: show
+    // the whole floor (clear of the hint above and the zoom buttons below)
+    // unless the dots would then crowd each other. Reframe only on
+    // selection/tool change, so neither dragging nor an explicit Fit action
+    // causes a camera jump.
+    const f = displayFloor.footprint;
+    const x0 = Math.min(f.x, b.x),
+      z0 = Math.min(f.z, b.z);
+    const all = {
+      x: x0,
+      z: z0,
+      w: Math.max(f.x + f.w, b.x + b.w) - x0,
+      d: Math.max(f.z + f.d, b.z + b.d) - z0,
+    };
+    const PAD_X = 24,
+      PAD_Z = 75;
+    const fit = (r: { w: number; d: number }) =>
+      Math.min(
+        (viewport.width - 2 * PAD_X) / (r.w * baseScale),
+        (viewport.height - 2 * PAD_Z) / (r.d * baseScale),
+      );
+    const handles = Math.min(110 / (Math.min(b.w, b.d) * baseScale), fit(b));
+    const nextZoom = Math.max(1, Math.min(MAX_ZOOM, Math.max(fit(all), handles)));
     if (nextZoom > 1) {
+      // Centre the floor, then nudge so the selection is fully in view.
+      const perCm = baseScale * nextZoom;
+      const halfW = viewport.width / 2 / perCm - PAD_X / perCm,
+        halfD = viewport.height / 2 / perCm - PAD_Z / perCm;
+      const clampTo = (centre: number, lo: number, hi: number, half: number) =>
+        hi - lo > 2 * half ? (lo + hi) / 2 : Math.min(Math.max(centre, hi - half), lo + half);
+      const cx = clampTo(all.x + all.w / 2, b.x, b.x + b.w, halfW),
+        cz = clampTo(all.z + all.d / 2, b.z, b.z + b.d, halfD);
       setZoom(nextZoom);
-      setPan({ x: b.x + b.w / 2 - width / 2, z: b.z + b.d / 2 - depth / 2 });
+      setPan({ x: cx - width / 2, z: cz - depth / 2 });
     }
   }, [
     activeTool,
     selected,
     floor.id,
     selectedRoom,
+    displayFloor.footprint,
     viewport.width,
     viewport.height,
     width,

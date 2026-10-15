@@ -1,3 +1,4 @@
+import { withStylePreset } from "./materials";
 import { validateProject } from "./model";
 import type {
   EditResult,
@@ -327,7 +328,8 @@ export function createStarter(
     garden: style === "open",
     parking: false,
   };
-  const project = canonicalHome(legacy);
+  // New homes start with the Indian modern look (bright walls, flat roof).
+  const project = withStylePreset(canonicalHome(legacy), "indian-modern");
   const errors = validateProject(project);
   return errors.length ? { ok: false, error: fitError } : { ok: true, project };
 }

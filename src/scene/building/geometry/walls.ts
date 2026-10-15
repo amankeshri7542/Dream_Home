@@ -74,7 +74,16 @@ export type WallContext = {
   aoStrips: boolean;
   /** Exterior-only views keep doors shut (no empty shell behind them). */
   doorsClosed?: boolean;
+  /** Projecting concrete sunshades over exterior windows and doors. */
+  chhajja?: boolean;
+  /** Two-tone accent band at the floor line (upper floors). */
+  band?: string | null;
+  /** The porch door already has a canopy: no chhajja there. */
+  entranceId?: string | null;
 };
+
+export const CHHAJJA_DEPTH = 0.5;
+export const CHHAJJA_COLOR = "#ebe6dc";
 
 export type LeafStyle = "panel" | "flush" | "glazed" | "divided";
 export type LeafInstance = {
@@ -248,6 +257,10 @@ export function emitShell(
       const [mn, mx] = make(v.a0 - 0.02, v.a1 + 0.02, 0, y0 + 0.3, face.plane, face.plane + face.side * 0.02);
       buckets.get("stone").box(mn, mx, stone);
       if (ctx.aoStrips) aoStrip(buckets, face, v, GROUND_TOP + 0.003, 0.7, 0.02);
+    } else if (cf.bucket === "facade" && ctx.band) {
+      // Two-tone: an accent band where the slab meets the wall.
+      const [mn, mx] = make(v.a0 - 0.025, v.a1 + 0.025, y0 - 0.2, y0 + 0.1, face.plane, face.plane + face.side * 0.025);
+      buckets.get("stone").box(mn, mx, rgb(ctx.band));
     }
   }
 }
@@ -370,6 +383,7 @@ export function emitOpenings(
         const lintel = B(o0 - 0.08, o1 + 0.08, yt, yt + 0.14, faceAt(outSide), faceAt(outSide) + outSide * 0.015);
         buckets.get("stone").box(lintel.min, lintel.max, stone);
       }
+      if (ctx.chhajja && exterior && headInWall && o.id !== ctx.entranceId) emitChhajja(buckets, B, o0, o1, yt, top, faceAt(outSide), outSide);
       if (isWin) {
         emitWindow(buckets, wall, ctx, o, o0, o1, ys, yt, line, t, exterior ? outSide : 0, exterior ? trim : white, stone, top);
         continue;
@@ -439,6 +453,31 @@ export function emitOpenings(
     }
   }
   return leaves;
+}
+
+/**
+ * Chhajja: a 50 cm concrete sunshade just above the lintel, with a thicker
+ * drip edge, sloping slightly away from the wall.
+ */
+function emitChhajja(
+  buckets: Buckets<string>,
+  B: (a0: number, a1: number, y0: number, y1: number, n0: number, n1: number) => { min: V3; max: V3 },
+  o0: number,
+  o1: number,
+  yt: number,
+  top: number,
+  face: number,
+  out: Side,
+) {
+  const y = Math.min(yt + 0.16, top - 0.14);
+  if (y < yt + 0.02) return;
+  const color = rgb(CHHAJJA_COLOR);
+  const shade = rgb("#d9d3c7");
+  const stone = buckets.get("stone");
+  const slab = B(o0 - 0.22, o1 + 0.22, y, y + 0.07, face, face + out * CHHAJJA_DEPTH);
+  stone.box(slab.min, slab.max, color);
+  const lip = B(o0 - 0.22, o1 + 0.22, y - 0.04, y + 0.075, face + out * (CHHAJJA_DEPTH - 0.04), face + out * CHHAJJA_DEPTH);
+  stone.box(lip.min, lip.max, shade);
 }
 
 function defaultSwing(

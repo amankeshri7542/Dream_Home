@@ -4,11 +4,14 @@
 // child meshes <id>__<slot> (material name == slot, COLOR_0 = baked AO).
 
 export const ASSET_MANIFEST = {
-  interior: { url: "/models/interior.glb?v=a72a2bdf25", bytes: 234164, tris: 23211 },
-  exterior: { url: "/models/exterior.glb?v=f9191bbf62", bytes: 111896, tris: 11340 },
+  interior: { url: "/models/interior.glb?v=dff9c320a7", bytes: 236524, tris: 23355 },
+  exterior: { url: "/models/exterior.glb?v=3b2b434c0a", bytes: 131532, tris: 13344 },
 } as const;
 
 export type AssetKit = keyof typeof ASSET_MANIFEST;
+
+/** Street life actors (scripts/blender/build_street.py), loaded lazily in Explore. */
+export const STREET_ASSET: { url: string; bytes: number; tris: number } | null = { url: "/models/street.glb?v=8f40c27e62", bytes: 67776, tris: 7522 };
 
 export const ASSET_ITEMS: Record<string, { kit: AssetKit; tris: number; bounds: { w: number; d: number; h: number } }> = {
   "armchair": { kit: "interior", tris: 816, bounds: { w: 85, d: 85, h: 80 } },
@@ -26,6 +29,7 @@ export const ASSET_ITEMS: Record<string, { kit: AssetKit; tris: number; bounds: 
   "dining-table": { kit: "interior", tris: 580, bounds: { w: 150, d: 90, h: 75 } },
   "dining-table-round": { kit: "interior", tris: 428, bounds: { w: 110, d: 110, h: 75 } },
   "display-shelf-module": { kit: "interior", tris: 544, bounds: { w: 60, d: 40, h: 180 } },
+  "diya": { kit: "interior", tris: 144, bounds: { w: 16, d: 12, h: 9 } },
   "dresser": { kit: "interior", tris: 560, bounds: { w: 100, d: 45, h: 80 } },
   "fence-panel": { kit: "exterior", tris: 296, bounds: { w: 200, d: 8, h: 120 } },
   "floor-lamp": { kit: "interior", tris: 376, bounds: { w: 40, d: 40, h: 160 } },
@@ -62,12 +66,15 @@ export const ASSET_ITEMS: Record<string, { kit: AssetKit; tris: number; bounds: 
   "sleeping-mat": { kit: "interior", tris: 284, bounds: { w: 76, d: 115, h: 10 } },
   "sofa-2": { kit: "interior", tris: 1136, bounds: { w: 160, d: 90, h: 80 } },
   "sofa-3": { kit: "interior", tris: 1456, bounds: { w: 220, d: 90, h: 80 } },
+  "street-light": { kit: "exterior", tris: 252, bounds: { w: 150, d: 30, h: 600 } },
   "sun-lounger": { kit: "exterior", tris: 592, bounds: { w: 70, d: 190, h: 40 } },
   "toilet": { kit: "interior", tris: 728, bounds: { w: 42, d: 68, h: 80 } },
   "tree-blossom": { kit: "exterior", tris: 1328, bounds: { w: 320, d: 320, h: 450 } },
+  "tree-neem": { kit: "exterior", tris: 988, bounds: { w: 420, d: 420, h: 600 } },
   "tree-oak": { kit: "exterior", tris: 1308, bounds: { w: 380, d: 380, h: 560 } },
   "tree-palm": { kit: "exterior", tris: 964, bounds: { w: 360, d: 360, h: 600 } },
   "tree-pine": { kit: "exterior", tris: 424, bounds: { w: 230, d: 230, h: 620 } },
+  "tulsi-planter": { kit: "exterior", tris: 764, bounds: { w: 70, d: 70, h: 100 } },
   "vanity": { kit: "interior", tris: 768, bounds: { w: 60, d: 46, h: 88 } },
   "wardrobe": { kit: "interior", tris: 696, bounds: { w: 120, d: 60, h: 210 } },
   "washing-machine": { kit: "interior", tris: 524, bounds: { w: 60, d: 60, h: 85 } },
@@ -89,6 +96,7 @@ export const THUMBS: Record<string, string> = {
   "dining-table-round": "/thumbs/dining-table-round.webp",
   "display-shelf": "/thumbs/display-shelf.webp",
   "display-shelf-module": "/thumbs/display-shelf-module.webp",
+  "diya": "/thumbs/diya.webp",
   "dresser": "/thumbs/dresser.webp",
   "fence-panel": "/thumbs/fence-panel.webp",
   "floor-lamp": "/thumbs/floor-lamp.webp",
@@ -130,12 +138,15 @@ export const THUMBS: Record<string, string> = {
   "sleeping-mat": "/thumbs/sleeping-mat.webp",
   "sofa-2": "/thumbs/sofa-2.webp",
   "sofa-3": "/thumbs/sofa-3.webp",
+  "street-light": "/thumbs/street-light.webp",
   "sun-lounger": "/thumbs/sun-lounger.webp",
   "toilet": "/thumbs/toilet.webp",
   "tree-blossom": "/thumbs/tree-blossom.webp",
+  "tree-neem": "/thumbs/tree-neem.webp",
   "tree-oak": "/thumbs/tree-oak.webp",
   "tree-palm": "/thumbs/tree-palm.webp",
   "tree-pine": "/thumbs/tree-pine.webp",
+  "tulsi-planter": "/thumbs/tulsi-planter.webp",
   "vanity": "/thumbs/vanity.webp",
   "wardrobe": "/thumbs/wardrobe.webp",
   "washing-machine": "/thumbs/washing-machine.webp",

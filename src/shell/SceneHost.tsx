@@ -115,6 +115,7 @@ export function SceneHost({
                       walls: true,
                       furnishings: true,
                       walkFloorId: walkFloor ?? activeFloor.id,
+                      streetLife: state.view.streetLife,
                     }
                   : state.view
             }

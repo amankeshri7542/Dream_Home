@@ -11,16 +11,20 @@ import {
   normalizeLandscapeItem,
 } from "./landscape";
 import { roomFloorFinish } from "./roomDetails";
+import { RAILING_KINDS, STYLE_PRESETS } from "./persist";
 import type {
   ComponentRef,
   EditResult,
   LandscapeItem,
   Project,
   ProjectStyle,
+  RailingKind,
   RoofStyle,
   Room,
   RoomKind,
   SiteStyle,
+  StyleDetails,
+  StylePreset,
 } from "./types";
 import { registerValidation } from "./validate";
 
@@ -37,6 +41,16 @@ export const EXTERIOR_FINISHES = {
   stone: { label: "Ashlar stone", color: "#cbbfa8", legacy: "sand" },
   concrete: { label: "Board concrete", color: "#bdb8ae", legacy: "ivory" },
   charcoal: { label: "Charcoal render", color: "#55514c", legacy: "brick" },
+  // Bright limewash and emulsion colours of Indian homes. `legacy` is the
+  // nearest of the three original families (by RGB distance).
+  saffron: { label: "Saffron", color: "#f0a447", legacy: "sand" },
+  peach: { label: "Peach", color: "#f7d3b4", legacy: "ivory" },
+  mint: { label: "Mint", color: "#bfe2c6", legacy: "ivory" },
+  sky: { label: "Sky blue", color: "#a8d2ea", legacy: "ivory" },
+  lime: { label: "Lime", color: "#d2e07c", legacy: "sand" },
+  rose: { label: "Rose pink", color: "#eeb1b8", legacy: "sand" },
+  ochre: { label: "Ochre", color: "#d9a443", legacy: "brick" },
+  "two-tone": { label: "Indian modern two-tone", color: "#f4ede0", legacy: "ivory" },
 } as const satisfies Record<string, Swatch & { legacy: LegacyFinish }>;
 export type ExteriorFinishId = keyof typeof EXTERIOR_FINISHES;
 
@@ -97,6 +111,8 @@ export const TRIM_COLORS = {
   charcoal: { label: "Charcoal", color: "#3c3a36" },
   oak: { label: "Oak", color: "#b98b5e" },
   sage: { label: "Sage", color: "#8fa58e" },
+  maroon: { label: "Maroon", color: "#7c2f2b" },
+  teal: { label: "Peacock teal", color: "#1f6b70" },
 } as const satisfies Record<string, Swatch>;
 export type TrimColorId = keyof typeof TRIM_COLORS;
 
@@ -107,6 +123,8 @@ export const DOOR_COLORS = {
   terracotta: { label: "Terracotta", color: "#b5562f" },
   charcoal: { label: "Charcoal", color: "#3b3936" },
   white: { label: "White", color: "#efebe3" },
+  teak: { label: "Teak", color: "#7a4a27" },
+  peacock: { label: "Peacock teal", color: "#1f6b70" },
 } as const satisfies Record<string, Swatch>;
 export type DoorColorId = keyof typeof DOOR_COLORS;
 
@@ -176,6 +194,17 @@ export function trimColor(p: Project): TrimColorId {
 export function frontDoorColor(p: Project): DoorColorId {
   return isDoorColor(p.style?.frontDoor) ? p.style.frontDoor : "oak";
 }
+/** Resolved regional details (absent flags are off, railings glass). */
+export function styleDetails(p: Project): Required<StyleDetails> {
+  const d = p.style?.details ?? {};
+  return {
+    chhajja: d.chhajja === true,
+    waterTank: d.waterTank === true,
+    carPorch: d.carPorch === true,
+    railing: d.railing && RAILING_KINDS.includes(d.railing) ? d.railing : "glass",
+  };
+}
+export const stylePreset = (p: Project): StylePreset | null => p.style?.preset ?? null;
 export function siteGround(p: Project): GroundId {
   if (isGround(p.site?.ground)) return p.site.ground;
   return p.garden ? "lawn" : "soil";
@@ -285,6 +314,104 @@ export function setSite(
   const next = compact(site);
   return finalizeEdit(p, next ? { ...rest, site: next } : rest);
 }
+// ---------------------------------------------------------------------------
+// Style presets ("Look"): one tap sets a coherent bundle of choices.
+// ---------------------------------------------------------------------------
+export const STYLE_PRESET_INFO: Record<
+  StylePreset,
+  { label: string; description: string; colors: [string, string, string] }
+> = {
+  "indian-modern": {
+    label: "Indian modern",
+    description: "Bright walls, flat roof with a parapet, sunshades, a water tank and a compound wall",
+    colors: [EXTERIOR_FINISHES.peach.color, "#f4f1ea", "#7a4a27"],
+  },
+  "indian-classic": {
+    label: "Indian classic",
+    description: "Warm ochre limewash, maroon trim, jaali balconies and a compound wall",
+    colors: [EXTERIOR_FINISHES.ochre.color, "#7c2f2b", "#1f6b70"],
+  },
+  diorama: {
+    label: "Diorama",
+    description: "The original toy look: ivory walls and a terracotta roof",
+    colors: [EXTERIOR_FINISHES.ivory.color, "#c2693f", "#a87a52"],
+  },
+};
+type PresetBundle = {
+  exterior: ExteriorFinishId;
+  trim: TrimColorId;
+  frontDoor: DoorColorId;
+  roof: NonNullable<ProjectStyle["roof"]>;
+  details: StyleDetails | undefined;
+  fence: string | null;
+};
+const PRESETS: Record<StylePreset, PresetBundle> = {
+  "indian-modern": {
+    exterior: "peach",
+    trim: "warm-white",
+    frontDoor: "teak",
+    roof: { style: "flat", material: "membrane", pitch: 30 },
+    details: { chhajja: true, waterTank: true, carPorch: true, railing: "grille" },
+    fence: "compound-wall",
+  },
+  "indian-classic": {
+    exterior: "ochre",
+    trim: "maroon",
+    frontDoor: "peacock",
+    roof: { style: "flat", material: "membrane", pitch: 30 },
+    details: { chhajja: true, waterTank: true, carPorch: true, railing: "jaali" },
+    fence: "compound-wall",
+  },
+  diorama: {
+    exterior: "ivory",
+    trim: "warm-white",
+    frontDoor: "oak",
+    roof: { style: "gable", material: "terracotta", pitch: 30 },
+    details: undefined,
+    fence: null,
+  },
+};
+/** The project with a preset's bundle applied (no validation). */
+export function withStylePreset(p: Project, preset: StylePreset): Project {
+  const b = PRESETS[preset];
+  const legacy = EXTERIOR_FINISHES[b.exterior].legacy;
+  const style: ProjectStyle = {
+    preset,
+    ...(b.exterior !== legacy ? { exterior: b.exterior } : {}),
+    trim: b.trim,
+    frontDoor: b.frontDoor,
+    roof: { ...b.roof },
+    ...(b.details ? { details: { ...b.details } } : {}),
+  };
+  const site: SiteStyle = { ...(p.site ?? {}) };
+  if (b.fence) site.fence = b.fence;
+  else delete site.fence;
+  const { site: _site, ...rest } = p;
+  void _site;
+  return { ...rest, finish: legacy, style, ...(Object.keys(site).length ? { site } : {}) };
+}
+/**
+ * Applies a Look: exterior, trim, front door, roof (flat with a parapet for
+ * the Indian looks), regional details and the boundary wall, in one edit.
+ */
+export function applyStylePreset(p: Project, preset: string): EditResult {
+  if (!STYLE_PRESETS.includes(preset as StylePreset))
+    return { ok: false, error: "Choose a valid look." };
+  return finalizeEdit(p, withStylePreset(p, preset as StylePreset));
+}
+/** Turns one regional detail on or off, or picks the balcony railing. */
+export function setStyleDetails(p: Project, patch: StyleDetails): EditResult {
+  if (patch.railing !== undefined && !RAILING_KINDS.includes(patch.railing as RailingKind))
+    return INVALID;
+  const details: StyleDetails = { ...(p.style?.details ?? {}), ...patch };
+  for (const key of Object.keys(details) as (keyof StyleDetails)[])
+    if (details[key] === undefined) delete details[key];
+  const style: ProjectStyle = { ...(p.style ?? {}) };
+  if (Object.keys(details).length) style.details = details;
+  else delete style.details;
+  return finalizeEdit(p, withStyle(p, compact(style)));
+}
+
 /** Turns the automatic garden (trees, lawn) on or off. */
 export function setGarden(p: Project, on: boolean): EditResult {
   return finalizeEdit(p, { ...p, garden: on });
@@ -333,6 +460,12 @@ registerValidation((p, issue) => {
     if (style.exterior !== undefined && !isExterior(style.exterior)) bad();
     if (style.trim !== undefined && !isTrim(style.trim)) bad();
     if (style.frontDoor !== undefined && !isDoorColor(style.frontDoor)) bad();
+    if (style.preset !== undefined && !STYLE_PRESETS.includes(style.preset)) bad();
+    if (
+      style.details?.railing !== undefined &&
+      !RAILING_KINDS.includes(style.details.railing)
+    )
+      bad();
     if (
       style.roof !== undefined &&
       (!(style.roof.style in ROOF_STYLES) ||

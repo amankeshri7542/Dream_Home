@@ -1,5 +1,5 @@
 // Selection-generic actions shared by the action dock, inspectors and keys.
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { duplicateRoom, rotateRoom } from "../domain/builder";
 import {
   removeBalcony,
@@ -152,12 +152,15 @@ export function useSelectionActions() {
     },
     [project, target, floorId, run],
   );
-  /** A bedroom without its own bathroom can get one. */
-  const canAddEnsuite =
-    target?.kind === "room" &&
-    selected?.room?.kind === "bedroom" &&
-    !!selected.floor &&
-    !ensuiteOf(selected.floor.rooms, target.id);
+  /** A bedroom without its own bathroom, with space for one (a ~1 ms dry run). */
+  const ensuiteFloorId = target?.kind === "room" && selected?.room?.kind === "bedroom" ? floorId : null;
+  const ensuiteRoomId = target?.kind === "room" ? target.id : null;
+  const canAddEnsuite = useMemo(() => {
+    if (!ensuiteFloorId || !ensuiteRoomId) return false;
+    const floor = project.floors.find((f) => f.id === ensuiteFloorId);
+    if (!floor || ensuiteOf(floor.rooms, ensuiteRoomId)) return false;
+    return addAttachedBathroom(project, ensuiteFloorId, ensuiteRoomId).ok;
+  }, [project, ensuiteFloorId, ensuiteRoomId]);
   const addEnsuite = useCallback(() => {
     if (target?.kind !== "room" || !floorId) return;
     run(addAttachedBathroom(project, floorId, target.id), `Add a bathroom to ${selected!.name}`, {

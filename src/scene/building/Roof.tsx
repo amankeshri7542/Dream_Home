@@ -4,13 +4,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Group, Material, MeshStandardMaterial } from "three";
 import { floorForGeometry } from "../../domain/core";
-import { effectiveRoof } from "../../domain/materials";
+import { effectiveRoof, styleDetails } from "../../domain/materials";
 import type { Project } from "../../domain/types";
 import { easeInOutCubic, floorBase } from "../coords";
 import type { MaterialLibrary } from "../materials/library";
 import { useSceneStore } from "../store";
 import { Buckets } from "./geometry/QuadBuilder";
 import { emitFlatRoof, emitPitchedRoof } from "./geometry/roof";
+import { emitMumty, emitWaterTank, mumtyRects, tankSpot } from "./geometry/rooftop";
 import { useBuckets } from "./useBuckets";
 import { projectStyle } from "./useStableFloors";
 
@@ -39,14 +40,24 @@ export function Roof({ project, floorId, visible, library, reducedMotion }: Prop
   const floor = floorId ? project.floors.find((f) => f.id === floorId) : undefined;
   const roof = effectiveRoof(project);
   const style = projectStyle(project);
-  const key = floor ? JSON.stringify([floor.footprint, floor.elevation, floor.height, roof, style, project.plot.road, project.verticalSpaces.filter((v) => v.floorIds.includes(floor.id))]) : "";
+  const terrace = roof.style === "flat" && styleDetails(project).waterTank;
+  const key = floor ? JSON.stringify([floor.footprint, floor.elevation, floor.height, roof, style, terrace, project.plot.road, project.verticalSpaces.filter((v) => v.floorIds.includes(floor.id))]) : "";
   const { built } = useBuckets(() => {
     const buckets = new Buckets<"roof" | "trim" | "facade">();
     if (!floor) return { buckets };
     const top = floorBase(floor) + floor.height / 100;
     const out = { roof: buckets.get("roof"), trim: buckets.get("trim"), facade: buckets.get("facade") };
-    if (roof.style === "flat") emitFlatRoof(floorForGeometry(project, floor.id), top, style.stone, out);
-    else emitPitchedRoof(floor.footprint, roof.style, roof.pitch, top, project.plot.road, style.trim, out);
+    if (roof.style === "flat") {
+      const geometry = floorForGeometry(project, floor.id);
+      emitFlatRoof(geometry, top, style.band ?? style.stone, out);
+      if (terrace) {
+        // Water tank in the back corner; a mumty over stairs that reach the top.
+        const stairs = mumtyRects(geometry);
+        for (const r of stairs) emitMumty(out, r, geometry, top, style.frontDoor, style.band ?? style.stone);
+        const spot = tankSpot(geometry, project.plot.road, stairs);
+        if (spot) emitWaterTank(out.trim, spot[0], spot[1], top);
+      }
+    } else emitPitchedRoof(floor.footprint, roof.style, roof.pitch, top, project.plot.road, style.trim, out);
     return { buckets };
   }, [key]);
 

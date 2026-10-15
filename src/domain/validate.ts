@@ -238,7 +238,7 @@ export function validateProjectIssues(
       if (overlapping.length)
         issue(
           "room-overlap",
-          `${room.name} overlaps another room. Leave space before moving or resizing.`,
+          `${room.name} and ${overlapping[0].name} would overlap. Leave space before moving or resizing.`,
           {
             source,
             floorIds,

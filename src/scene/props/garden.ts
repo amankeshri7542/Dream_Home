@@ -91,15 +91,24 @@ export function gardenPlan(project: Project, layout: SiteLayout): { models: Gard
       models.push({ model, x, y: GROUND_TOP, z, yaw, scale: tree ? [vs * 0.75, vs * 0.75, vs * 0.75] : [vs, vs, vs], owner });
     }
   } else if (project.garden) {
+    // Indian looks plant neem for shade trees and a tulsi planter by the door.
+    const indian = project.style?.preset === "indian-modern" || project.style?.preset === "indian-classic";
     for (const t of layout.trees) {
       const s = t.scale * 0.72;
-      models.push({ model: `tree-${t.kind}`, x: t.x, y: GROUND_TOP, z: t.z, yaw: hash2(Math.round(t.x * 10), Math.round(t.z * 10), 3) * Math.PI * 2, scale: [s, s, s] });
+      const model = indian && t.kind === "oak" && ASSET_ITEMS["tree-neem"] ? "tree-neem" : `tree-${t.kind}`;
+      models.push({ model, x: t.x, y: GROUND_TOP, z: t.z, yaw: hash2(Math.round(t.x * 10), Math.round(t.z * 10), 3) * Math.PI * 2, scale: [s, s, s] });
     }
-    for (const s of layout.shrubs) {
+    layout.shrubs.forEach((s, i) => {
+      if (indian && i === 0 && ASSET_ITEMS["tulsi-planter"]) {
+        models.push({ model: "tulsi-planter", x: s.x, y: GROUND_TOP, z: s.z, yaw: 0, scale: [1, 1, 1] });
+        return;
+      }
       const k = (s.r * 2) / modelSize("shrub").w;
       models.push({ model: "shrub", x: s.x, y: GROUND_TOP, z: s.z, yaw: 0, scale: [k, k * 0.9, k] });
-    }
+    });
     // Low hedges along the non-road boundaries, skipping the house and parking.
+    // A chosen boundary (site.fence) replaces them.
+    const fence = project.site?.fence;
     const road = project.plot.road;
     const inset = 0.28,
       th = 0.38,
@@ -115,7 +124,7 @@ export function gardenPlan(project: Project, layout: SiteLayout): { models: Gard
     const endZ = d - inset - (road === "south" ? 0.6 : th);
     if (road !== "west") runs.push([inset + th / 2, inset + th, inset + th / 2, endZ]);
     if (road !== "east") runs.push([w - inset - th / 2, inset + th, w - inset - th / 2, endZ]);
-    for (const [x0, z0, x1, z1] of runs) {
+    for (const [x0, z0, x1, z1] of fence && fence !== "none" ? [] : runs) {
       const segs: GardenModel[] = [];
       tileRun(segs, "hedge-module", x0, z0, x1, z1, hh, th);
       for (const s of segs) {

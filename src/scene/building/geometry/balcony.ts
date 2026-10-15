@@ -1,7 +1,8 @@
-// Balconies: slab with a drip lip, stone deck, and a glass balustrade (posts,
-// panels, top rail) on the three open edges.
+// Balconies: slab with a drip lip, stone deck, and a balustrade on the three
+// open edges: glass (posts, panels, top rail), an MS grille (square bars) or a
+// pierced jaali screen (alpha-tested texture in the `jaali` bucket).
 import { balconyBounds } from "../../../domain/core";
-import type { Balcony, GeometryFloor } from "../../../domain/types";
+import type { Balcony, GeometryFloor, RailingKind } from "../../../domain/types";
 import { rgb, type Buckets, type V3 } from "./QuadBuilder";
 import { ownerKey, upQuad } from "./floors";
 
@@ -11,6 +12,7 @@ export function emitBalcony(
   base: number,
   trimHex: string,
   buckets: Buckets<string>,
+  railing: RailingKind = "glass",
 ) {
   const r = balconyBounds(floor, balcony);
   const x0 = r.x / 100,
@@ -64,6 +66,48 @@ export function emitBalcony(
         color,
       );
     };
+    if (railing === "grille") {
+      // Mild-steel grille: square bars every 11 cm between two flats, with a
+      // painted top rail.
+      const iron = rgb("#2e2f31");
+      const bars = Math.max(2, Math.round(len / 0.11));
+      for (let i = 0; i <= bars; i++) {
+        const t = Math.min(len - 0.01, Math.max(0.01, (i / bars) * len));
+        bx(t - 0.008, t + 0.008, 0.042, 0.058, yb, yt - 0.03, iron);
+      }
+      for (const y of [yb + 0.1, yb + 0.72]) bx(0, len, 0.04, 0.06, y, y + 0.025, iron);
+      bx(0, len, 0.03, 0.07, yt - 0.03, yt + 0.02, rail);
+      continue;
+    }
+    if (railing === "jaali") {
+      // Solid stone-coloured jaali panels between plastered piers.
+      const panel = rgb("#e9dcc2");
+      const jaali = buckets.get("jaali");
+      for (let i = 0; i <= count; i++) {
+        const t = Math.min(len - 0.05, Math.max(0.05, (i / count) * len));
+        bx(t - 0.05, t + 0.05, 0.0, 0.1, yb, yt + 0.03, rail);
+      }
+      bx(0, len, 0.0, 0.1, yt - 0.04, yt + 0.04, rail);
+      bx(0, len, 0.01, 0.09, yb, yb + 0.08, rail);
+      for (let i = 0; i < count; i++) {
+        const t0 = (i / count) * len + 0.05,
+          t1 = ((i + 1) / count) * len - 0.05;
+        const a = P(t0, 0.05, yb + 0.08),
+          b = P(t1, 0.05, yb + 0.08),
+          c = P(t1, 0.05, yt - 0.04),
+          d = P(t0, 0.05, yt - 0.04);
+        // Metre UVs so the pattern keeps its size on any balcony.
+        const u0 = e.a[0] + e.a[1] + t0,
+          u1 = e.a[0] + e.a[1] + t1;
+        jaali.quad(a, b, c, d, panel, [
+          [u0, yb + 0.08],
+          [u1, yb + 0.08],
+          [u1, yt - 0.04],
+          [u0, yt - 0.04],
+        ]);
+      }
+      continue;
+    }
     for (let i = 0; i <= count; i++) {
       const t = Math.min(len - 0.02, Math.max(0.02, (i / count) * len));
       bx(t - 0.02, t + 0.02, 0.03, 0.07, yb, yt - 0.02, post);

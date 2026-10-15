@@ -4,6 +4,7 @@
 //   node scripts/assets/build.mjs                 # blender + pack
 //   node scripts/assets/build.mjs --step blender  # Blender: raw GLBs, thumbnails, report
 //   node scripts/assets/build.mjs --step pack     # gltfpack, budgets, manifest, cleanup
+//   node scripts/assets/build.mjs --step street   # street life actors only (Blender + pack)
 //
 // Blender binary: $BLENDER_PATH or the default macOS install below.
 import { spawnSync } from "node:child_process";
@@ -20,7 +21,8 @@ const THUMBS = join(ROOT, "public", "thumbs");
 const REPORT = join(ROOT, "scripts", "blender", "report.json");
 const MANIFEST = join(ROOT, "src", "scene", "assets", "assetManifest.ts");
 const KITS = ["interior", "exterior"];
-const BUDGET_BYTES = { interior: 300_000, exterior: 150_000 };
+const BUDGET_BYTES = { interior: 300_000, exterior: 150_000, street: 120_000 };
+const STREET_REPORT = join(ROOT, "scripts", "blender", "street-report.json");
 // EXT_meshopt_compression (decodable by three r180's MeshoptDecoder), keep
 // node names / materials / extras. -vpf keeps float positions so each mesh
 // stays directly on its named `<id>__<slot>` node (no dequantisation nodes);
@@ -46,6 +48,55 @@ function stepBlender() {
     ["--factory-startup", "-b", "--python-exit-code", "1", "--python", join("scripts", "blender", "build_kit.py"), "--", "--kit", "all", "--thumbs"],
     "blender",
   );
+}
+
+function stepStreetBlender() {
+  if (!existsSync(BLENDER)) fail(`Blender not found at "${BLENDER}" (set BLENDER_PATH)`);
+  run(
+    BLENDER,
+    ["--factory-startup", "-b", "--python-exit-code", "1", "--python", join("scripts", "blender", "build_street.py"), "--"],
+    "blender street",
+  );
+}
+
+/** Street life actors: gltfpack keeps the named part nodes (pivots). */
+function packStreet() {
+  const raw = join(MODELS, "street.raw.glb");
+  const out = join(MODELS, "street.glb");
+  if (!existsSync(raw)) fail(`${relative(ROOT, raw)} missing - run \`npm run assets -- --step street\``);
+  const [gltfpack, pre] = gltfpackCommand();
+  run(gltfpack, [...pre, "-i", raw, "-o", out, ...GLTFPACK_FLAGS], "gltfpack street");
+  const bytes = statSync(out).size;
+  if (bytes > BUDGET_BYTES.street) fail(`street.glb is ${bytes} bytes > budget ${BUDGET_BYTES.street}`);
+  const gltf = readGlbJson(out);
+  const names = new Set((gltf.nodes ?? []).map((n) => n.name));
+  const report = JSON.parse(readFileSync(STREET_REPORT, "utf8"));
+  const lost = report.actors.flatMap((a) => [a.id, ...a.parts]).filter((n) => !names.has(n));
+  if (lost.length) fail(`street.glb lost nodes: ${lost.join(", ")}`);
+  rmSync(raw, { force: true });
+  console.log(`[assets] street.glb ${bytes} bytes (budget ${BUDGET_BYTES.street}), ${report.tris} tris`);
+}
+
+/** Street kit entry from the packed file on disk (null when absent). */
+function streetInfo() {
+  const out = join(MODELS, "street.glb");
+  if (!existsSync(out) || !existsSync(STREET_REPORT)) return null;
+  const report = JSON.parse(readFileSync(STREET_REPORT, "utf8"));
+  const hash = createHash("sha256").update(readFileSync(out)).digest("hex").slice(0, 10);
+  return { url: `/models/street.glb?v=${hash}`, bytes: statSync(out).size, tris: report.tris };
+}
+
+/** Kit entries from the packed files on disk (for street-only rebuilds). */
+function kitsFromDisk(report) {
+  const kits = {};
+  for (const kit of KITS) {
+    const out = join(MODELS, `${kit}.glb`);
+    if (!existsSync(out)) fail(`${relative(ROOT, out)} missing - run \`npm run assets\``);
+    const hash = createHash("sha256").update(readFileSync(out)).digest("hex").slice(0, 10);
+    const tris = report.items.filter((e) => e.kit === kit).reduce((s, e) => s + e.tris, 0);
+    kits[kit] = { url: `/models/${kit}.glb?v=${hash}`, bytes: statSync(out).size, tris };
+  }
+  return kits;
 }
 
 function gltfpackCommand() {
@@ -91,6 +142,7 @@ function stepPack() {
     kits[kit] = { url: `/models/${kit}.glb?v=${hash}`, bytes, tris };
     console.log(`[assets] ${kit}.glb ${bytes} bytes (budget ${BUDGET_BYTES[kit]}), ${tris} tris, v=${hash}`);
   }
+  if (existsSync(join(MODELS, "street.raw.glb"))) packStreet();
   writeManifest(kits, report);
   for (const kit of KITS) rmSync(join(MODELS, `${kit}.raw.glb`), { force: true });
   console.log(`[assets] wrote ${relative(ROOT, MANIFEST)}; removed raw GLBs`);
@@ -121,6 +173,14 @@ function writeManifest(kits, report) {
   lines.push("} as const;");
   lines.push("");
   lines.push("export type AssetKit = keyof typeof ASSET_MANIFEST;");
+  const street = streetInfo();
+  lines.push("");
+  lines.push("/** Street life actors (scripts/blender/build_street.py), loaded lazily in Explore. */");
+  lines.push(
+    street
+      ? `export const STREET_ASSET: { url: string; bytes: number; tris: number } | null = { url: ${q(street.url)}, bytes: ${street.bytes}, tris: ${street.tris} };`
+      : "export const STREET_ASSET: { url: string; bytes: number; tris: number } | null = null;",
+  );
   lines.push("");
   lines.push("export const ASSET_ITEMS: Record<string, { kit: AssetKit; tris: number; bounds: { w: number; d: number; h: number } }> = {");
   for (const e of items) {
@@ -140,8 +200,13 @@ function writeManifest(kits, report) {
 const argv = process.argv.slice(2);
 const stepIdx = argv.indexOf("--step");
 const step = stepIdx >= 0 ? argv[stepIdx + 1] : "all";
-if (!["all", "blender", "pack"].includes(step)) fail(`unknown --step ${step}`);
+if (!["all", "blender", "pack", "street"].includes(step)) fail(`unknown --step ${step}`);
 const t0 = Date.now();
 if (step === "all" || step === "blender") stepBlender();
+if (step === "all" || step === "blender" || step === "street") stepStreetBlender();
 if (step === "all" || step === "pack") stepPack();
+if (step === "street") {
+  packStreet();
+  writeManifest(kitsFromDisk(JSON.parse(readFileSync(REPORT, "utf8"))), JSON.parse(readFileSync(REPORT, "utf8")));
+}
 console.log(`[assets] done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

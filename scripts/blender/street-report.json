@@ -1,0 +1,96 @@
+{
+  "actors": [
+    {
+      "id": "person-kurta",
+      "parts": [
+        "person-kurta:leg-l",
+        "person-kurta:leg-r",
+        "person-kurta:arm-l",
+        "person-kurta:arm-r",
+        "person-kurta:body",
+        "person-kurta:head"
+      ],
+      "tris": 600
+    },
+    {
+      "id": "person-saree",
+      "parts": [
+        "person-saree:leg-l",
+        "person-saree:leg-r",
+        "person-saree:arm-l",
+        "person-saree:arm-r",
+        "person-saree:body",
+        "person-saree:head"
+      ],
+      "tris": 980
+    },
+    {
+      "id": "person-kid",
+      "parts": [
+        "person-kid:leg-l",
+        "person-kid:leg-r",
+        "person-kid:arm-l",
+        "person-kid:arm-r",
+        "person-kid:body",
+        "person-kid:head"
+      ],
+      "tris": 1140
+    },
+    {
+      "id": "dog",
+      "parts": [
+        "dog:body",
+        "dog:head",
+        "dog:leg-fl",
+        "dog:leg-fr",
+        "dog:leg-bl",
+        "dog:leg-br",
+        "dog:tail"
+      ],
+      "tris": 458
+    },
+    {
+      "id": "cow",
+      "parts": [
+        "cow:body",
+        "cow:head",
+        "cow:leg-fl",
+        "cow:leg-fr",
+        "cow:leg-bl",
+        "cow:leg-br"
+      ],
+      "tris": 692
+    },
+    {
+      "id": "scooter",
+      "parts": [
+        "scooter:body",
+        "scooter:wheel-f",
+        "scooter:wheel-r"
+      ],
+      "tris": 1732
+    },
+    {
+      "id": "auto",
+      "parts": [
+        "auto:body",
+        "auto:wheel-f",
+        "auto:wheel-l",
+        "auto:wheel-r"
+      ],
+      "tris": 1680
+    },
+    {
+      "id": "bird",
+      "parts": [
+        "bird:body",
+        "bird:wing-l",
+        "bird:wing-r"
+      ],
+      "tris": 240
+    }
+  ],
+  "errors": [],
+  "tris": 7522,
+  "bytes": 272092
+}

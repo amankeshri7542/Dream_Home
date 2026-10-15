@@ -9,17 +9,34 @@ import { Button, IconButton } from "../ui/primitives";
 import { BrandMark } from "../shell/TopBar";
 import { PLOT_SIZES, TEMPLATES, buildTemplate, type Template } from "./templates";
 import "./onboarding.css";
+import "../ai/ai.css";
+
+/** The big "Design my home with AI" button (title screen and gallery). */
+function AiEntry({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="dh-ai-entry" onClick={onClick}>
+      <Icon.sparkle size={26} aria-hidden />
+      <span>
+        <strong>Design my home with AI</strong>
+        <small>Answer 4 quick questions. Get a furnished home.</small>
+      </span>
+      <Icon.right size={20} aria-hidden />
+    </button>
+  );
+}
 
 export function TitleScreen({
   onContinue,
   onNew,
   onSample,
   onOpen,
+  onAi,
 }: {
   onContinue: () => void;
   onNew: () => void;
   onSample: () => void;
   onOpen: () => void;
+  onAi: () => void;
 }) {
   const editor = useEditor();
   const { project, hasSavedProject, error, recovery } = editor;
@@ -76,6 +93,7 @@ export function TitleScreen({
             <Button variant="secondary" size="lg" full icon={Icon.add} onClick={onNew}>
               Start a new home
             </Button>
+            <AiEntry onClick={onAi} />
           </>
         ) : (
           <>
@@ -86,7 +104,8 @@ export function TitleScreen({
               Pick a starting home, move rooms like puzzle pieces, add doors,
               furniture and a garden — then walk right in.
             </p>
-            <Button ref={primary} variant="primary" size="lg" full onClick={onNew}>
+            <AiEntry onClick={onAi} />
+            <Button ref={primary} variant="secondary" size="lg" full onClick={onNew}>
               Start a new home
               <Icon.right size={20} aria-hidden />
             </Button>
@@ -151,11 +170,13 @@ export function TemplateGallery({
   onPreview,
   onBuild,
   onCustom,
+  onAi,
 }: {
   onBack: () => void;
   onPreview: (project: Project | null) => void;
   onBuild: (project: Project, template: Template) => void;
   onCustom: () => void;
+  onAi: () => void;
 }) {
   const [picked, setPicked] = useState(TEMPLATES[0].id);
   const template = TEMPLATES.find((t) => t.id === picked)!;
@@ -209,6 +230,7 @@ export function TemplateGallery({
           {TEMPLATES.length} homes ›
         </span>
       </div>
+      <AiEntry onClick={onAi} />
       <div className="dh-gallery-cards" role="radiogroup" aria-label="Starting homes">
         {TEMPLATES.map((t) => (
           <button

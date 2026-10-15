@@ -50,7 +50,7 @@ export function loadKit(name: AssetKit): Promise<Kit> {
   return p;
 }
 
-function normalise(src: BufferGeometry): BufferGeometry {
+export function normalise(src: BufferGeometry): BufferGeometry {
   const g = new BufferGeometry();
   const pos = src.getAttribute("position");
   const nor = src.getAttribute("normal");

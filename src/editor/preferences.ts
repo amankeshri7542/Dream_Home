@@ -12,6 +12,8 @@ export type Preferences = {
   quality: QualitySetting;
   singleKeyShortcuts: boolean;
   checklist: "show" | "hide";
+  /** People and traffic on the road in Explore. */
+  streetLife: boolean;
 };
 const QUALITIES: QualitySetting[] = ["auto", "battery", "balanced", "beautiful"];
 
@@ -30,6 +32,7 @@ export function normalizePreferences(raw: unknown): Preferences {
       : "auto",
     singleKeyShortcuts: p.singleKeyShortcuts !== false,
     checklist: p.checklist === "hide" ? "hide" : "show",
+    streetLife: p.streetLife !== false,
   };
 }
 function readRaw(storage: Storage | undefined, key: string): unknown {

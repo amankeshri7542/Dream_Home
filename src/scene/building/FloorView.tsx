@@ -45,6 +45,8 @@ function materialFor(key: string, model: FloorModel, lib: MaterialLibrary): Mate
       return lib.hit();
     case "lamp":
       return lib.lamp();
+    case "jaali":
+      return lib.jaali();
     default:
       return lib.joinery();
   }

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/build-api.mjs && vite build",
+    "build:api": "node scripts/build-api.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint .",
@@ -16,6 +17,7 @@
     "assets:pack": "node scripts/assets/build.mjs --step pack"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@fontsource-variable/figtree": "^5.3.0",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@react-three/drei": "^10.7.0",

@@ -9,8 +9,11 @@ import type {
   PlacedOpening,
   Project,
   ProjectStyle,
+  RailingKind,
   Room,
   SiteStyle,
+  StyleDetails,
+  StylePreset,
 } from "./types";
 
 type Obj = Record<string, unknown>;
@@ -33,6 +36,9 @@ export const OPENING_KINDS: readonly OpeningKind[] = [
 ];
 const OPENING_STYLES = ["panel", "flush", "glazed", "plain", "divided"];
 const ROOF_STYLES = ["flat", "gable", "hip", "shed"];
+export const STYLE_PRESETS: readonly StylePreset[] = ["indian-modern", "indian-classic", "diorama"];
+export const RAILING_KINDS: readonly RailingKind[] = ["glass", "grille", "jaali"];
+const optBool = (v: unknown) => v === undefined || typeof v === "boolean";
 
 function checkOpening(v: unknown): v is PlacedOpening {
   return (
@@ -111,10 +117,30 @@ export function copyLandscape(l: LandscapeItem): LandscapeItem {
     ...(l.variant !== undefined ? { variant: l.variant } : {}),
   };
 }
+function checkDetails(v: unknown): v is StyleDetails {
+  return (
+    obj(v) &&
+    optBool(v.chhajja) &&
+    optBool(v.waterTank) &&
+    optBool(v.carPorch) &&
+    (v.railing === undefined || RAILING_KINDS.includes(v.railing as RailingKind))
+  );
+}
+function copyDetails(d: StyleDetails): StyleDetails {
+  return {
+    ...(d.chhajja !== undefined ? { chhajja: d.chhajja } : {}),
+    ...(d.waterTank !== undefined ? { waterTank: d.waterTank } : {}),
+    ...(d.carPorch !== undefined ? { carPorch: d.carPorch } : {}),
+    ...(d.railing !== undefined ? { railing: d.railing } : {}),
+  };
+}
 function checkStyle(v: unknown): v is ProjectStyle {
   if (!obj(v)) return false;
   if (!optStr(v.exterior) || !optStr(v.trim) || !optStr(v.frontDoor))
     return false;
+  if (v.preset !== undefined && !STYLE_PRESETS.includes(v.preset as StylePreset))
+    return false;
+  if (v.details !== undefined && !checkDetails(v.details)) return false;
   if (v.roof === undefined) return true;
   return (
     obj(v.roof) &&
@@ -125,6 +151,8 @@ function checkStyle(v: unknown): v is ProjectStyle {
 }
 function copyStyle(s: ProjectStyle): ProjectStyle {
   return {
+    ...(s.preset !== undefined ? { preset: s.preset } : {}),
+    ...(s.details !== undefined ? { details: copyDetails(s.details) } : {}),
     ...(s.exterior !== undefined ? { exterior: s.exterior } : {}),
     ...(s.trim !== undefined ? { trim: s.trim } : {}),
     ...(s.frontDoor !== undefined ? { frontDoor: s.frontDoor } : {}),

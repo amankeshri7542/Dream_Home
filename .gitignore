@@ -8,3 +8,7 @@ playwright-report/
 
 .playwright-mcp/
 public/models/*.raw.glb
+
+# Local secrets (ANTHROPIC_API_KEY)
+.env
+.env*.local

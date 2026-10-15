@@ -87,7 +87,7 @@ export const ROOM_CATALOG: ReadonlyArray<{
   },
   {
     id: "prayer",
-    label: "Prayer room",
+    label: "Pooja room",
     kind: "utility",
     description: "A peaceful space for prayer.",
     width: 180,

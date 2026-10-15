@@ -21,6 +21,7 @@ import type {
   Project,
 } from "../domain/types";
 import {
+  DEFAULT_VIEW,
   editorReducer,
   initialEditorState,
   type EditorAction,
@@ -150,7 +151,11 @@ export function EditorProvider({
   const doc = useProject();
   const [prefs, setPrefsState] = useState(loadPreferences);
   const [state, dispatch] = useReducer(editorReducer, undefined, () =>
-    initialEditorState({ quality: prefs.quality, ...initial }),
+    initialEditorState({
+      quality: prefs.quality,
+      ...(prefs.streetLife ? {} : { view: { ...DEFAULT_VIEW, streetLife: false } }),
+      ...initial,
+    }),
   );
   const { project } = doc;
   const selected = useMemo(

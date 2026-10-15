@@ -545,6 +545,8 @@
   }
   .dh-inspector-title h2 {
     font-size: var(--dh-text-xl);
+    overflow: hidden;
+    overflow-wrap: anywhere;
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;

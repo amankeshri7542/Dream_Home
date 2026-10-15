@@ -425,6 +425,10 @@ const prayerShrine: Gen = (e, ox, oz, w, d) => {
   e.box("shrine shelf", ox + 5, oz, w - 10, d - 7, 55, 5, "oak", false, true);
   e.ellipse("lamp", ox + w / 2 - 7, oz + 22, 14, 14, 60, 12, "clay");
 };
+const diya: Gen = (e, ox, oz, w, d) => {
+  e.ellipse("diya", ox, oz, w, d, 0, 4, "clay");
+  e.ellipse("diya flame", ox + w / 2 - 2, oz + d / 2 - 2, 4, 4, 4, 5, "glow");
+};
 const prayerMat: Gen = (e, ox, oz, w, d) =>
   e.box("prayer mat", ox, oz, w, d, 0, 2, "fabric", true, true);
 const desk: Gen = (e, ox, oz, w, d) => {
@@ -631,6 +635,7 @@ const GENERATORS: Record<string, Gen> = {
   "shop-counter": shopCounter,
   "prayer-shrine": prayerShrine,
   "prayer-mat": prayerMat,
+  diya,
   "rug-rect": rugRect,
   "rug-round": rugRound,
   "plant-floor": plant(28, 35),

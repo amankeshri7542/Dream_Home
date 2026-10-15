@@ -1,0 +1,56 @@
+/* Outside → House style: the "Look" cards (mobile first, big tap targets). */
+@layer components {
+  .dh-looks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .dh-looks legend {
+    margin-bottom: 8px;
+    padding: 0;
+    font-weight: 700;
+  }
+  .dh-looks button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 148px;
+    padding: 8px 6px 10px;
+    border: 2px solid transparent;
+    border-radius: var(--dh-radius-lg, 16px);
+    background: var(--dh-paper-0, #fffdf8);
+    box-shadow: var(--dh-shadow-1);
+    text-align: center;
+    color: inherit;
+  }
+  .dh-looks button svg {
+    width: 100%;
+    max-width: 104px;
+    height: auto;
+  }
+  .dh-looks button strong {
+    font-size: 14px;
+    line-height: 1.15;
+  }
+  .dh-looks button small {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.25;
+    color: var(--dh-ink-2, #6b6158);
+  }
+  .dh-looks button[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+  }
+  .dh-style-details {
+    display: grid;
+    gap: 6px;
+  }
+}

@@ -50,7 +50,7 @@ export function CameraHud() {
 }
 
 export function ViewOptions() {
-  const { state, dispatch, project, run, commit } = useEditor();
+  const { state, dispatch, project, run, commit, setPrefs } = useEditor();
   const { view } = state;
   const ref = useRef<HTMLDivElement>(null);
   const setView = (patch: Partial<typeof view>) => dispatch({ type: "view", patch });
@@ -156,6 +156,16 @@ export function ViewOptions() {
           label="Show the roof"
           checked={view.roof}
           onChange={() => setView({ roof: !view.roof, stage: !view.roof ? 5 : 4 })}
+        />
+        <Switch
+          label="Street life"
+          description="People, a cow and traffic on the road while you explore"
+          checked={view.streetLife !== false}
+          onChange={() => {
+            const on = view.streetLife === false;
+            setView({ streetLife: on });
+            setPrefs({ streetLife: on });
+          }}
         />
       </div>
       <fieldset className="dh-finish-choices">

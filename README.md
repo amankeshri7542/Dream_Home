@@ -4,8 +4,10 @@ A warm, playful 3D sandbox for building the home you keep imagining. Pick a
 starting home, move rooms like puzzle pieces, place doors and windows, furnish
 every room, style the roof and garden — then walk right in and take a photo.
 React, TypeScript, Vite, React Three Fiber and Three.js, with furniture modelled
-in Blender. No account, backend, runtime AI calls or API keys; everything saves
-on your device.
+in Blender. No account; everything saves on your device. An optional **AI
+designer** (Claude Opus 5.5 through one small server function) designs a whole
+furnished home from four taps; without it, a built-in planner does the same job
+offline.
 
 [Open Dream Home](https://dream-home-liard-nine.vercel.app/)
 
@@ -22,6 +24,17 @@ Open [localhost:5173](http://localhost:5173). `npm run build` creates `dist/`;
 `npm run preview` serves it locally. GitHub's `main` branch is the Vercel
 deployment source.
 
+### The AI designer (optional)
+
+Create `.env.local` (never committed) with `ANTHROPIC_API_KEY=...` and run
+`npm run dev`: the dev server also serves `/api/design` from `server/*.ts`.
+Without a key the app uses its built-in planner. On Vercel, add the same
+variable in Project → Settings → Environment Variables. For free-tier limits
+that survive restarts, add an Upstash Redis / Vercel KV integration
+(`KV_REST_API_URL`, `KV_REST_API_TOKEN`); `AI_DAILY_BUDGET_USD` (default 10)
+caps total spend per day. After changing `server/` or `src/ai/`, run
+`npm run build:api` to regenerate `api/design.js` (`npm run build` does it too).
+
 > The project lives in an iCloud-synced folder on the author's machine, so
 > `node_modules` is a symlink to an un-synced `node_modules.nosync`. If
 > `npm install` replaces the symlink, restore it with
@@ -29,15 +42,23 @@ deployment source.
 
 ## Play
 
-1. **Start** — a title screen offers *Continue my home*, *Start a new home*,
+1. **Design with AI** — *Design my home with AI* asks four one-thumb questions
+   (plot and facing, who lives here, must-haves such as an attached bathroom,
+   pooja room, parking or Vastu, and a style) and returns a complete, furnished,
+   styled home with short design notes, *Try another* and *Keep it*. In
+   Decorate, *Make it nice* restyles one room. 3 free home designs and 10 room
+   makeovers per device; after that (or offline) the built-in planner steps in.
+   The AI only proposes; the app's own layout engine builds, so the result is
+   always a valid, editable home.
+2. **Start** — a title screen offers *Continue my home*, *Start a new home*,
    *Try the sample home* and *Open a saved project*. The gallery has eight
    starting homes (cosy bungalow, garden villa, duplex, courtyard home,
    apartment block, shop + home, little market, blank plot) with live 3D
    previews and simple steppers. *Start with my plot* opens the detailed
    wizard for measured plots, 1–8 floors and apartments or shops. A short
    construction reveal and a three-step tour follow (replay it from More).
-2. **Build** — tap any room in 3D (or pick it from Rooms) to see a compact
-   card and an action bar: Move, Resize, Rotate, Duplicate, Set aside. Press
+3. **Build** — tap any room in 3D (or pick it from Rooms) to see a compact
+   card and an action bar: Move, Edit in 2D (drag to move, pull a dot to resize), Rotate, Duplicate, Set aside, and for bedrooms *Add attached bathroom*. Press
    **Move** and drag the room right in 3D (grab the floor or its name label;
    with a mouse, just drag the selected room): a ghost shows where it lands,
    dropping it on another room swaps them, and dropping it on the Tray sets it
@@ -45,26 +66,30 @@ deployment source.
    balconies, courtyards and stairs; when the house is full it offers
    **Grow house & add** in one tap. The **tray** keeps set-aside rooms safe until
    you place them back. Floors are an elevator on the right.
-3. **Doors & windows** — every room lists its doors and windows. Add doors,
+4. **Doors & windows** — every room lists its doors and windows. Add doors,
    French and sliding doors, archways, windows and picture windows; slide them
    along the wall, resize them, move them to another wall, flip which way a door
    opens, or make the whole floor automatic again.
-4. **Decorate** — tap a room and the camera glides inside it. About forty
+5. **Decorate** — tap a room and the camera glides inside it. About forty
    pieces of chunky, rounded furniture with real thumbnails: add them to a
    room (they find a free spot), tap a piece and drag it around — even into
    another room — or nudge, turn, copy and recolour it. Paint the walls and choose the floor
    (oak, walnut, herringbone, tile, terrazzo, marble, stone, slate, concrete,
    carpet). *Auto-furnish* and *Empty the room* are one tap.
-5. **Outside** — choose the outside walls (plaster, brick, sandstone, stucco,
+6. **Outside** — choose the outside walls (plaster, brick, sandstone, stucco,
    render, timber, stone, concrete, charcoal), a flat, gable, hip or shed roof
-   with material and steepness, trim and front-door colours. Plant trees,
+   with material and steepness, trim and front-door colours. One-tap **Looks**
+   (Indian modern, Indian classic, Diorama) add chhajja sunshades, a rooftop
+   water tank, grille or jaali balconies, a compound wall with a gate and a car
+   porch. Explore shows a lively Indian street (people, a cow, a dog, a scooter,
+   an auto-rickshaw and street lights), switchable in View options. Plant trees,
    shrubs, flower beds, hedges, a pool, paths, patios, lamps and benches; pick
    the ground and a fence.
-6. **Explore** — admire the home on a turntable, slide the time of day from
+7. **Explore** — admire the home on a turntable, slide the time of day from
    morning to a glowing night, take a photo to save or share, and walk inside
    with the keyboard, a thumb joystick or tap-to-walk; stairs take you between
    floors.
-7. **Share** — a dimensioned plan image per floor, or the whole project as an
+8. **Share** — a dimensioned plan image per floor, or the whole project as an
    editable JSON backup.
 
 **Never lost:** every change can be undone (with a description of what it
@@ -94,6 +119,11 @@ settings turn off camera glides and animations; `?` lists keyboard shortcuts.
 - `src/shell/`, `src/onboarding/`, `src/explore/`, `src/ui/` — the workspace
   chrome, title/gallery/tour, Explore HUD and walkthrough, design tokens and
   primitives.
+- `src/ai/`, `server/`, `api/` — the AI designer: brief validation, strict JSON
+  schemas built from the catalogs, prompts, the built-in planner, the engine that
+  turns a plan into a valid home (`buildHome.ts`), the mobile-first brief UI;
+  the server handler with per-device/IP limits and a spend cap, bundled by
+  `scripts/build-api.mjs` into the Vercel function `api/design.js`.
 - `src/scene/` — renderer v2: perspective camera rig with inset-aware framing,
   procedural sky with time of day, image lighting, shadows, materials, building
   geometry (junctions, openings, cutaway section fill, stairs, roofs, porch),

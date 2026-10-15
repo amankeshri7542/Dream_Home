@@ -17,6 +17,10 @@ import {
   updateLandscape,
 } from "../../domain/landscapeCommands";
 import {
+  STYLE_PRESET_INFO,
+  applyStylePreset,
+  setStyleDetails,
+  styleDetails,
   DOOR_COLORS,
   EXTERIOR_FINISHES,
   GROUND_STYLES,
@@ -35,11 +39,12 @@ import {
   siteGround,
   trimColor,
 } from "../../domain/materials";
-import type { EditResult, RoofStyle } from "../../domain/types";
+import type { EditResult, RailingKind, RoofStyle, StylePreset } from "../../domain/types";
 import { useEditor } from "../../editor/EditorProvider";
 import { Icon } from "../../ui/icons";
 import { Button, IconButton, Section, Segmented, Swatches } from "../../ui/primitives";
 import { Thumb } from "./DecoratePanels";
+import "./outside.css";
 
 const swatches = <T extends Record<string, { label: string; color: string }>>(set: T) =>
   Object.entries(set).map(([value, s]) => ({ value, label: s.label, color: s.color }));
@@ -61,6 +66,107 @@ function RoofIcon({ style }: { style: RoofStyle }) {
   );
 }
 
+/** A tiny house in the look's colours: flat roof + tank, or a gable. */
+function LookIcon({ preset }: { preset: StylePreset }) {
+  const [wall, trim, accent] = STYLE_PRESET_INFO[preset].colors;
+  const indian = preset !== "diorama";
+  return (
+    <svg viewBox="0 0 96 64" width="96" height="64" aria-hidden>
+      <rect x="0" y="54" width="96" height="10" rx="3" fill="#9fb07a" />
+      {indian ? (
+        <>
+          <rect x="62" y="10" width="14" height="12" rx="3" fill="#2d2b29" />
+          <rect x="64" y="22" width="2" height="5" fill="#2d2b29" />
+          <rect x="72" y="22" width="2" height="5" fill="#2d2b29" />
+          <rect x="18" y="26" width="60" height="30" fill={wall} />
+          <rect x="16" y="24" width="64" height="5" fill={trim} />
+          <rect x="24" y="33" width="14" height="10" fill="#6d8794" />
+          <rect x="22" y="31" width="18" height="3" fill="#d9d4ca" />
+          <rect x="56" y="33" width="14" height="10" fill="#6d8794" />
+          <rect x="54" y="31" width="18" height="3" fill="#d9d4ca" />
+          <rect x="43" y="40" width="10" height="16" fill={accent} />
+          <rect x="4" y="47" width="88" height="8" fill="#efe9de" />
+          <rect x="40" y="47" width="16" height="8" fill="#9fb07a" />
+        </>
+      ) : (
+        <>
+          <path d="M14 30 L48 8 L82 30 Z" fill={trim} />
+          <rect x="20" y="30" width="56" height="26" fill={wall} />
+          <rect x="27" y="36" width="12" height="9" fill="#6d8794" />
+          <rect x="57" y="36" width="12" height="9" fill="#6d8794" />
+          <rect x="43" y="40" width="10" height="16" fill={accent} />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function LookRow() {
+  const { project, run } = useEditor();
+  const current = project.style?.preset;
+  return (
+    <fieldset className="dh-looks">
+      <legend>Look</legend>
+      {(Object.keys(STYLE_PRESET_INFO) as StylePreset[]).map((preset) => {
+        const info = STYLE_PRESET_INFO[preset];
+        return (
+          <button
+            key={preset}
+            type="button"
+            aria-pressed={current === preset}
+            aria-describedby={`dh-look-${preset}`}
+            onClick={() => run(applyStylePreset(project, preset), `Use the ${info.label} look`, { notice: `${info.label} look` })}
+          >
+            <LookIcon preset={preset} />
+            <strong>{info.label}</strong>
+            <small id={`dh-look-${preset}`}>{info.description}</small>
+          </button>
+        );
+      })}
+    </fieldset>
+  );
+}
+
+function DetailsSection() {
+  const { project, run } = useEditor();
+  const details = styleDetails(project);
+  const flat = effectiveRoof(project).style === "flat";
+  const toggle = (key: "chhajja" | "waterTank" | "carPorch", label: string) =>
+    run(setStyleDetails(project, { [key]: !details[key] }), label);
+  return (
+    <div className="dh-style-details">
+      <Switch
+        label="Sunshades (chhajja)"
+        description="A concrete ledge over every outside window and door"
+        checked={details.chhajja}
+        onChange={() => toggle("chhajja", "Toggle sunshades")}
+      />
+      <Switch
+        label="Water tank on the roof"
+        description={flat ? "A black tank and a stair cabin on the terrace" : "Shows with a flat roof"}
+        checked={details.waterTank}
+        onChange={() => toggle("waterTank", "Toggle the water tank")}
+      />
+      <Switch
+        label="Car porch"
+        description={project.parking ? "A slim canopy over the parking spot" : "Shows when the home has parking"}
+        checked={details.carPorch}
+        onChange={() => toggle("carPorch", "Toggle the car porch")}
+      />
+      <Segmented<RailingKind>
+        label="Balcony railing"
+        value={details.railing}
+        options={[
+          { value: "glass", label: "Glass" },
+          { value: "grille", label: "Grille" },
+          { value: "jaali", label: "Jaali" },
+        ]}
+        onChange={(railing) => run(setStyleDetails(project, { railing }), "Change balcony railing")}
+      />
+    </div>
+  );
+}
+
 export function StylePanel() {
   const { project, run } = useEditor();
   const roof = effectiveRoof(project);
@@ -69,6 +175,8 @@ export function StylePanel() {
     run(setStyle(project, { roof: { ...roof, ...patch } }), label, { coalesceKey: "roof" });
   return (
     <div className="dh-inspector-body">
+      <LookRow />
+      <DetailsSection />
       <Swatches
         label="Outside walls"
         value={exteriorFinish(project)}

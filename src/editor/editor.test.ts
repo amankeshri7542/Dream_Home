@@ -147,5 +147,7 @@ describe("preferences", () => {
       quality: "auto",
     });
     expect(normalizePreferences("nonsense").unit).toBe("ft");
+    expect(normalizePreferences({}).streetLife).toBe(true);
+    expect(normalizePreferences({ streetLife: false }).streetLife).toBe(false);
   });
 });

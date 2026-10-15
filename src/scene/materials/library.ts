@@ -17,7 +17,7 @@ import {
   type Look,
 } from "./palette";
 import { patchMaterial, type PatchOptions } from "./patches";
-import { generateTextures, gradientTexture } from "./textures";
+import { generateTextures, gradientTexture, jaaliTexture } from "./textures";
 
 export type LibraryOptions = { textureSize: number; anisotropy: number };
 
@@ -118,6 +118,29 @@ export class MaterialLibrary {
   }
   pavers() {
     return this.standard("ground:pavers", () => this.textured(NEUTRAL_LOOKS.pavers, {}, true));
+  }
+  /** Pierced jaali screens: vertex colour, alpha-tested pattern (metre UVs). */
+  jaali() {
+    return this.standard("jaali", () =>
+      patchMaterial(
+        new MeshStandardMaterial({
+          vertexColors: true,
+          alphaMap: jaaliTexture(),
+          alphaTest: 0.5,
+          side: DoubleSide,
+          roughness: 0.85,
+          metalness: 0,
+        }),
+        { clip: true },
+      ),
+    );
+  }
+  /** Site structures (compound wall, car porch): plaster × vertex colour, never section-cut. */
+  sitePlaster() {
+    return this.standard("site:plaster", () => this.textured(NEUTRAL_LOOKS.paint, {}, true));
+  }
+  siteStone() {
+    return this.standard("site:stone", () => this.textured(NEUTRAL_LOOKS.stone, {}, true));
   }
   /** Diorama soil strata, foliage, car body etc. — plain vertex colours. */
   vertexColor(name: string, roughness = 0.85, patch: PatchOptions = {}) {

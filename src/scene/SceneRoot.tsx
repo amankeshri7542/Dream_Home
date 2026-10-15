@@ -28,6 +28,8 @@ import { OverlayProjector } from "./overlay/OverlayProjector";
 import type { OverlayRegistry } from "./overlay/registry";
 import { Landscape } from "./props/Landscape";
 import { Plot } from "./props/Plot";
+import { SiteExtras } from "./props/SiteExtras";
+import { StreetLife } from "./street/StreetLife";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
 import { TIERS, MEASURE_FRAMES } from "./quality/quality";
@@ -165,6 +167,9 @@ export function SceneRoot(props: RootProps) {
   };
 
   const ground = view.landscape ? siteGround(project) : "soil";
+  // Street life: Explore / showcase only, never on battery or reduced motion.
+  const streetLife =
+    (mode === "explore" || explore === "showcase") && tier !== "battery" && !reducedMotion && view.streetLife !== false;
   const pickLandscape = (id: string) => props.onSelect({ kind: "landscape", id });
   return (
     <>
@@ -174,6 +179,8 @@ export function SceneRoot(props: RootProps) {
       <group position={offset}>
         <Ground project={project} ground={ground} library={library} light={light} />
         <Plot project={project} layout={layout} landscape={view.landscape} library={library} />
+        <SiteExtras project={project} layout={layout} library={library} landscape={view.landscape} />
+        <StreetLife project={project} layout={layout} enabled={streetLife} />
         {view.landscape && (
           <Landscape project={project} layout={layout} library={library} pickable={mode === "outside"} onPick={pickLandscape} />
         )}

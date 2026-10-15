@@ -79,6 +79,8 @@ export const ToolButton = forwardRef<
       ref={ref}
       type="button"
       aria-pressed={pressed}
+      // A short caption ("More") keeps the full name ("More actions") for screen readers.
+      aria-label={caption && caption !== label ? label : undefined}
       className={`dh-tool ${className ?? ""}`}
       {...rest}
     >

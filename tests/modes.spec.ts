@@ -103,7 +103,7 @@ test("outside: roof, exterior, garden and fence choices persist", async ({ page 
   await expect
     .poll(async () => (await stored(page)).landscape?.filter((l) => l.kind === "tree-oak").length ?? 0)
     .toBeGreaterThan(0);
-  await page.getByRole("button", { name: "Ground", exact: true }).click();
+  await page.getByRole("button", { name: "Ground & fence", exact: true }).click();
   await page.getByRole("button", { name: "White picket" }).click();
   await expect.poll(async () => (await stored(page)).site?.fence).toBe("picket");
   const final = await stored(page);

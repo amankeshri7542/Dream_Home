@@ -3,9 +3,9 @@
 // skip rebuilding (selection/hover/labels never rebuild geometry).
 import { useRef } from "react";
 import { floorForGeometry } from "../../domain/core";
-import { exteriorFinish, frontDoorColor, trimColor, DOOR_COLORS, TRIM_COLORS, type ExteriorFinishId } from "../../domain/materials";
+import { exteriorFinish, frontDoorColor, styleDetails, trimColor, DOOR_COLORS, TRIM_COLORS, type ExteriorFinishId } from "../../domain/materials";
 import { deriveWalls } from "../../domain/walls";
-import type { EdgeSide, GeometryFloor, Project, Void, Wall } from "../../domain/types";
+import type { EdgeSide, GeometryFloor, Project, RailingKind, Void, Wall } from "../../domain/types";
 import type { SceneView } from "../types";
 import { floorBase } from "../coords";
 import { FACADE_LOOKS } from "../materials/palette";
@@ -17,6 +17,10 @@ export type FloorStyle = {
   trim: string;
   frontDoor: string;
   stone: string;
+  /** Two-tone accent band (floor lines, parapet coping), or null. */
+  band: string | null;
+  chhajja: boolean;
+  railing: RailingKind;
 };
 
 export type FloorModel = {
@@ -43,11 +47,15 @@ export type FloorModel = {
 
 export function projectStyle(project: Project): FloorStyle {
   const exterior = exteriorFinish(project);
+  const details = styleDetails(project);
   return {
     exterior,
     trim: TRIM_COLORS[trimColor(project)].color,
     frontDoor: DOOR_COLORS[frontDoorColor(project)].color,
     stone: FACADE_LOOKS[exterior].stone,
+    band: FACADE_LOOKS[exterior].band ?? null,
+    chhajja: details.chhajja,
+    railing: details.railing,
   };
 }
 

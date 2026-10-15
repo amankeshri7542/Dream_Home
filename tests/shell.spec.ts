@@ -159,7 +159,7 @@ for (const [name, size] of [
     await page.locator(".scene-room-label").filter({ hasText: room.name }).click();
     await dock(page, "Edit in 2D").click();
     await expect(page.locator(".plan-svg")).toBeVisible();
-    await dock(page, "More").click();
+    await dock(page, "More actions").click();
     const menu = page.getByRole("menu", { name: `More for ${room.name}` });
     // Every item is really on screen, not clipped by the scrolling bar.
     for (const item of await menu.getByRole("menuitem").all()) {
@@ -170,6 +170,19 @@ for (const [name, size] of [
         [box.x + box.width / 2, box.y + box.height / 2],
       );
       expect(hit).toBe(await item.textContent());
+    }
+    // Keyboard: focus starts on the first item, arrows move, Escape closes only the menu.
+    if (name === "desktop") {
+      const items = menu.getByRole("menuitem");
+      await expect(items.first()).toBeFocused();
+      await page.keyboard.press("ArrowDown");
+      await expect(items.nth(1)).toBeFocused();
+      await page.keyboard.press("ArrowUp");
+      await expect(items.first()).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+      await expect(dock(page, "More actions")).toBeFocused();
+      await dock(page, "More actions").click();
     }
     // "All details" leaves the plan and shows the room's details.
     await menu.getByRole("menuitem", { name: "All details" }).click();

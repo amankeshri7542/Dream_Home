@@ -29,11 +29,9 @@ export function finalizeEdit(
     (i) => i.severity === "error",
   );
   if (errors.length) {
-    return {
-      ok: false,
-      error: errors[0].message,
-      issues: focusIssues(errors, opts.subject),
-    };
+    // Lead with the problem of the thing being edited, not whichever came first.
+    const issues = focusIssues(errors, opts.subject);
+    return { ok: false, error: issues[0].message, issues };
   }
   return {
     ok: true,

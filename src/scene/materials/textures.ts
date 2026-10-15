@@ -512,3 +512,54 @@ export function gradientTexture(kind: "strip" | "radial", size = 64): CanvasText
   tex.colorSpace = NoColorSpace;
   return tex;
 }
+
+/**
+ * Jaali (pierced screen) alpha pattern: one tile is a quatrefoil of four
+ * round holes around a diamond, framed by a solid border. UVs are metres;
+ * the texture repeats every `tile` metres.
+ */
+export function jaaliTexture(tile = 0.3, size = 128): CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#000000";
+  const c = size / 2,
+    r = size * 0.17;
+  for (const [dx, dy] of [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ]) {
+    ctx.beginPath();
+    ctx.arc(c + dx * size * 0.2, c + dy * size * 0.2, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Solid centre boss and corner diamonds keep the screen reading as stone.
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(c, c, size * 0.09, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#000000";
+  for (const [x, y] of [
+    [0, 0],
+    [size, 0],
+    [0, size],
+    [size, size],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.12, y);
+    ctx.lineTo(x, y - size * 0.12);
+    ctx.lineTo(x + size * 0.12, y);
+    ctx.lineTo(x, y + size * 0.12);
+    ctx.closePath();
+    ctx.fill();
+  }
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = NoColorSpace;
+  tex.wrapS = tex.wrapT = RepeatWrapping;
+  tex.repeat.set(1 / tile, 1 / tile);
+  return tex;
+}

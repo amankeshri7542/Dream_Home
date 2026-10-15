@@ -34,6 +34,7 @@ import { useEditor } from "../../editor/EditorProvider";
 import { THUMBS } from "../../scene/assets/assetManifest";
 import { Icon } from "../../ui/icons";
 import { Button, Field, IconButton, Section, Swatches } from "../../ui/primitives";
+import { MakeItNice } from "../../ai/MakeItNice";
 
 const CATEGORY_LABELS: Record<string, string> = {
   sleep: "Beds",
@@ -151,6 +152,7 @@ export function DecorateRoomPanel({ room, floorId }: { room: Room; floorId: stri
   const items = resolveFurniture(room, walls);
   return (
     <div className="dh-inspector-body">
+      {room.kind !== "shop" && <MakeItNice room={room} floorId={floorId} />}
       <Section title={`Furniture in ${room.name}`} description={`${items.length} piece${items.length === 1 ? "" : "s"}`} open>
         <div className="dh-furniture-list">
           {items.map((item) => (

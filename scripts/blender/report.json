@@ -399,6 +399,36 @@
       ]
     },
     {
+      "id": "street-light",
+      "kit": "exterior",
+      "tris": 252,
+      "triBudget": 400,
+      "bounds": {
+        "w": 150.0,
+        "d": 30.0,
+        "h": 600.0
+      },
+      "size": {
+        "w": 150.0,
+        "d": 30.0,
+        "h": 600.0
+      },
+      "slots": [
+        "metal",
+        "glow"
+      ],
+      "fitScale": [
+        1.0135,
+        1.1538,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.014,1.154,1.000"
+      ]
+    },
+    {
       "id": "sun-lounger",
       "kit": "exterior",
       "tris": 592,
@@ -455,6 +485,36 @@
       "errors": [],
       "warnings": [
         "fit scale drift 1.065,1.130,1.057"
+      ]
+    },
+    {
+      "id": "tree-neem",
+      "kit": "exterior",
+      "tris": 988,
+      "triBudget": 1300,
+      "bounds": {
+        "w": 420.0,
+        "d": 420.0,
+        "h": 600.0
+      },
+      "size": {
+        "w": 420.0,
+        "d": 420.0,
+        "h": 600.0
+      },
+      "slots": [
+        "bark",
+        "leaf"
+      ],
+      "fitScale": [
+        1.002,
+        1.0487,
+        1.1745
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.002,1.049,1.174"
       ]
     },
     {
@@ -542,6 +602,35 @@
       "warnings": [
         "fit scale drift 0.917,1.059,1.000"
       ]
+    },
+    {
+      "id": "tulsi-planter",
+      "kit": "exterior",
+      "tris": 764,
+      "triBudget": 800,
+      "bounds": {
+        "w": 70.0,
+        "d": 70.0,
+        "h": 100.0
+      },
+      "size": {
+        "w": 70.0,
+        "d": 70.0,
+        "h": 100.0
+      },
+      "slots": [
+        "stone",
+        "terracotta",
+        "leaf"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        0.9997
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
     },
     {
       "id": "armchair",
@@ -884,6 +973,36 @@
       "ao": "cycles",
       "errors": [],
       "warnings": []
+    },
+    {
+      "id": "diya",
+      "kit": "interior",
+      "tris": 144,
+      "triBudget": 200,
+      "bounds": {
+        "w": 16.0,
+        "d": 12.0,
+        "h": 9.0
+      },
+      "size": {
+        "w": 16.0,
+        "d": 12.0,
+        "h": 9.0
+      },
+      "slots": [
+        "terracotta",
+        "glow"
+      ],
+      "fitScale": [
+        0.9726,
+        0.8571,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 0.973,0.857,1.000"
+      ]
     },
     {
       "id": "dresser",
@@ -1718,7 +1837,7 @@
   ],
   "kits": {
     "interior": {
-      "bytes": 882992,
+      "bytes": 889820,
       "materials": [
         "fabric",
         "linen",
@@ -1735,9 +1854,9 @@
         "glow",
         "leaf"
       ],
-      "nodes": 143,
+      "nodes": 146,
       "errors": [],
-      "tris": 23211,
+      "tris": 23355,
       "items": [
         "bed-double",
         "bed-single",
@@ -1774,6 +1893,7 @@
         "shop-counter",
         "prayer-shrine",
         "prayer-mat",
+        "diya",
         "rug-rect",
         "rug-round",
         "plant-floor",
@@ -1783,13 +1903,13 @@
       ]
     },
     "exterior": {
-      "bytes": 417828,
+      "bytes": 490608,
       "materials": [
         "bark",
         "leaf",
         "accent",
-        "terracotta",
         "stone",
+        "terracotta",
         "metal",
         "wood",
         "fabric",
@@ -1798,14 +1918,16 @@
         "rubber",
         "linen"
       ],
-      "nodes": 56,
+      "nodes": 66,
       "errors": [],
-      "tris": 11340,
+      "tris": 13344,
       "items": [
         "tree-oak",
         "tree-pine",
         "tree-palm",
         "tree-blossom",
+        "tree-neem",
+        "tulsi-planter",
         "shrub",
         "planter",
         "rock",
@@ -1815,6 +1937,7 @@
         "sun-lounger",
         "parasol",
         "lamp-post",
+        "street-light",
         "mailbox",
         "car",
         "fence-panel",
@@ -1862,6 +1985,7 @@
     "shop-counter",
     "prayer-shrine",
     "prayer-mat",
+    "diya",
     "rug-rect",
     "rug-round",
     "plant-floor",
@@ -1872,6 +1996,8 @@
     "tree-pine",
     "tree-palm",
     "tree-blossom",
+    "tree-neem",
+    "tulsi-planter",
     "shrub",
     "planter",
     "rock",
@@ -1881,6 +2007,7 @@
     "sun-lounger",
     "parasol",
     "lamp-post",
+    "street-light",
     "mailbox",
     "parking",
     "pool",

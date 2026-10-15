@@ -107,7 +107,7 @@ function Header({
       )}
       <div className="dh-inspector-title">
         {kicker && <span className="dh-kicker">{kicker}</span>}
-        <h2 className="dh-truncate">{title}</h2>
+        <h2>{title}</h2>
         {meta && <p className="dh-truncate dh-num">{meta}</p>}
       </div>
       {!desktop && (

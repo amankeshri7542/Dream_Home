@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EXTERIOR_FINISHES,
   effectiveRoof,
   exteriorFinish,
   frontDoorColor,
@@ -108,5 +109,27 @@ describe("material commands", () => {
     expect(() => parseProject(JSON.stringify(bad))).toThrow("Choose a valid finish.");
     const roof = { ...p, style: { roof: { style: "dome", material: "slate", pitch: 30 } } };
     expect(() => parseProject(JSON.stringify(roof))).toThrow("Project contains an invalid style.");
+  });
+});
+
+describe("bright Indian facades", () => {
+  const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const dist = (a: string, b: string) => {
+    const [x, y] = [rgbOf(a), rgbOf(b)];
+    return x.reduce((s, v, i) => s + (v - y[i]) ** 2, 0);
+  };
+  it("adds the bright finishes, each mapped to its nearest legacy family", () => {
+    for (const id of ["saffron", "peach", "mint", "sky", "lime", "rose", "ochre", "two-tone"] as const) {
+      const f = EXTERIOR_FINISHES[id];
+      expect(f.color).toMatch(/^#[0-9a-f]{6}$/);
+      const nearest = (["ivory", "brick", "sand"] as const).reduce((best, l) =>
+        dist(f.color, EXTERIOR_FINISHES[l].color) < dist(f.color, EXTERIOR_FINISHES[best].color) ? l : best,
+      );
+      expect(f.legacy, id).toBe(nearest);
+      const p = ok(setExterior(preset(), id));
+      expect(exteriorFinish(p)).toBe(id);
+      expect(p.finish).toBe(nearest);
+      expect(parseProject(JSON.stringify(p))).toStrictEqual(p);
+    }
   });
 });

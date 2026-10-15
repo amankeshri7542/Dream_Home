@@ -5,6 +5,7 @@ import { homeChecks } from "../domain/advice";
 import { moveRoomStrict, swapRoomUses } from "../domain/model";
 import { addRoomWindow } from "../domain/openingCommands";
 import { addAttachedBathroom } from "../domain/ensuite";
+import { withStylePreset } from "../domain/materials";
 import type { EditResult, Project, RoomKind } from "../domain/types";
 
 export const FEET = 30.48;
@@ -127,7 +128,9 @@ export function buildTemplate(
   });
   if (!result.ok) return result;
   const polished = polishTemplate(result.project);
-  return { ...result, project: template.ensuite ? withEnsuite(polished) : polished };
+  const home = template.ensuite ? withEnsuite(polished) : polished;
+  // New homes start with the Indian modern look.
+  return { ...result, project: home.style?.preset ? home : withStylePreset(home, "indian-modern") };
 }
 
 /**
@@ -187,7 +190,10 @@ export function polishTemplate(project: Project): Project {
           r.unitId === bedroom.unitId &&
           WINDOWLESS_OK.includes(r.kind) &&
           // An attached bathroom stays with its bedroom.
-          !r.attachedTo,
+          !r.attachedTo &&
+          // Never squeeze a bedroom into a cupboard-sized room.
+          Math.min(r.bounds.w, r.bounds.d) >= 240 &&
+          r.bounds.w * r.bounds.d >= area * 0.6,
       )
       .sort(
         (a, b) =>

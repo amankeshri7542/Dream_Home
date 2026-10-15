@@ -55,6 +55,17 @@ function carveSpots(bedroom: Rect): [Rect, Rect][] {
     out.push([{ x, z, w, d: d - 180 }, { x, z: z + d - 180, w: bathW, d: 180 }]);
     out.push([{ x, z: z + 180, w, d: d - 180 }, { x, z, w: bathW, d: 180 }]);
   }
+  // A compact 1.5 m bath (a common Indian 5 × 8 ft toilet) when the bedroom is snugger.
+  for (const strip of [150]) {
+    if (d - strip >= 250 && w >= 240) {
+      out.push([{ x, z, w, d: d - strip }, { x, z: z + d - strip, w: bathW, d: strip }]);
+      out.push([{ x, z: z + strip, w, d: d - strip }, { x, z, w: bathW, d: strip }]);
+    }
+    if (w - strip >= 250 && d >= 240) {
+      out.push([{ x, z, w: w - strip, d }, { x: x + w - strip, z, w: strip, d: bathD }]);
+      out.push([{ x: x + strip, z, w: w - strip, d }, { x, z, w: strip, d: bathD }]);
+    }
+  }
   return out;
 }
 

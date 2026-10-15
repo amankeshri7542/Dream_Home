@@ -4,6 +4,8 @@ import type { Project } from "../domain/types";
 import { loadSession, saveSession } from "../editor/preferences";
 import { useReducedMotion } from "../editor/hooks";
 import { CoachMarks, TemplateGallery, TitleScreen } from "../onboarding/Onboarding";
+import { AiDesigner, type AiResult } from "../ai/AiDesigner";
+import { DesignNotes } from "../ai/DesignNotes";
 import { ExploreHud } from "../explore/ExploreHud";
 import { PhotoDialog } from "../explore/PhotoDialog";
 import type { TrayPointer } from "../components/RoomTray";
@@ -39,7 +41,7 @@ export function AppShell() {
   const onWebGL = useCallback((value: boolean) => setNoWebGL(value), []);
   const [trayDrag, setTrayDrag] = useState<TrayPointer | null>(null);
   const [trayDrop, setTrayDrop] = useState<(TrayPointer & { key: number }) | null>(null);
-  const [screen, setScreen] = useState<"title" | "gallery" | "workspace">(() =>
+  const [screen, setScreen] = useState<"title" | "gallery" | "ai" | "workspace">(() =>
     loadSession().titleDismissed ? "workspace" : "title",
   );
   const [preview, setPreview] = useState<Project | null>(null);
@@ -47,6 +49,22 @@ export function AppShell() {
   const reduced = useReducedMotion();
   const reveal = useRef<number[]>([]);
   useEffect(() => () => reveal.current.forEach((t) => window.clearTimeout(t)), []);
+  /** The AI-designed home on screen, while its design notes are open. */
+  const [design, setDesign] = useState<AiResult | null>(null);
+  /** Design notes wait for the construction reveal to finish. */
+  const [notesReady, setNotesReady] = useState(false);
+  const showDesign = useCallback(
+    (result: AiResult) => {
+      setDesign(result);
+      setNotesReady(reduced);
+      if (!reduced) reveal.current.push(window.setTimeout(() => setNotesReady(true), REVEAL_MS));
+    },
+    [reduced],
+  );
+  // The notes describe one design: once the home changes (an undo, an edit), they're done.
+  useEffect(() => {
+    if (design && editor.project !== design.project) setDesign(null);
+  }, [design, editor.project]);
   const enterWorkspace = useCallback(() => {
     saveSession({ titleDismissed: true });
     setScreen("workspace");
@@ -116,6 +134,7 @@ export function AppShell() {
   const chromeHidden = state.chromeHidden || screen !== "workspace";
   const layerOpen =
     screen === "gallery" ||
+    screen === "ai" ||
     (screen === "workspace" &&
       (!!state.selection ||
         !!state.panel ||
@@ -126,7 +145,7 @@ export function AppShell() {
         state.chromeHidden ||
         explore));
   useBackButton(layerOpen, () => {
-    if (screen === "gallery") setScreen("title");
+    if (screen === "gallery" || screen === "ai") setScreen("title");
     else if (state.overlay) dispatch({ type: "overlay", overlay: null });
     else if (explore && state.explore !== "walk")
       dispatch({ type: "set-mode", mode: state.lastEditMode });
@@ -206,6 +225,19 @@ export function AppShell() {
             startTourIfNew();
           }}
           onOpen={() => fileInput.current?.click()}
+          onAi={() => setScreen("ai")}
+        />
+      )}
+      {screen === "ai" && (
+        <AiDesigner
+          onBack={() => setScreen("title")}
+          onDone={(result) => {
+            adopt(result.project, "Design my home with AI");
+            dispatch({ type: "choose-floor", floor: "all" });
+            enterWorkspace();
+            constructionReveal();
+            showDesign(result);
+          }}
         />
       )}
       {screen === "gallery" && (
@@ -230,6 +262,22 @@ export function AppShell() {
           onCustom={() => {
             enterWorkspace();
             dispatch({ type: "overlay", overlay: "start" });
+          }}
+          onAi={() => setScreen("ai")}
+        />
+      )}
+      {design && notesReady && screen === "workspace" && !explore && !chromeHidden && !tour && (
+        <DesignNotes
+          key={design.variant}
+          result={design}
+          onReplace={(next) => {
+            editor.commit(next.project, "Try another AI design", { select: null });
+            constructionReveal();
+            showDesign(next);
+          }}
+          onClose={() => {
+            setDesign(null);
+            startTourIfNew();
           }}
         />
       )}
@@ -259,7 +307,7 @@ export function AppShell() {
           />
           {desktop && <ToolPalette rail />}
           {desktop && inspector}
-          <ChecklistPill />
+          {!design && <ChecklistPill />}
           {!explore && <FloorSwitcher />}
           <CameraHud />
           {!explore && (
