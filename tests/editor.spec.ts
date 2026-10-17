@@ -430,9 +430,9 @@ test("PNG export is a real image and native sharing is safely mocked", async ({
   await freshVisit(page);
   await renderedModel(page);
   await page.screenshot({ path: "test-results/default-desktop.png" });
-  await page
-    .getByRole("button", { name: "Share home plan", exact: true })
-    .click();
+  // Plan drawings live in the share sheet, under "More ways to share".
+  await page.getByRole("button", { name: "Share your home", exact: true }).click();
+  await page.getByRole("button", { name: /Plan drawings/ }).click();
   await expect(
     page.getByRole("img", { name: "Preview of Ground floor plan" }),
   ).toBeVisible();

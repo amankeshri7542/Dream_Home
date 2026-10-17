@@ -931,6 +931,16 @@ export function parseProject(text: string): Project {
       north: raw.plot.north,
       road: raw.plot.road,
       setback: raw.plot.setback,
+      ...(raw.plot.location
+        ? {
+            location: {
+              city: raw.plot.location.city,
+              // Rounded: a city is enough for the sun, and kinder to privacy.
+              lat: Math.round(raw.plot.location.lat * 100) / 100,
+              lon: Math.round(raw.plot.location.lon * 100) / 100,
+            },
+          }
+        : {}),
     },
     garden: raw.garden,
     parking: raw.parking,

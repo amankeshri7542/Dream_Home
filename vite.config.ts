@@ -77,7 +77,13 @@ function localApi(): Plugin {
 export default defineConfig({
   plugins: [react(), localApi()],
   build: { chunkSizeWarningLimit: 1200 },
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    // node_modules is a symlink to node_modules.nosync (iCloud folder); Vite
+    // ignores node_modules by name only, so stray file events in the real folder
+    // would force full page reloads.
+    watch: { ignored: ["**/node_modules.nosync/**"] },
+  },
   // The production headers (CSP and friends), so the built app can be tested locally.
   preview: { port: 4173, headers: SECURITY_HEADERS },
 });

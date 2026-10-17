@@ -70,7 +70,7 @@ export type Designed<P> = {
 };
 
 /** The caller's signal plus a two-minute limit (works on older phone browsers too). */
-function withTimeout(signal: AbortSignal | undefined, ms: number) {
+export function withTimeout(signal: AbortSignal | undefined, ms: number) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   if (signal?.aborted) controller.abort();

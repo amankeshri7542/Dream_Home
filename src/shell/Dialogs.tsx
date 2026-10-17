@@ -8,6 +8,7 @@ import type { Project } from "../domain/types";
 import type { Unit } from "../domain/display";
 import { friendlyError, useEditor, type EditorApi } from "../editor/EditorProvider";
 import { MyHomesDialog } from "./MyHomes";
+import { ShareSheet } from "../share/ShareSheet";
 import { Icon } from "../ui/icons";
 import { Kbd, Segmented } from "../ui/primitives";
 
@@ -31,6 +32,8 @@ export function DialogHost({
   onReplayTour,
   onStartNew,
   onHomeOpened,
+  capture,
+  onTakePhoto,
 }: {
   fileInput: React.RefObject<HTMLInputElement | null>;
   onReplayTour: () => void;
@@ -38,6 +41,9 @@ export function DialogHost({
   onStartNew: () => void;
   /** A home from My homes was opened. */
   onHomeOpened: () => void;
+  /** A snapshot of the 3D view (for a share link's preview picture). */
+  capture: () => Promise<Blob | null>;
+  onTakePhoto: () => void;
 }) {
   const editor = useEditor();
   const { state, dispatch, project, unit, setPrefs, error } = editor;
@@ -66,7 +72,19 @@ export function DialogHost({
       );
     case "share":
       return (
-        <Dialog label="Share home" onClose={close}>
+        <ShareSheet
+          onClose={close}
+          capture={capture}
+          onTakePhoto={() => {
+            close();
+            onTakePhoto();
+          }}
+          onPlans={() => dispatch({ type: "overlay", overlay: "plans" })}
+        />
+      );
+    case "plans":
+      return (
+        <Dialog label="Plan drawings" onClose={close}>
           <SharePlan project={project} unit={unit} language="en" onClose={close} />
         </Dialog>
       );

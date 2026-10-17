@@ -200,7 +200,28 @@ export function checkFloorExtras(f: Obj) {
   )
     throw new Error("Project contains an invalid opening.");
 }
+export const SHARE_ID = /^[A-Za-z0-9]{10}$/;
+function checkLocation(l: unknown): boolean {
+  return (
+    obj(l) &&
+    str(l.city) &&
+    l.city.length <= 80 &&
+    typeof l.lat === "number" &&
+    typeof l.lon === "number" &&
+    Math.abs(l.lat) <= 90 &&
+    Math.abs(l.lon) <= 180
+  );
+}
 export function checkProjectExtras(p: Obj) {
+  if (obj(p.plot) && p.plot.location !== undefined && !checkLocation(p.plot.location))
+    throw new Error("Project contains an invalid location.");
+  if (p.vastu !== undefined && typeof p.vastu !== "boolean")
+    throw new Error("Project contains an invalid Vastu setting.");
+  if (
+    p.remixOf !== undefined &&
+    !(obj(p.remixOf) && str(p.remixOf.id) && SHARE_ID.test(p.remixOf.id) && str(p.remixOf.name) && p.remixOf.name.length <= 80)
+  )
+    throw new Error("Project contains an invalid remix link.");
   if (p.style !== undefined && !checkStyle(p.style))
     throw new Error("Project contains an invalid style.");
   if (p.site !== undefined && !checkSite(p.site))
@@ -232,8 +253,10 @@ export function copyRoomExtras(
 }
 export function copyProjectExtras(
   p: Project,
-): Pick<Project, "style" | "site" | "landscape"> {
+): Pick<Project, "style" | "site" | "landscape" | "vastu" | "remixOf"> {
   return {
+    ...(p.vastu !== undefined ? { vastu: p.vastu } : {}),
+    ...(p.remixOf !== undefined ? { remixOf: { id: p.remixOf.id, name: p.remixOf.name } } : {}),
     ...(p.style !== undefined ? { style: copyStyle(p.style) } : {}),
     ...(p.site !== undefined
       ? {

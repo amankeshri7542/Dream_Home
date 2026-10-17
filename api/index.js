@@ -271,6 +271,7 @@ function makeIssue(code, message, extra = {}) {
 }
 
 // src/domain/geometry.ts
+var snap = (n) => Math.round(n / 10) * 10;
 var rect = (x, z, w, d) => ({
   x,
   z,
@@ -278,8 +279,33 @@ var rect = (x, z, w, d) => ({
   d
 });
 var sameRect = (a, b) => a.x === b.x && a.z === b.z && a.w === b.w && a.d === b.d;
+var contains = (a, b) => b.x >= a.x && b.z >= a.z && b.x + b.w <= a.x + a.w && b.z + b.d <= a.z + a.d;
 var overlaps = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.z < b.z + b.d && a.z + a.d > b.z;
-var inside = (r, x, z) => x > r.x && x < r.x + r.w && z > r.z && z < r.z + r.d;
+var inside = (r2, x, z) => x > r2.x && x < r2.x + r2.w && z > r2.z && z < r2.z + r2.d;
+var validRect = (r2, min = 10) => [r2.x, r2.z, r2.w, r2.d].every(
+  (n) => Number.isInteger(n) && Number.isFinite(n) && n % 10 === 0 && Math.abs(n) <= 1e4
+) && r2.w >= min && r2.d >= min;
+var componentIds = (p) => /* @__PURE__ */ new Set([
+  ...p.units.map((u) => u.id),
+  ...p.verticalSpaces.map((v) => v.id),
+  ...(p.stagedRooms ?? []).flatMap((item) => [
+    item.room.id,
+    ...(item.room.furniture ?? []).map((f) => f.id)
+  ]),
+  ...(p.landscape ?? []).map((l) => l.id),
+  ...p.floors.flatMap((f) => [
+    f.id,
+    ...f.rooms.flatMap((r2) => [r2.id, ...(r2.furniture ?? []).map((i) => i.id)]),
+    ...f.balconies.map((b) => b.id),
+    ...(f.openings ?? []).map((o) => o.id)
+  ])
+]);
+function allocateId(seed, used) {
+  let id = seed, suffix = 2;
+  while (used.has(id)) id = `${seed}-${suffix++}`;
+  used.add(id);
+  return id;
+}
 function idCounts(project) {
   const counts = /* @__PURE__ */ new Map();
   const add = (id) => counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -292,9 +318,9 @@ function idCounts(project) {
   }
   for (const f of project.floors) {
     add(f.id);
-    for (const r of f.rooms) {
-      add(r.id);
-      (r.furniture ?? []).forEach((i) => add(i.id));
+    for (const r2 of f.rooms) {
+      add(r2.id);
+      (r2.furniture ?? []).forEach((i) => add(i.id));
     }
     f.balconies.forEach((b) => add(b.id));
     (f.openings ?? []).forEach((o) => add(o.id));
@@ -334,7 +360,7 @@ function slabTiles(floor, includeStairHole) {
         rect(tile.x, z2, tile.w, tile.z + tile.d - z2),
         rect(tile.x, z1, x1 - tile.x, z2 - z1),
         rect(x2, z1, tile.x + tile.w - x2, z2 - z1)
-      ].filter((r) => r.w > 0 && r.d > 0);
+      ].filter((r2) => r2.w > 0 && r2.d > 0);
     });
   }
   return tiles;
@@ -355,10 +381,388 @@ var LIMITS = Object.freeze({
   landscapeItems: 120
 });
 
+// src/domain/types.ts
+var ROOM_META = {
+  shop: { label: "Shop", color: "#d2b6c9" },
+  living: { label: "Living room", color: "#e3b98f" },
+  kitchen: { label: "Kitchen", color: "#a9c3a1" },
+  bedroom: { label: "Bedroom", color: "#b7c4d6" },
+  bathroom: { label: "Bathroom", color: "#b9d3d3" },
+  dining: { label: "Dining", color: "#e2c98f" },
+  utility: { label: "Utility", color: "#cdbfc9" }
+};
+
 // src/domain/validate.ts
 var extensions = [];
 function registerValidation(check) {
   if (!extensions.includes(check)) extensions.push(check);
+}
+var sides = ["north", "south", "east", "west"];
+var ID = /^[a-zA-Z0-9_-]{1,64}$/;
+var validName = (name) => typeof name === "string" && !!name.trim() && name.length <= 80;
+function validRoomPresentation(room) {
+  return (room.furnishingRotation === void 0 || [0, 90, 180, 270].includes(room.furnishingRotation)) && (room.floorFinish === void 0 || ["auto", "wood", "tile", "stone"].includes(room.floorFinish)) && (room.furnishing === void 0 || ["auto", "none"].includes(room.furnishing));
+}
+var roomRef = (floorId, id) => ({
+  kind: "room",
+  id,
+  floorId
+});
+function validateProjectIssues(project, opts = {}) {
+  const issues = [];
+  const issue = (code, message, extra) => issues.push(makeIssue(code, message, extra));
+  const { plot } = project;
+  if (project.schemaVersion !== 2)
+    issue("schema", "This project must use schema version 2.");
+  if (!validName(project.name))
+    issue("name", "Project names must contain 1\u201380 characters.");
+  if (project.finish !== void 0 && !["ivory", "brick", "sand"].includes(project.finish))
+    issue("finish", "Choose an ivory, brick or sand exterior finish.");
+  if (![plot.width, plot.depth].every(
+    (n) => Number.isInteger(n) && n >= 400 && n <= 1e4
+  ))
+    issue("plot", "Plot dimensions must be 4\u2013100 m, in whole centimetres.");
+  if (!Number.isInteger(plot.setback) || plot.setback < 0 || plot.setback > 2e3 || plot.setback % 10 !== 0)
+    issue("plot", "Setback must be 0\u201320 m, in 0.1 m steps.");
+  if (!Number.isFinite(plot.north) || plot.north < 0 || plot.north >= 360)
+    issue("plot", "Orientation must be between 0 and 359 degrees.");
+  if (!sides.includes(plot.road))
+    issue("plot", "Choose a valid road-facing side.");
+  if (project.floors.length < 1 || project.floors.length > LIMITS.floors)
+    issue("limit", "Choose one to eight floors.");
+  if (project.units.length > LIMITS.units)
+    issue("limit", "This building supports up to 64 units.");
+  if (project.verticalSpaces.length > LIMITS.verticalSpaces)
+    issue("limit", "This building supports up to 8 vertical spaces.");
+  if ((project.stagedRooms?.length ?? 0) > LIMITS.stagedRooms)
+    issue("limit", "Up to 48 rooms can be kept for later.");
+  const envelope = rect(
+    plot.setback,
+    plot.setback,
+    plot.width - 2 * plot.setback,
+    plot.depth - 2 * plot.setback
+  );
+  const ids = /* @__PURE__ */ new Set(), unitIds = new Set(project.units.map((u) => u.id));
+  const checkId = (id) => {
+    if (typeof id !== "string" || !ID.test(id) || ids.has(id))
+      issue("duplicate-id", "Every component must have a unique, valid ID.");
+    ids.add(id);
+  };
+  for (const { room, sourceFloorId } of project.stagedRooms ?? []) {
+    checkId(room.id);
+    const source = { kind: "staged", id: room.id };
+    if (!Object.keys(ROOM_META).includes(room.kind) || !validName(room.name) || !validRect(room.bounds, 120))
+      issue(
+        "staged",
+        "A room kept for later needs a valid name, type and dimensions.",
+        { source }
+      );
+    if (typeof sourceFloorId !== "string" || !ID.test(sourceFloorId))
+      issue("staged", "A room kept for later needs a valid original floor ID.", {
+        source
+      });
+    if (room.unitId !== null && (typeof room.unitId !== "string" || !ID.test(room.unitId)))
+      issue("staged", "A room kept for later needs a valid original unit ID.", {
+        source
+      });
+    if (!validRoomPresentation(room))
+      issue(
+        "presentation",
+        "Choose a valid room finish and furnishing setting.",
+        { source }
+      );
+  }
+  for (const unit of project.units) {
+    checkId(unit.id);
+    if (!validName(unit.name) || !["residential", "commercial"].includes(unit.use))
+      issue(
+        "unit",
+        "Every unit needs a name and a residential or commercial use.",
+        { source: { kind: "unit", id: unit.id } }
+      );
+  }
+  for (const [index, floor] of project.floors.entries()) {
+    checkId(floor.id);
+    const floorIds2 = [floor.id];
+    if (!validName(floor.name))
+      issue("name", "Every floor needs a valid name.", { floorIds: floorIds2 });
+    if (floor.height !== 300 || floor.elevation !== index * 300)
+      issue(
+        "storey",
+        "Floors must use aligned 3 m storeys, starting at ground level.",
+        { floorIds: floorIds2 }
+      );
+    if (!validRect(floor.footprint, 400) || !contains(envelope, floor.footprint))
+      issue(
+        "footprint",
+        "The home must fit inside the plot setbacks. Increase the plot or reduce the setback.",
+        { floorIds: floorIds2, attempted: floor.footprint }
+      );
+    if (index && !sameRect(floor.footprint, project.floors[0].footprint))
+      issue("footprint", "Floor footprints must stay aligned in this version.", {
+        floorIds: floorIds2
+      });
+    if (floor.rooms.length > LIMITS.roomsPerFloor)
+      issue("limit", "Each floor supports up to 48 rooms.", { floorIds: floorIds2 });
+    if (floor.balconies.length > LIMITS.balconiesPerFloor)
+      issue("limit", "Each floor supports up to 4 balconies.", { floorIds: floorIds2 });
+    if (floor.unitAreas.length > LIMITS.units)
+      issue("limit", "A floor has too many unit areas.", { floorIds: floorIds2 });
+    const localUnits = /* @__PURE__ */ new Set();
+    for (const [i, area] of floor.unitAreas.entries()) {
+      const source = {
+        kind: "unit",
+        id: area.unitId,
+        floorId: floor.id
+      };
+      if (!unitIds.has(area.unitId) || localUnits.has(area.unitId))
+        issue(
+          "unit-area",
+          "Each unit can have one valid area on each floor.",
+          { source, floorIds: floorIds2 }
+        );
+      localUnits.add(area.unitId);
+      if (!validRect(area.bounds, 120) || !contains(floor.footprint, area.bounds))
+        issue("unit-area", "Unit areas must fit inside their floor boundary.", {
+          source,
+          floorIds: floorIds2,
+          attempted: area.bounds
+        });
+      const others = floor.unitAreas.slice(i + 1).filter((a) => overlaps(area.bounds, a.bounds));
+      if (others.length)
+        issue("unit-area", "Unit areas cannot overlap.", {
+          source,
+          floorIds: floorIds2,
+          blockers: others.map((a) => ({
+            kind: "unit",
+            id: a.unitId,
+            floorId: floor.id
+          }))
+        });
+    }
+    const voids = deriveFloorVoids(project, floor.id);
+    for (const [i, room] of floor.rooms.entries()) {
+      checkId(room.id);
+      const source = roomRef(floor.id, room.id);
+      if (!Object.keys(ROOM_META).includes(room.kind))
+        issue("room-kind", "Unknown room type.", { source, floorIds: floorIds2 });
+      if (!validName(room.name))
+        issue("name", "Room names must contain 1\u201380 characters.", {
+          source,
+          floorIds: floorIds2
+        });
+      if (!validRoomPresentation(room))
+        issue(
+          "presentation",
+          "Choose a valid room finish and furnishing setting.",
+          { source, floorIds: floorIds2 }
+        );
+      if (!validRect(room.bounds, 120))
+        issue(
+          "room-size",
+          "Rooms need dimensions of at least 1.2 m, in 0.1 m steps.",
+          { source, floorIds: floorIds2, attempted: room.bounds }
+        );
+      if (!contains(floor.footprint, room.bounds))
+        issue(
+          "room-outside-floor",
+          `${room.name} must stay inside the floor boundary.`,
+          {
+            source,
+            floorIds: floorIds2,
+            attempted: room.bounds,
+            fixes: [{ kind: "edit", target: source, focus: "move" }]
+          }
+        );
+      const overlapping = floor.rooms.slice(i + 1).filter((r2) => overlaps(room.bounds, r2.bounds));
+      if (overlapping.length)
+        issue(
+          "room-overlap",
+          `${room.name} and ${overlapping[0].name} would overlap. Leave space before moving or resizing.`,
+          {
+            source,
+            floorIds: floorIds2,
+            attempted: room.bounds,
+            blockers: overlapping.map((r2) => roomRef(floor.id, r2.id))
+          }
+        );
+      const voidBlockers = voids.filter((v) => overlaps(room.bounds, v.bounds));
+      if (voidBlockers.length)
+        issue(
+          "room-in-void",
+          `${room.name} overlaps the courtyard or stair opening.`,
+          {
+            source,
+            floorIds: floorIds2,
+            attempted: room.bounds,
+            blockers: voidBlockers.map((v) => ({
+              kind: "vertical",
+              id: v.id,
+              floorId: floor.id
+            }))
+          }
+        );
+      if (room.unitId === null) {
+        const areas = floor.unitAreas.filter(
+          (a) => overlaps(a.bounds, room.bounds)
+        );
+        if (areas.length)
+          issue(
+            "room-in-private-unit",
+            `${room.name} is shared space and cannot overlap a private unit.`,
+            {
+              source,
+              floorIds: floorIds2,
+              attempted: room.bounds,
+              blockers: areas.map((a) => ({
+                kind: "unit",
+                id: a.unitId,
+                floorId: floor.id
+              }))
+            }
+          );
+      } else {
+        const area = floor.unitAreas.find((a) => a.unitId === room.unitId);
+        if (!unitIds.has(room.unitId) || !area || !contains(area.bounds, room.bounds))
+          issue(
+            "room-outside-unit",
+            `${room.name} must stay inside its assigned unit.`,
+            { source, floorIds: floorIds2, attempted: room.bounds }
+          );
+      }
+    }
+    for (const [i, b] of floor.balconies.entries()) {
+      checkId(b.id);
+      const source = {
+        kind: "balcony",
+        id: b.id,
+        floorId: floor.id
+      };
+      const span = b.edge === "north" || b.edge === "south" ? floor.footprint.w : floor.footprint.d;
+      if (!sides.includes(b.edge) || ![b.offset, b.width, b.depth].every(
+        (n) => Number.isFinite(n) && Number.isInteger(n) && n % 10 === 0
+      ) || b.offset < 0 || b.width < 150 || b.depth < 90 || b.offset + b.width > span)
+        issue(
+          "balcony-shape",
+          "A balcony must fit its edge, with at least 1.5 m width and 0.9 m depth.",
+          { source, floorIds: floorIds2 }
+        );
+      const bounds = balconyBounds(floor, b);
+      if (!contains(envelope, bounds))
+        issue(
+          "balcony-setback",
+          "The balcony must fit inside the plot setbacks. Increase the plot or reduce its depth.",
+          { source, floorIds: floorIds2, attempted: bounds }
+        );
+      const others = floor.balconies.slice(i + 1).filter((other) => overlaps(bounds, balconyBounds(floor, other)));
+      if (others.length)
+        issue("balcony-overlap", "Balconies on the same floor cannot overlap.", {
+          source,
+          floorIds: floorIds2,
+          attempted: bounds,
+          blockers: others.map((o) => ({
+            kind: "balcony",
+            id: o.id,
+            floorId: floor.id
+          }))
+        });
+    }
+  }
+  const floorIds = project.floors.map((f) => f.id);
+  for (const [i, space] of project.verticalSpaces.entries()) {
+    checkId(space.id);
+    const source = { kind: "vertical", id: space.id };
+    if (!["courtyard", "stairs"].includes(space.kind) || !validRect(space.bounds, 120))
+      issue(
+        "vertical-shape",
+        "Vertical spaces need valid dimensions on the planning grid.",
+        { source }
+      );
+    const indices = space.floorIds.map((id) => floorIds.indexOf(id));
+    if (!indices.length || indices.some((n) => n < 0) || new Set(indices).size !== indices.length || indices.some((n, j) => j > 0 && n !== indices[j - 1] + 1))
+      issue(
+        "vertical-floors",
+        "Vertical spaces must serve an ordered, contiguous set of floors.",
+        { source }
+      );
+    if (space.kind === "courtyard" && indices.at(-1) !== floorIds.length - 1)
+      issue("courtyard-roof", "An open-to-sky courtyard must reach the top floor.", {
+        source
+      });
+    if (space.unitId !== null && !unitIds.has(space.unitId))
+      issue("vertical-unit", "A vertical space refers to an unknown unit.", {
+        source
+      });
+    for (const floor of project.floors.filter(
+      (f) => space.floorIds.includes(f.id)
+    )) {
+      if (!contains(floor.footprint, space.bounds))
+        issue(
+          "vertical-outside",
+          "The courtyard or staircase must fit inside every connected floor.",
+          { source, floorIds: [floor.id], attempted: space.bounds }
+        );
+      if (space.unitId === null) {
+        const areas = floor.unitAreas.filter(
+          (a) => overlaps(a.bounds, space.bounds)
+        );
+        if (areas.length)
+          issue(
+            "vertical-unit",
+            "Shared stairs and courtyards cannot overlap private unit areas.",
+            {
+              source,
+              floorIds: [floor.id],
+              attempted: space.bounds,
+              blockers: areas.map((a) => ({
+                kind: "unit",
+                id: a.unitId,
+                floorId: floor.id
+              }))
+            }
+          );
+      } else {
+        const area = floor.unitAreas.find((a) => a.unitId === space.unitId);
+        if (!area || !contains(area.bounds, space.bounds))
+          issue(
+            "vertical-unit",
+            "A private vertical space must stay inside its unit on every connected floor.",
+            { source, floorIds: [floor.id], attempted: space.bounds }
+          );
+      }
+    }
+    const others = project.verticalSpaces.slice(i + 1).filter(
+      (v) => v.floorIds.some((id) => space.floorIds.includes(id)) && overlaps(v.bounds, space.bounds)
+    );
+    if (others.length)
+      issue(
+        "vertical-overlap",
+        "Vertical spaces on the same floor cannot overlap.",
+        {
+          source,
+          attempted: space.bounds,
+          blockers: others.map((o) => ({ kind: "vertical", id: o.id }))
+        }
+      );
+  }
+  for (let i = 1; i < floorIds.length; i++)
+    if (!project.verticalSpaces.some(
+      (v) => v.kind === "stairs" && v.floorIds.includes(floorIds[i - 1]) && v.floorIds.includes(floorIds[i])
+    ))
+      issue(
+        "stairs-missing",
+        "Every pair of adjacent floors needs an aligned stair connection.",
+        { floorIds: [floorIds[i - 1], floorIds[i]] }
+      );
+  for (const check of extensions) check(project, issue, opts);
+  return issues;
+}
+function validateProject(project) {
+  return [
+    ...new Set(
+      validateProjectIssues(project).filter((i) => i.severity === "error").map((i) => i.message)
+    )
+  ];
 }
 
 // src/domain/edit.ts
@@ -377,7 +781,7 @@ var cache = /* @__PURE__ */ new WeakMap();
 function gridKey(floor) {
   return JSON.stringify([
     floor.footprint,
-    floor.rooms.map((r) => r.bounds),
+    floor.rooms.map((r2) => r2.bounds),
     floor.voids.map((v) => v.bounds),
     floor.unitAreas.map((a) => [a.unitId, a.bounds])
   ]);
@@ -396,12 +800,12 @@ function buildGrid(floor) {
   const n = nx * nz;
   const owner = new Int16Array(n).fill(FREE);
   const label = new Int16Array(n).fill(-1);
-  const paint = (r, value, into) => {
-    const i0 = Math.max(0, Math.floor((r.x - fp.x) / CELL)), i1 = Math.min(nx, Math.ceil((r.x + r.w - fp.x) / CELL)), j0 = Math.max(0, Math.floor((r.z - fp.z) / CELL)), j1 = Math.min(nz, Math.ceil((r.z + r.d - fp.z) / CELL));
+  const paint = (r2, value, into) => {
+    const i0 = Math.max(0, Math.floor((r2.x - fp.x) / CELL)), i1 = Math.min(nx, Math.ceil((r2.x + r2.w - fp.x) / CELL)), j0 = Math.max(0, Math.floor((r2.z - fp.z) / CELL)), j1 = Math.min(nz, Math.ceil((r2.z + r2.d - fp.z) / CELL));
     for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) into[j * nx + i] = value;
   };
   floor.voids.forEach((v) => paint(v.bounds, BLOCKED, owner));
-  floor.rooms.forEach((r, k) => paint(r.bounds, k, owner));
+  floor.rooms.forEach((r2, k) => paint(r2.bounds, k, owner));
   for (let c = 0; c < n; c++) if (owner[c] === FREE) label[c] = 0;
   floor.unitAreas.forEach((a, k) => {
     const lab = new Int16Array(n).fill(-1);
@@ -526,9 +930,9 @@ function reachableNodes(floor, grid, openings) {
       { x: b.x - CELL, z: b.z, w: CELL, d: b.d },
       { x: b.x + b.w, z: b.z, w: CELL, d: b.d }
     ];
-    for (const r of ring)
-      for (let z = r.z; z < r.z + r.d; z += CELL)
-        for (let x = r.x; x < r.x + r.w; x += CELL) {
+    for (const r2 of ring)
+      for (let z = r2.z; z < r2.z + r2.d; z += CELL)
+        for (let x = r2.x; x < r2.x + r2.w; x += CELL) {
           const i = Math.floor((x - grid.x0) / CELL), j = Math.floor((z - grid.z0) / CELL);
           if (i < 0 || j < 0 || i >= grid.nx || j >= grid.nz) continue;
           const c = j * grid.nx + i;
@@ -553,18 +957,18 @@ function reachableNodes(floor, grid, openings) {
 }
 
 // src/domain/walls.ts
-function edges(r, exterior) {
+function edges(r2, exterior) {
   return [
-    { axis: "x", fixed: r.z, start: r.x, end: r.x + r.w, exterior },
-    { axis: "x", fixed: r.z + r.d, start: r.x, end: r.x + r.w, exterior },
-    { axis: "z", fixed: r.x, start: r.z, end: r.z + r.d, exterior },
-    { axis: "z", fixed: r.x + r.w, start: r.z, end: r.z + r.d, exterior }
+    { axis: "x", fixed: r2.z, start: r2.x, end: r2.x + r2.w, exterior },
+    { axis: "x", fixed: r2.z + r2.d, start: r2.x, end: r2.x + r2.w, exterior },
+    { axis: "z", fixed: r2.x, start: r2.z, end: r2.z + r2.d, exterior },
+    { axis: "z", fixed: r2.x + r2.w, start: r2.z, end: r2.z + r2.d, exterior }
   ];
 }
 var wallStart = (w) => w.axis === "x" ? w.x : w.z;
 var wallLine = (w) => w.axis === "x" ? w.z : w.x;
-function touches(w, r) {
-  return edges(r, false).some(
+function touches(w, r2) {
+  return edges(r2, false).some(
     (e) => e.axis === w.axis && e.fixed === wallLine(w) && e.start <= wallStart(w) && e.end >= wallStart(w) + w.length
   );
 }
@@ -576,6 +980,7 @@ var OPENING_CLASS = {
   window: "window",
   "picture-window": "window"
 };
+var isWindow = (kind) => OPENING_CLASS[kind] === "window";
 var isPassable = (kind) => OPENING_CLASS[kind] !== "window";
 var segmentCache = /* @__PURE__ */ new WeakMap();
 function deriveWallSegments(floor) {
@@ -583,7 +988,7 @@ function deriveWallSegments(floor) {
   if (cached) return cached.map((w) => ({ ...w, openings: [] }));
   const all = [
     ...edges(floor.footprint, true),
-    ...floor.rooms.flatMap((r) => edges(r.bounds, false)),
+    ...floor.rooms.flatMap((r2) => edges(r2.bounds, false)),
     ...floor.unitAreas.flatMap((a) => edges(a.bounds, false)),
     ...floor.voids.filter((v) => v.kind === "courtyard").flatMap((v) => edges(v.bounds, true))
   ];
@@ -598,7 +1003,7 @@ function deriveWallSegments(floor) {
     const extra = [
       ...floor.voids.map((v) => v.bounds),
       ...floor.balconies.map((b) => balconyBounds(floor, b))
-    ].flatMap((r) => edges(r, false)).filter((e) => e.axis === axis && e.fixed === fixed).flatMap((e) => [e.start, e.end]);
+    ].flatMap((r2) => edges(r2, false)).filter((e) => e.axis === axis && e.fixed === fixed).flatMap((e) => [e.start, e.end]);
     const cuts = [
       .../* @__PURE__ */ new Set([...group.flatMap((e) => [e.start, e.end]), ...extra])
     ].sort((a, b) => a - b);
@@ -629,7 +1034,7 @@ function wallSamples(w) {
 }
 function wallSideRooms(floor, w) {
   const [plus, minus] = wallSamples(w);
-  const at = (p) => floor.rooms.find((r) => inside(r.bounds, p.x, p.z))?.id ?? null;
+  const at = (p) => floor.rooms.find((r2) => inside(r2.bounds, p.x, p.z))?.id ?? null;
   return [at(plus), at(minus)];
 }
 function sharedEdge(a, b) {
@@ -642,21 +1047,21 @@ function sharedEdge(a, b) {
 var ENSUITE_MIN_EDGE = 120;
 function ensuiteHost(rooms, room) {
   if (room.kind !== "bathroom" || !room.attachedTo) return null;
-  const host = rooms.find((r) => r.id === room.attachedTo);
+  const host = rooms.find((r2) => r2.id === room.attachedTo);
   return host && host.kind === "bedroom" && sharedEdge(room.bounds, host.bounds) >= ENSUITE_MIN_EDGE ? host : null;
 }
 function doorWallFilter(floor) {
   const ensuites = /* @__PURE__ */ new Map();
-  for (const r of floor.rooms) {
-    const host = ensuiteHost(floor.rooms, r);
-    if (host) ensuites.set(r.id, host.id);
+  for (const r2 of floor.rooms) {
+    const host = ensuiteHost(floor.rooms, r2);
+    if (host) ensuites.set(r2.id, host.id);
   }
   if (!ensuites.size) return () => true;
   return (room, w) => {
-    const sides = wallSideRooms(floor, w);
+    const sides2 = wallSideRooms(floor, w);
     const host = room ? ensuites.get(room.id) : void 0;
-    if (room && host) return sides.includes(room.id) && sides.includes(host);
-    return !sides.some((id) => id !== null && ensuites.has(id));
+    if (room && host) return sides2.includes(room.id) && sides2.includes(host);
+    return !sides2.some((id) => id !== null && ensuites.has(id));
   };
 }
 function autoOpenings(floor, road, segments = deriveWallSegments(floor)) {
@@ -672,7 +1077,7 @@ function autoOpenings(floor, road, segments = deriveWallSegments(floor)) {
     (p) => floor.voids.some((v) => inside(v.bounds, p.x, p.z))
   );
   const roomOwners = (w) => floor.rooms.filter(
-    (r) => wallSamples(w).some((p) => inside(r.bounds, p.x, p.z))
+    (r2) => wallSamples(w).some((p) => inside(r2.bounds, p.x, p.z))
   ).length;
   const rank = (a, b) => roomOwners(a) - roomOwners(b) || b.length - a.length || a.id.localeCompare(b.id);
   const doorWall = doorWallFilter(floor);
@@ -720,7 +1125,7 @@ function autoOpenings(floor, road, segments = deriveWallSegments(floor)) {
   const entrance = (side, balcony) => {
     const options = segments.filter(
       (w) => atSide(w, side) && w.length >= 150 && !blocked(w) && (!balcony || (() => {
-        const r = balconyBounds(floor, balcony), center = wallStart(w) + w.length / 2, start = w.axis === "x" ? r.x : r.z, span = w.axis === "x" ? r.w : r.d;
+        const r2 = balconyBounds(floor, balcony), center = wallStart(w) + w.length / 2, start = w.axis === "x" ? r2.x : r2.z, span = w.axis === "x" ? r2.w : r2.d;
         return center - 55 >= start && center + 55 <= start + span;
       })())
     );
@@ -871,29 +1276,29 @@ function overlapArea(a, b) {
   return Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.z + a.d, b.z + b.d) - Math.max(a.z, b.z));
 }
 function roomDoorApproaches(room, walls) {
-  const r = room.bounds;
+  const r2 = room.bounds;
   return walls.flatMap(
     (wall) => wall.openings.flatMap((opening) => {
       if (!isPassable(opening.kind)) return [];
       const width = opening.width + 20;
-      if (wall.axis === "x" && (wall.z === r.z || wall.z === r.z + r.d)) {
+      if (wall.axis === "x" && (wall.z === r2.z || wall.z === r2.z + r2.d)) {
         const center = wall.x + opening.offset;
-        if (center <= r.x || center >= r.x + r.w) return [];
+        if (center <= r2.x || center >= r2.x + r2.w) return [];
         return [
           {
             x: center - width / 2,
-            z: wall.z === r.z ? r.z : r.z + r.d - 85,
+            z: wall.z === r2.z ? r2.z : r2.z + r2.d - 85,
             w: width,
             d: 85
           }
         ];
       }
-      if (wall.axis === "z" && (wall.x === r.x || wall.x === r.x + r.w)) {
+      if (wall.axis === "z" && (wall.x === r2.x || wall.x === r2.x + r2.w)) {
         const center = wall.z + opening.offset;
-        if (center <= r.z || center >= r.z + r.d) return [];
+        if (center <= r2.z || center >= r2.z + r2.d) return [];
         return [
           {
-            x: wall.x === r.x ? r.x : r.x + r.w - 85,
+            x: wall.x === r2.x ? r2.x : r2.x + r2.w - 85,
             z: center - width / 2,
             w: 85,
             d: width
@@ -1493,7 +1898,7 @@ function footprintGap(a, b) {
   const dz = Math.max(0, Math.max(a.z, b.z) - Math.min(a.z + a.d, b.z + b.d));
   return dx && dz ? Math.hypot(dx, dz) : dx + dz;
 }
-var grow = (r, m) => ({ x: r.x - m, z: r.z - m, w: r.w + 2 * m, d: r.d + 2 * m });
+var grow = (r2, m) => ({ x: r2.x - m, z: r2.z - m, w: r2.w + 2 * m, d: r2.d + 2 * m });
 var hung = (p) => p.entry.layer === "high" || p.entry.layer === "wall";
 var FRONT_ACCESS = /* @__PURE__ */ new Set([
   "wardrobe",
@@ -1515,16 +1920,16 @@ var FRONT_ACCESS = /* @__PURE__ */ new Set([
 var FRONT_CLEAR = 70;
 function frontZone(p) {
   if (!FRONT_ACCESS.has(p.catalogId)) return null;
-  const r = p.rect, f = FRONT_CLEAR;
+  const r2 = p.rect, f = FRONT_CLEAR;
   switch (p.rotation) {
     case 0:
-      return { x: r.x + 10, z: r.z + r.d, w: r.w - 20, d: f };
+      return { x: r2.x + 10, z: r2.z + r2.d, w: r2.w - 20, d: f };
     case 180:
-      return { x: r.x + 10, z: r.z - f, w: r.w - 20, d: f };
+      return { x: r2.x + 10, z: r2.z - f, w: r2.w - 20, d: f };
     case 90:
-      return { x: r.x - f, z: r.z + 10, w: f, d: r.d - 20 };
+      return { x: r2.x - f, z: r2.z + 10, w: f, d: r2.d - 20 };
     case 270:
-      return { x: r.x + r.w, z: r.z + 10, w: f, d: r.d - 20 };
+      return { x: r2.x + r2.w, z: r2.z + 10, w: f, d: r2.d - 20 };
   }
 }
 var major = (p) => p.entry.layer === "standard" && p.entry.blocksWalk && p.group !== "accent";
@@ -1554,25 +1959,25 @@ function designer(W, D, ctx, room = { name: "" }) {
   const placed = [];
   let score = 0;
   const len = (side) => side === "north" || side === "south" ? W : D;
-  const spanOf = (r, side) => side === "north" || side === "south" ? [r.x, r.x + r.w] : [r.z, r.z + r.d];
+  const spanOf = (r2, side) => side === "north" || side === "south" ? [r2.x, r2.x + r2.w] : [r2.z, r2.z + r2.d];
   const surfaceAt = (x, z) => {
     let y = 0;
     for (const o of placed) {
       const s = o.entry.surface;
       if (s === void 0 || o.entry.layer !== "standard") continue;
-      const r = o.rect;
-      if (x > r.x && x < r.x + r.w && z > r.z && z < r.z + r.d) y = Math.max(y, s);
+      const r2 = o.rect;
+      if (x > r2.x && x < r2.x + r2.w && z > r2.z && z < r2.z + r2.d) y = Math.max(y, s);
     }
     return y;
   };
   const fits = (p) => {
-    const r = p.rect, layer = p.entry.layer;
-    if (!(r.w > 0 && r.d > 0)) return false;
-    if (r.x < -0.01 || r.z < -0.01 || r.x + r.w > W + 0.01 || r.z + r.d > D + 0.01) return false;
-    if ((layer === "standard" || layer === "decor") && ctx.doors.some((d) => overlaps(d, r)))
+    const r2 = p.rect, layer = p.entry.layer;
+    if (!(r2.w > 0 && r2.d > 0)) return false;
+    if (r2.x < -0.01 || r2.z < -0.01 || r2.x + r2.w > W + 0.01 || r2.z + r2.d > D + 0.01) return false;
+    if ((layer === "standard" || layer === "decor") && ctx.doors.some((d) => overlaps(d, r2)))
       return false;
     if (p.side) {
-      const [a, b2] = spanOf(r, p.side);
+      const [a, b2] = spanOf(r2, p.side);
       const wall = ctx.walls[p.side];
       const across = (s, margin) => a < s.b + margin && b2 > s.a - margin;
       if (wall.doors.some((s) => across(s, 8) && p.base < s.y1)) return false;
@@ -1581,16 +1986,16 @@ function designer(W, D, ctx, room = { name: "" }) {
     }
     for (const o of placed) {
       const ol = o.entry.layer;
-      if (ol === layer && overlaps(grow(o.rect, LAYER_GAP / 2), grow(r, LAYER_GAP / 2)))
+      if (ol === layer && overlaps(grow(o.rect, LAYER_GAP / 2), grow(r2, LAYER_GAP / 2)))
         return false;
-      if (hung(p) && ol === "standard" && o.top > p.base + 5 && overlaps(o.rect, r)) return false;
-      if (layer === "standard" && hung(o) && p.top > o.base + 5 && overlaps(o.rect, r)) return false;
+      if (hung(p) && ol === "standard" && o.top > p.base + 5 && overlaps(o.rect, r2)) return false;
+      if (layer === "standard" && hung(o) && p.top > o.base + 5 && overlaps(o.rect, r2)) return false;
       if (major(p) && major(o) && o.group !== p.group) {
-        const g = footprintGap(o.rect, r);
+        const g = footprintGap(o.rect, r2);
         if (g > SNUG && g < AUTO_WALKWAY) return false;
         if (g <= SNUG && !(p.side && o.side)) return false;
         const pf = frontZone(p), of = frontZone(o);
-        if (pf && overlaps(pf, o.rect) || of && overlaps(of, r)) return false;
+        if (pf && overlaps(pf, o.rect) || of && overlaps(of, r2)) return false;
       }
     }
     return true;
@@ -1614,16 +2019,16 @@ function designer(W, D, ctx, room = { name: "" }) {
       };
       if (!ok("w", w) || !ok("d", d)) return null;
       const fw = turned ? d : w, fd = turned ? w : d;
-      const r = {
+      const r2 = {
         x: rect2.x + (rect2.w - fw) / 2,
         z: rect2.z + (rect2.d - fd) / 2,
         w: fw,
         d: fd
       };
-      const base = entry.layer === "decor" ? surfaceAt(r.x + r.w / 2, r.z + r.d / 2) : entry.mountY ?? 0;
+      const base = entry.layer === "decor" ? surfaceAt(r2.x + r2.w / 2, r2.z + r2.d / 2) : entry.mountY ?? 0;
       const p = {
         catalogId,
-        rect: r,
+        rect: r2,
         w,
         d,
         rotation,
@@ -2242,7 +2647,7 @@ function furnitureFootprint(item) {
 var FURNITURE_WALL_GAP = 10;
 var FURNITURE_GRID = 5;
 var snap5 = (n) => Math.round(n / FURNITURE_GRID) * FURNITURE_GRID;
-var ID = /^[a-zA-Z0-9_-]{1,64}$/;
+var ID2 = /^[a-zA-Z0-9_-]{1,64}$/;
 var sameLayer = (a, b) => CATALOG.get(a.catalogId)?.layer === CATALOG.get(b.catalogId)?.layer;
 var furnitureLabel = (item) => CATALOG.get(item.catalogId)?.label ?? "Furniture";
 function furnitureShapeProblems(item) {
@@ -2367,7 +2772,7 @@ function validateRoomFurniture(room, floorId, ids, issue, walls) {
     });
   for (const [i, item] of items.entries()) {
     const source = furnitureRef(floorId, room.id, item.id);
-    if (typeof item.id !== "string" || !ID.test(item.id) || (ids.get(item.id) ?? 0) > 1)
+    if (typeof item.id !== "string" || !ID2.test(item.id) || (ids.get(item.id) ?? 0) > 1)
       issue("duplicate-id", "Every component must have a unique, valid ID.", {
         source,
         floorIds
@@ -2422,7 +2827,7 @@ function validateRoomFurniture(room, floorId, ids, issue, walls) {
       );
 }
 registerValidation((project, issue) => {
-  const explicit = (rooms) => rooms.some((r) => r.furniture);
+  const explicit = (rooms) => rooms.some((r2) => r2.furniture);
   const staged = (project.stagedRooms ?? []).map((s) => s.room);
   if (!project.floors.some((f) => explicit(f.rooms)) && !explicit(staged)) return;
   const ids = idCounts(project);
@@ -2450,7 +2855,7 @@ registerValidation((project, issue) => {
 function reconcileFurniture(before, after, notices) {
   if (before === after) return after;
   const old = /* @__PURE__ */ new Map();
-  for (const f of before.floors) for (const r of f.rooms) old.set(r.id, r);
+  for (const f of before.floors) for (const r2 of f.rooms) old.set(r2.id, r2);
   for (const s of before.stagedRooms ?? []) old.set(s.room.id, s.room);
   let changed = false;
   const fix = (room, floorId) => {
@@ -2502,8 +2907,8 @@ function reconcileFurniture(before, after, notices) {
     return { ...room, furniture: items };
   };
   const floors = after.floors.map((f) => {
-    const rooms = f.rooms.map((r) => fix(r, f.id));
-    return rooms.every((r, i) => r === f.rooms[i]) ? f : { ...f, rooms };
+    const rooms = f.rooms.map((r2) => fix(r2, f.id));
+    return rooms.every((r2, i) => r2 === f.rooms[i]) ? f : { ...f, rooms };
   });
   const stagedRooms = after.stagedRooms?.map((s) => {
     const room = fix(s.room, null);
@@ -2572,12 +2977,12 @@ function landscapeSiteProblems(p, item, ex = landscapeExclusions(p)) {
   const fp = landscapeFootprint(item), out = [];
   if (fp.x < 0 || fp.z < 0 || fp.x + fp.w > p.plot.width || fp.z + fp.d > p.plot.depth)
     out.push({ code: "landscape-outside", message: "Garden items must stay inside the plot." });
-  if (ex.all.some((r) => overlaps(r, fp)))
+  if (ex.all.some((r2) => overlaps(r2, fp)))
     out.push({
       code: "landscape-on-building",
       message: `${entry.label} can't sit on the house or a veranda.`
     });
-  if (entry.tall && ex.tall.some((r) => overlaps(r, fp)))
+  if (entry.tall && ex.tall.some((r2) => overlaps(r2, fp)))
     out.push({
       code: "landscape-under-balcony",
       message: `${entry.label} is too tall to stand under a balcony.`
@@ -2592,7 +2997,7 @@ function landscapeCollisions(item, others) {
     (o) => o.id !== item.id && isSolid(o) && overlaps(fp, landscapeFootprint(o))
   );
 }
-var ID2 = /^[a-zA-Z0-9_-]{1,64}$/;
+var ID3 = /^[a-zA-Z0-9_-]{1,64}$/;
 var ref = (id) => ({ kind: "landscape", id });
 registerValidation((p, issue) => {
   if (!p.landscape) return;
@@ -2601,7 +3006,7 @@ registerValidation((p, issue) => {
   const ids = idCounts(p), ex = landscapeExclusions(p);
   for (const [i, item] of p.landscape.entries()) {
     const source = ref(item.id), attempted = landscapeFootprint(item);
-    if (typeof item.id !== "string" || !ID2.test(item.id) || (ids.get(item.id) ?? 0) > 1)
+    if (typeof item.id !== "string" || !ID3.test(item.id) || (ids.get(item.id) ?? 0) > 1)
       issue("duplicate-id", "Every component must have a unique, valid ID.", { source });
     const shape = landscapeShapeProblems(item);
     for (const s of shape) issue(s.code, s.message, { source, attempted });
@@ -2652,8 +3057,170 @@ function reconcileLandscape(before, after, notices) {
 registerReconciler(reconcileLandscape);
 
 // src/domain/persist.ts
+var obj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+var str = (v) => typeof v === "string" && v.length > 0 && v.length <= 80;
+var num = (v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 1e5;
+var optNum = (v) => v === void 0 || num(v);
+var optStr = (v) => v === void 0 || str(v);
+var turn = (v) => v === 0 || v === 90 || v === 180 || v === 270;
+var OPENING_KINDS = [
+  "door",
+  "french-door",
+  "sliding-door",
+  "archway",
+  "window",
+  "picture-window"
+];
+var OPENING_STYLES = ["panel", "flush", "glazed", "plain", "divided"];
+var ROOF_STYLES = ["flat", "gable", "hip", "shed"];
 var STYLE_PRESETS = ["indian-modern", "indian-classic", "diorama"];
 var RAILING_KINDS = ["glass", "grille", "jaali"];
+var optBool = (v) => v === void 0 || typeof v === "boolean";
+var EDGES = ["north", "south", "east", "west"];
+function checkOpening(v) {
+  return obj(v) && str(v.id) && OPENING_KINDS.includes(v.kind) && (v.axis === "x" || v.axis === "z") && ["line", "center", "width", "height", "sill"].every((k) => num(v[k])) && (v.style === void 0 || OPENING_STYLES.includes(v.style)) && (v.hinge === void 0 || v.hinge === "start" || v.hinge === "end") && (v.swing === void 0 || v.swing === 1 || v.swing === -1);
+}
+function copyOpening(o) {
+  return {
+    id: o.id,
+    kind: o.kind,
+    axis: o.axis,
+    line: o.line,
+    center: o.center,
+    width: o.width,
+    height: o.height,
+    sill: o.sill,
+    ...o.style !== void 0 ? { style: o.style } : {},
+    ...o.hinge !== void 0 ? { hinge: o.hinge } : {},
+    ...o.swing !== void 0 ? { swing: o.swing } : {}
+  };
+}
+function checkFurniture(v) {
+  return obj(v) && str(v.id) && str(v.catalogId) && num(v.x) && num(v.z) && turn(v.rotation) && optNum(v.w) && optNum(v.d) && optStr(v.finish);
+}
+function copyFurniture(f) {
+  return {
+    id: f.id,
+    catalogId: f.catalogId,
+    x: f.x,
+    z: f.z,
+    rotation: f.rotation,
+    ...f.w !== void 0 ? { w: f.w } : {},
+    ...f.d !== void 0 ? { d: f.d } : {},
+    ...f.finish !== void 0 ? { finish: f.finish } : {}
+  };
+}
+function checkLandscape(v) {
+  return obj(v) && str(v.id) && str(v.kind) && num(v.x) && num(v.z) && turn(v.rotation) && optNum(v.w) && optNum(v.d) && optStr(v.variant);
+}
+function copyLandscape(l) {
+  return {
+    id: l.id,
+    kind: l.kind,
+    x: l.x,
+    z: l.z,
+    rotation: l.rotation,
+    ...l.w !== void 0 ? { w: l.w } : {},
+    ...l.d !== void 0 ? { d: l.d } : {},
+    ...l.variant !== void 0 ? { variant: l.variant } : {}
+  };
+}
+function checkDetails(v) {
+  return obj(v) && optBool(v.chhajja) && optBool(v.waterTank) && optBool(v.carPorch) && (v.railing === void 0 || RAILING_KINDS.includes(v.railing));
+}
+function copyDetails(d) {
+  return {
+    ...d.chhajja !== void 0 ? { chhajja: d.chhajja } : {},
+    ...d.waterTank !== void 0 ? { waterTank: d.waterTank } : {},
+    ...d.carPorch !== void 0 ? { carPorch: d.carPorch } : {},
+    ...d.railing !== void 0 ? { railing: d.railing } : {}
+  };
+}
+function checkStyle(v) {
+  if (!obj(v)) return false;
+  if (!optStr(v.exterior) || !optStr(v.trim) || !optStr(v.frontDoor))
+    return false;
+  if (v.preset !== void 0 && !STYLE_PRESETS.includes(v.preset))
+    return false;
+  if (v.details !== void 0 && !checkDetails(v.details)) return false;
+  if (v.roof === void 0) return true;
+  return obj(v.roof) && ROOF_STYLES.includes(v.roof.style) && str(v.roof.material) && [20, 30, 40].includes(v.roof.pitch);
+}
+function copyStyle(s) {
+  return {
+    ...s.preset !== void 0 ? { preset: s.preset } : {},
+    ...s.details !== void 0 ? { details: copyDetails(s.details) } : {},
+    ...s.exterior !== void 0 ? { exterior: s.exterior } : {},
+    ...s.trim !== void 0 ? { trim: s.trim } : {},
+    ...s.frontDoor !== void 0 ? { frontDoor: s.frontDoor } : {},
+    ...s.roof !== void 0 ? {
+      roof: {
+        style: s.roof.style,
+        material: s.roof.material,
+        pitch: s.roof.pitch
+      }
+    } : {}
+  };
+}
+var checkSite = (v) => obj(v) && optStr(v.ground) && optStr(v.fence);
+function checkRoomExtras(r2) {
+  if (!optStr(r2.floorMaterial) || !optStr(r2.wallColor))
+    throw new Error("Project contains an invalid room finish.");
+  if (!optStr(r2.attachedTo) || typeof r2.attachedTo === "string" && r2.attachedTo.length > 120)
+    throw new Error("Project contains an invalid attached bathroom.");
+  if (r2.accentWall !== void 0 && !(obj(r2.accentWall) && EDGES.includes(r2.accentWall.edge) && str(r2.accentWall.color)))
+    throw new Error("Project contains an invalid room finish.");
+  if (r2.furniture === void 0) return;
+  if (!Array.isArray(r2.furniture) || r2.furniture.length > LIMITS.furniturePerRoom || !r2.furniture.every(checkFurniture))
+    throw new Error("Project contains an invalid furniture item.");
+}
+function checkFloorExtras(f) {
+  if (f.openings === void 0) return;
+  if (!Array.isArray(f.openings) || f.openings.length > LIMITS.openingsPerFloor || !f.openings.every(checkOpening))
+    throw new Error("Project contains an invalid opening.");
+}
+var SHARE_ID = /^[A-Za-z0-9]{10}$/;
+function checkLocation(l) {
+  return obj(l) && str(l.city) && l.city.length <= 80 && typeof l.lat === "number" && typeof l.lon === "number" && Math.abs(l.lat) <= 90 && Math.abs(l.lon) <= 180;
+}
+function checkProjectExtras(p) {
+  if (obj(p.plot) && p.plot.location !== void 0 && !checkLocation(p.plot.location))
+    throw new Error("Project contains an invalid location.");
+  if (p.vastu !== void 0 && typeof p.vastu !== "boolean")
+    throw new Error("Project contains an invalid Vastu setting.");
+  if (p.remixOf !== void 0 && !(obj(p.remixOf) && str(p.remixOf.id) && SHARE_ID.test(p.remixOf.id) && str(p.remixOf.name) && p.remixOf.name.length <= 80))
+    throw new Error("Project contains an invalid remix link.");
+  if (p.style !== void 0 && !checkStyle(p.style))
+    throw new Error("Project contains an invalid style.");
+  if (p.site !== void 0 && !checkSite(p.site))
+    throw new Error("Project contains an invalid style.");
+  if (p.landscape === void 0) return;
+  if (!Array.isArray(p.landscape) || p.landscape.length > LIMITS.landscapeItems || !p.landscape.every(checkLandscape))
+    throw new Error("Project contains an invalid garden item.");
+}
+function copyRoomExtras(room) {
+  return {
+    ...room.attachedTo !== void 0 ? { attachedTo: room.attachedTo } : {},
+    ...room.accentWall !== void 0 ? { accentWall: { edge: room.accentWall.edge, color: room.accentWall.color } } : {},
+    ...room.floorMaterial !== void 0 ? { floorMaterial: room.floorMaterial } : {},
+    ...room.wallColor !== void 0 ? { wallColor: room.wallColor } : {},
+    ...room.furniture !== void 0 ? { furniture: room.furniture.map(copyFurniture) } : {}
+  };
+}
+function copyProjectExtras(p) {
+  return {
+    ...p.vastu !== void 0 ? { vastu: p.vastu } : {},
+    ...p.remixOf !== void 0 ? { remixOf: { id: p.remixOf.id, name: p.remixOf.name } } : {},
+    ...p.style !== void 0 ? { style: copyStyle(p.style) } : {},
+    ...p.site !== void 0 ? {
+      site: {
+        ...p.site.ground !== void 0 ? { ground: p.site.ground } : {},
+        ...p.site.fence !== void 0 ? { fence: p.site.fence } : {}
+      }
+    } : {},
+    ...p.landscape !== void 0 ? { landscape: p.landscape.map(copyLandscape) } : {}
+  };
+}
 
 // src/domain/materials.ts
 var EXTERIOR_FINISHES = {
@@ -2709,7 +3276,7 @@ var ROOF_MATERIALS = {
   metal: { label: "Standing seam", color: "#7f8b8f" },
   membrane: { label: "Flat membrane", color: "#b9b3a6" }
 };
-var ROOF_STYLES = {
+var ROOF_STYLES2 = {
   flat: { label: "Flat" },
   gable: { label: "Gable" },
   hip: { label: "Hip" },
@@ -2781,20 +3348,20 @@ registerValidation((p, issue) => {
     if (style.preset !== void 0 && !STYLE_PRESETS.includes(style.preset)) bad();
     if (style.details?.railing !== void 0 && !RAILING_KINDS.includes(style.details.railing))
       bad();
-    if (style.roof !== void 0 && (!(style.roof.style in ROOF_STYLES) || !isRoofMaterial(style.roof.material) || ![20, 30, 40].includes(style.roof.pitch)))
+    if (style.roof !== void 0 && (!(style.roof.style in ROOF_STYLES2) || !isRoofMaterial(style.roof.material) || ![20, 30, 40].includes(style.roof.pitch)))
       bad();
   }
   if (p.site) {
     if (p.site.ground !== void 0 && !isGround(p.site.ground)) bad();
     if (p.site.fence !== void 0 && !isFence(p.site.fence)) bad();
   }
-  const room = (r, source, floorIds) => {
-    if (r.floorMaterial !== void 0 && !isFloorMaterial(r.floorMaterial) || r.wallColor !== void 0 && !isWallPaint(r.wallColor) || r.accentWall !== void 0 && !roomAccentWall(r))
+  const room = (r2, source, floorIds) => {
+    if (r2.floorMaterial !== void 0 && !isFloorMaterial(r2.floorMaterial) || r2.wallColor !== void 0 && !isWallPaint(r2.wallColor) || r2.accentWall !== void 0 && !roomAccentWall(r2))
       bad(source, floorIds);
   };
   for (const f of p.floors)
-    for (const r of f.rooms)
-      room(r, { kind: "room", id: r.id, floorId: f.id }, [f.id]);
+    for (const r2 of f.rooms)
+      room(r2, { kind: "room", id: r2.id, floorId: f.id }, [f.id]);
   for (const s of p.stagedRooms ?? [])
     room(s.room, { kind: "staged", id: s.room.id }, []);
 });
@@ -2835,7 +3402,7 @@ var ENUMS = {
   roofMaterial: keys(ROOF_MATERIALS),
   ground: keys(GROUND_STYLES)
 };
-var str = { type: "string" };
+var str2 = { type: "string" };
 var oneOf = (values) => ({ type: "string", enum: [...values] });
 var list = (items) => ({ type: "array", items });
 var object = (properties) => ({
@@ -2854,13 +3421,13 @@ var palette = {
   accentWall: oneOf([...ENUMS.paint, "none"])
 };
 var HOME_PLAN_SCHEMA = object({
-  name: str,
+  name: str2,
   floors: { type: "integer", enum: [1, 2, 3] },
   layout: oneOf(LAYOUTS),
   rooms: list(
     object({
       use: oneOf(ROOM_USES),
-      name: str,
+      name: str2,
       zone: oneOf(ZONES),
       ...palette,
       extras: list(oneOf(EXTRA_IDS))
@@ -2875,13 +3442,13 @@ var HOME_PLAN_SCHEMA = object({
   }),
   ground: oneOf(ENUMS.ground),
   garden: list(oneOf(GARDEN_IDS)),
-  notes: list(str)
+  notes: list(str2)
 });
 var ROOM_PLAN_SCHEMA = object({
   ...palette,
   layout: oneOf(["fresh", "keep"]),
   extras: list(oneOf(EXTRA_IDS)),
-  notes: list(str)
+  notes: list(str2)
 });
 var pick = (value, allowed, fallback) => typeof value === "string" && allowed.includes(value) ? value : fallback;
 var text = (value, max, fallback) => {
@@ -2926,23 +3493,23 @@ var isBedroomUse = (use) => use.endsWith("bedroom");
 function sanitizeHomePlan(raw) {
   const p = raw ?? {};
   const ex = p.exterior ?? {};
-  let rooms = (Array.isArray(p.rooms) ? p.rooms : []).map((r) => sanitizeRoom(r)).filter((r) => !!r);
+  let rooms = (Array.isArray(p.rooms) ? p.rooms : []).map((r2) => sanitizeRoom(r2)).filter((r2) => !!r2);
   const counts = /* @__PURE__ */ new Map();
   const bump = (key) => {
     const n = (counts.get(key) ?? 0) + 1;
     counts.set(key, n);
     return n;
   };
-  rooms = rooms.filter((r) => {
-    if (isBedroomUse(r.use)) return bump("bedrooms") <= 6 && (r.use !== "master-bedroom" || bump(r.use) <= 1);
-    return bump(r.use) <= (r.use === "bathroom" ? 5 : 1);
+  rooms = rooms.filter((r2) => {
+    if (isBedroomUse(r2.use)) return bump("bedrooms") <= 6 && (r2.use !== "master-bedroom" || bump(r2.use) <= 1);
+    return bump(r2.use) <= (r2.use === "bathroom" ? 5 : 1);
   });
   const seen = /* @__PURE__ */ new Set();
-  for (const r of rooms) {
-    let name = r.name, i = 2;
-    while (seen.has(name.toLowerCase())) name = `${r.name.slice(0, 20)} ${i++}`;
+  for (const r2 of rooms) {
+    let name = r2.name, i = 2;
+    while (seen.has(name.toLowerCase())) name = `${r2.name.slice(0, 20)} ${i++}`;
     seen.add(name.toLowerCase());
-    r.name = name;
+    r2.name = name;
   }
   return {
     name: text(p.name, 40, "Our Dream Home"),
@@ -3109,6 +3676,48 @@ var callClaude = async (call) => {
   }
 };
 
+// server/blob.ts
+function memoryBlobs() {
+  const files2 = /* @__PURE__ */ new Map();
+  return {
+    async put(path, bytes) {
+      files2.set(path, bytes);
+    },
+    async get(path) {
+      return files2.get(path) ?? null;
+    },
+    async remove(...paths) {
+      for (const p of paths) files2.delete(p);
+    }
+  };
+}
+function vercelBlobs(token) {
+  const sdk = () => import("@vercel/blob");
+  return {
+    async put(path, bytes, contentType) {
+      const { put } = await sdk();
+      await put(path, new Blob([bytes], { type: contentType }), {
+        access: "private",
+        token,
+        contentType,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 60
+      });
+    },
+    async get(path) {
+      const { get } = await sdk();
+      const result = await get(path, { access: "private", token, useCache: false });
+      if (!result || result.statusCode !== 200) return null;
+      return new Uint8Array(await new Response(result.stream).arrayBuffer());
+    },
+    async remove(...paths) {
+      const { del } = await sdk();
+      if (paths.length) await del(paths, { token });
+    }
+  };
+}
+
 // server/http.ts
 var DEVICE = /^[a-z0-9-]{16,64}$/;
 var onVercel = (env) => env.VERCEL === "1";
@@ -3119,13 +3728,20 @@ var API_HEADERS = {
   "X-Robots-Tag": "noindex"
 };
 var json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { ...API_HEADERS, ...headers } });
+function publicOrigin(request, env) {
+  if (env.PUBLIC_ORIGIN) return env.PUBLIC_ORIGIN.replace(/\/$/, "");
+  const url = new URL(request.url);
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.host;
+  const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
+  return `${proto}://${host}`;
+}
 var fail = (reason, message, left, status = 200) => json({ ok: false, reason, message, ...left !== void 0 ? { left } : {} }, status);
 var BodyTooLarge = class extends Error {
 };
-async function readBody(request, maxBytes) {
+async function readBytes(request, maxBytes) {
   const declared = Number(request.headers.get("content-length") ?? "0");
   if (declared > maxBytes) throw new BodyTooLarge();
-  if (!request.body) return "";
+  if (!request.body) return new Uint8Array();
   const reader = request.body.getReader();
   const chunks = [];
   let total = 0;
@@ -3141,11 +3757,14 @@ async function readBody(request, maxBytes) {
   }
   const bytes = new Uint8Array(total);
   let at = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, at);
-    at += chunk.byteLength;
+  for (const c of chunks) {
+    bytes.set(c, at);
+    at += c.byteLength;
   }
-  return new TextDecoder().decode(bytes);
+  return bytes;
+}
+async function readBody(request, maxBytes) {
+  return new TextDecoder().decode(await readBytes(request, maxBytes));
 }
 function ipv6Groups(ip) {
   if (!/^[0-9a-f:.]+$/i.test(ip) || !ip.includes(":")) return null;
@@ -3159,9 +3778,9 @@ function ipv6Groups(ip) {
     if (v4.length !== 4 || v4.some((n) => !(n >= 0 && n <= 255))) return null;
     last.push((v4[0] << 8 | v4[1]).toString(16), (v4[2] << 8 | v4[3]).toString(16));
   }
-  const missing = 8 - left.length - right.length;
-  if (tail === void 0 ? missing !== 0 : missing < 1) return null;
-  const groups = [...left, ...Array(tail === void 0 ? 0 : missing).fill("0"), ...right].map((g) => parseInt(g, 16));
+  const missing2 = 8 - left.length - right.length;
+  if (tail === void 0 ? missing2 !== 0 : missing2 < 1) return null;
+  const groups = [...left, ...Array(tail === void 0 ? 0 : missing2).fill("0"), ...right].map((g) => parseInt(g, 16));
   return groups.length === 8 && groups.every((g) => g >= 0 && g <= 65535) ? groups : null;
 }
 function clientIp(request) {
@@ -3192,6 +3811,95 @@ function sameSite(request, env) {
   if (host === own) return true;
   const allowed = [env.PUBLIC_ORIGIN, ...(env.ALLOWED_ORIGINS ?? "").split(",")].map((o) => o?.trim()).filter(Boolean);
   return allowed.includes(origin);
+}
+
+// server/kv.ts
+function memoryKv() {
+  const values = /* @__PURE__ */ new Map();
+  const live = (key) => {
+    const e = values.get(key);
+    if (e && e.until < Date.now()) values.delete(key);
+    return values.get(key);
+  };
+  return {
+    async get(key) {
+      const e = live(key);
+      return typeof e?.v === "string" ? e.v : null;
+    },
+    async set(key, value, opts = {}) {
+      if (opts.onlyIfNew && live(key)) return false;
+      values.set(key, { v: value, until: opts.ttl ? Date.now() + opts.ttl * 1e3 : Infinity });
+      return true;
+    },
+    async del(...keys3) {
+      for (const k of keys3) values.delete(k);
+    },
+    async incr(key) {
+      const e = live(key);
+      const n = (typeof e?.v === "string" ? Number(e.v) : 0) + 1;
+      values.set(key, { v: String(n), until: e?.until ?? Infinity });
+      return n;
+    },
+    async addToSet(key, member) {
+      const e = live(key);
+      const set = e?.v instanceof Set ? e.v : /* @__PURE__ */ new Set();
+      set.add(member);
+      values.set(key, { v: set, until: e?.until ?? Infinity });
+      return set.size;
+    },
+    async counts(...keys3) {
+      return keys3.map((k) => {
+        const e = live(k);
+        return typeof e?.v === "string" ? Number(e.v) || 0 : 0;
+      });
+    }
+  };
+}
+function restKv(url, token, fetcher = fetch) {
+  const run = async (commands) => {
+    const res = await fetcher(`${url.replace(/\/$/, "")}/pipeline`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(commands)
+    });
+    if (!res.ok) throw new Error(`Store answered ${res.status}`);
+    const results = await res.json();
+    const error = results.find((r2) => r2.error);
+    if (error) throw new Error(error.error);
+    return results.map((r2) => r2.result);
+  };
+  return {
+    async get(key) {
+      const [v] = await run([["GET", key]]);
+      return typeof v === "string" ? v : null;
+    },
+    async set(key, value, opts = {}) {
+      const command = ["SET", key, value];
+      if (opts.ttl) command.push("EX", opts.ttl);
+      if (opts.onlyIfNew) command.push("NX");
+      const [v] = await run([command]);
+      return v === "OK";
+    },
+    async del(...keys3) {
+      if (keys3.length) await run([["DEL", ...keys3]]);
+    },
+    async incr(key) {
+      const [v] = await run([["INCR", key]]);
+      return Number(v);
+    },
+    async addToSet(key, member) {
+      const [, size] = await run([
+        ["SADD", key, member],
+        ["SCARD", key]
+      ]);
+      return Number(size);
+    },
+    async counts(...keys3) {
+      if (!keys3.length) return [];
+      const [v] = await run([["MGET", ...keys3]]);
+      return v.map((x) => Number(x ?? 0) || 0);
+    }
+  };
 }
 
 // server/limiter.ts
@@ -3266,7 +3974,7 @@ function restStore(url, token, fetcher = fetch) {
     });
     if (!res.ok) throw new Error(`Limit store answered ${res.status}`);
     const results = await res.json();
-    const error = results.find((r) => r.error);
+    const error = results.find((r2) => r2.error);
     if (error) throw new Error(error.error);
     return results;
   };
@@ -3283,9 +3991,9 @@ function restStore(url, token, fetcher = fetch) {
       return Number(got.result ?? 0) || 0;
     },
     async reserve(budget, counters) {
-      const keys2 = [budget?.key ?? "dh:v1:no-budget", ...counters.map((c) => c.key)];
+      const keys3 = [budget?.key ?? "dh:v1:no-budget", ...counters.map((c) => c.key)];
       const args = [budget ? budget.max : -1, ...counters.flatMap((c) => [c.max, c.ttl])];
-      const [answer] = await run([["EVAL", RESERVE_SCRIPT, keys2.length, ...keys2, ...args]]);
+      const [answer] = await run([["EVAL", RESERVE_SCRIPT, keys3.length, ...keys3, ...args]]);
       const out = answer.result.map(Number);
       if (out[0] === 0) return { ok: true, values: out.slice(1) };
       if (out[0] === 1) return { ok: false, blocked: "budget" };
@@ -3361,6 +4069,20 @@ function budgetFrom(env) {
 
 // server/context.ts
 var sharedMemory = null;
+var sharedKv = null;
+var sharedBlobs = null;
+function kvFor(env, deps) {
+  if (deps.kv) return deps.kv;
+  if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) return restKv(env.KV_REST_API_URL, env.KV_REST_API_TOKEN);
+  if (onVercel(env)) return null;
+  return sharedKv ??= memoryKv();
+}
+function blobsFor(env, deps) {
+  if (deps.blobs) return deps.blobs;
+  if (env.BLOB_READ_WRITE_TOKEN) return vercelBlobs(env.BLOB_READ_WRITE_TOKEN);
+  if (onVercel(env)) return null;
+  return sharedBlobs ??= memoryBlobs();
+}
 function storeFor(env, deps) {
   if (deps.store) return deps.store;
   if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) return restStore(env.KV_REST_API_URL, env.KV_REST_API_TOKEN);
@@ -3448,9 +4170,1106 @@ async function handleDesign(request, env, deps = {}) {
   }
 }
 
+// src/domain/openings.ts
+var r = (min, max, def) => ({ min, max, def });
+var OPENING_SPECS = {
+  door: { label: "Door", where: "any", width: r(70, 120, 90), height: r(200, 240, 215), sill: r(0, 0, 0) },
+  "french-door": { label: "French door", where: "any", width: r(110, 200, 140), height: r(200, 240, 220), sill: r(0, 0, 0) },
+  "sliding-door": { label: "Sliding door", where: "any", width: r(150, 360, 210), height: r(200, 240, 220), sill: r(0, 0, 0) },
+  archway: { label: "Archway", where: "interior", width: r(80, 300, 120), height: r(200, 250, 230), sill: r(0, 0, 0) },
+  window: { label: "Window", where: "exterior", width: r(60, 300, 150), height: r(60, 180, 135), sill: r(60, 150, 90) },
+  "picture-window": { label: "Picture window", where: "exterior", width: r(120, 400, 240), height: r(150, 240, 210), sill: r(10, 60, 30) }
+};
+var OPENING_KIND_LIST = Object.keys(OPENING_SPECS);
+var OPENING_END_MARGIN = 15;
+var OPENING_GAP = 20;
+var OPENING_MAX_TOP = 285;
+var OPENING_GRID = {
+  line: 10,
+  center: 5,
+  width: 10,
+  height: 5,
+  sill: 5
+};
+var STYLES = ["panel", "flush", "glazed", "plain", "divided"];
+var ID4 = /^[a-zA-Z0-9_-]{1,64}$/;
+var snapCenter = (n) => Math.round(n / OPENING_GRID.center) * OPENING_GRID.center;
+var openingLabel = (kind) => OPENING_SPECS[kind]?.label ?? "Opening";
+var inRange = (n, range) => Number.isFinite(n) && n >= range.min && n <= range.max;
+function openingShapeProblems(o) {
+  const spec = OPENING_SPECS[o.kind];
+  if (!spec) return ["Choose a door, window or archway."];
+  const out = [];
+  if (!inRange(o.width, spec.width) || o.width % OPENING_GRID.width)
+    out.push(
+      `${spec.label}s are ${spec.width.min}\u2013${spec.width.max} cm wide, in 10 cm steps.`
+    );
+  if (!inRange(o.height, spec.height) || o.height % OPENING_GRID.height)
+    out.push(
+      `${spec.label}s are ${spec.height.min}\u2013${spec.height.max} cm tall, in 5 cm steps.`
+    );
+  if (!inRange(o.sill, spec.sill) || o.sill % OPENING_GRID.sill)
+    out.push(
+      spec.sill.max === 0 ? `${spec.label}s start at floor level.` : `${spec.label} sills sit ${spec.sill.min}\u2013${spec.sill.max} cm above the floor.`
+    );
+  if (o.sill + o.height > OPENING_MAX_TOP)
+    out.push("Doors and windows must stay below 2.85 m.");
+  if (!Number.isFinite(o.line) || !Number.isFinite(o.center) || o.line % OPENING_GRID.line || o.center % OPENING_GRID.center)
+    out.push("Doors and windows snap to a 5 cm grid along their wall.");
+  if (o.style !== void 0 && !STYLES.includes(o.style) || o.hinge !== void 0 && o.hinge !== "start" && o.hinge !== "end" || o.swing !== void 0 && o.swing !== 1 && o.swing !== -1)
+    out.push("Choose a valid style for this opening.");
+  return out;
+}
+function wallAccepts(wall, kind) {
+  const where = OPENING_SPECS[kind]?.where;
+  return where === "exterior" ? wall.exterior : where === "interior" ? !wall.exterior : !!where;
+}
+function openingClashes(o, others) {
+  return others.filter(
+    (p) => p.id !== o.id && p.axis === o.axis && p.line === o.line && Math.abs(p.center - o.center) < (p.width + o.width) / 2 + OPENING_GAP
+  );
+}
+function placementProblems(o, segments, others) {
+  const wall = segmentAt(segments, o.axis, o.line, o.center);
+  if (!wall)
+    return [
+      {
+        code: "opening-off-wall",
+        message: "Doors and windows must sit on a wall.",
+        blockers: []
+      }
+    ];
+  const out = [];
+  const start = wallStart(wall), end = start + wall.length;
+  if (o.center - o.width / 2 < start + OPENING_END_MARGIN || o.center + o.width / 2 > end - OPENING_END_MARGIN)
+    out.push({
+      code: "opening-margin",
+      message: "Keep doors and windows at least 15 cm from wall corners.",
+      blockers: []
+    });
+  if (!wallAccepts(wall, o.kind))
+    out.push({
+      code: "opening-placement",
+      message: OPENING_SPECS[o.kind]?.where === "exterior" ? `${openingLabel(o.kind)}s go on outside walls.` : `${openingLabel(o.kind)}s join two indoor spaces.`,
+      blockers: []
+    });
+  const hits = openingClashes(o, others);
+  if (hits.length)
+    out.push({
+      code: "opening-overlap",
+      message: "Leave at least 20 cm of wall between doors and windows.",
+      blockers: hits.map((h) => h.id)
+    });
+  return out;
+}
+function openingRect(o) {
+  return o.axis === "x" ? { x: o.center - o.width / 2, z: o.line - 10, w: o.width, d: 20 } : { x: o.line - 10, z: o.center - o.width / 2, w: 20, d: o.width };
+}
+function validateFloorOpenings(project, floorId, issue, ids = idCounts(project)) {
+  const floor = project.floors.find((f) => f.id === floorId);
+  if (!floor?.openings) return;
+  const floorIds = [floor.id];
+  if (floor.openings.length > LIMITS.openingsPerFloor)
+    issue("limit", "A floor holds up to 256 doors and windows.", { floorIds });
+  const segments = deriveWallSegments(floorForGeometry(project, floor.id));
+  for (const [i, o] of floor.openings.entries()) {
+    const source = { kind: "opening", id: o.id, floorId: floor.id };
+    const extra = { source, floorIds, attempted: openingRect(o) };
+    if (typeof o.id !== "string" || !ID4.test(o.id) || (ids.get(o.id) ?? 0) > 1)
+      issue("duplicate-id", "Every component must have a unique, valid ID.", extra);
+    const shape = openingShapeProblems(o);
+    for (const message of shape) issue("opening-shape", message, extra);
+    if (!OPENING_SPECS[o.kind]) continue;
+    for (const p of placementProblems(o, segments, floor.openings.slice(i + 1)))
+      issue(p.code, p.message, {
+        ...extra,
+        blockers: p.blockers.map((id) => ({
+          kind: "opening",
+          id,
+          floorId: floor.id
+        }))
+      });
+  }
+}
+registerValidation((project, issue) => {
+  if (!project.floors.some((f) => f.openings)) return;
+  const ids = idCounts(project);
+  for (const floor of project.floors)
+    if (floor.openings) validateFloorOpenings(project, floor.id, issue, ids);
+});
+function freeCenter(wall, desired, width, others, id = "") {
+  const start = wallStart(wall), end = start + wall.length;
+  const lo = Math.ceil((start + OPENING_END_MARGIN + width / 2) / 5) * 5, hi = Math.floor((end - OPENING_END_MARGIN - width / 2) / 5) * 5;
+  if (lo > hi) return void 0;
+  const axis = wall.axis, line = wallLine(wall);
+  const free = (center) => !openingClashes({ id, axis, line, center, width }, others).length;
+  const first = Math.min(hi, Math.max(lo, snapCenter(desired)));
+  for (let step = 0; first - step >= lo || first + step <= hi; step += 5) {
+    if (first - step >= lo && free(first - step)) return first - step;
+    if (step && first + step <= hi && free(first + step)) return first + step;
+  }
+  return void 0;
+}
+function wallHelpers(floor) {
+  const unitsAt = (w) => wallSamples(w).map(
+    (p) => floor.unitAreas.find((a) => inside(a.bounds, p.x, p.z))?.unitId ?? null
+  );
+  const privateBoundary = (w) => {
+    const [a, b] = unitsAt(w);
+    return a !== null && b !== null && a !== b;
+  };
+  const blocked = (w) => wallSamples(w).some(
+    (p) => floor.voids.some((v) => inside(v.bounds, p.x, p.z))
+  );
+  const roomOwners = (w) => floor.rooms.filter(
+    (room) => wallSamples(w).some((p) => inside(room.bounds, p.x, p.z))
+  ).length;
+  const rank = (a, b) => roomOwners(a) - roomOwners(b) || b.length - a.length || a.id.localeCompare(b.id);
+  return { privateBoundary, blocked, rank };
+}
+function openingSide(o, rect2) {
+  if (o.axis === "x" && o.center > rect2.x && o.center < rect2.x + rect2.w) {
+    if (o.line === rect2.z) return "north";
+    if (o.line === rect2.z + rect2.d) return "south";
+  }
+  if (o.axis === "z" && o.center > rect2.z && o.center < rect2.z + rect2.d) {
+    if (o.line === rect2.x) return "west";
+    if (o.line === rect2.x + rect2.w) return "east";
+  }
+  return null;
+}
+var roomHasPassage = (room, openings) => openings.some((o) => isPassable(o.kind) && openingSide(o, room.bounds));
+function findRoomDoor(floor, segments, room, openings, accept) {
+  const { privateBoundary, blocked, rank } = wallHelpers(floor);
+  const spec = OPENING_SPECS.door;
+  const door = (w, center) => ({
+    kind: "door",
+    axis: w.axis,
+    line: wallLine(w),
+    center,
+    width: spec.width.def,
+    height: spec.height.def,
+    sill: 0
+  });
+  const pick2 = (options) => {
+    for (const w of options.sort(rank)) {
+      const center = freeCenter(w, wallStart(w) + w.length / 2, spec.width.def, openings);
+      if (center !== void 0) return door(w, center);
+    }
+    return void 0;
+  };
+  const doorWall = doorWallFilter(floor);
+  const near = segments.filter(
+    (w) => touches(w, room.bounds) && !blocked(w) && doorWall(room, w)
+  );
+  const interior = near.filter((w) => !w.exterior && !privateBoundary(w) && w.length >= 120);
+  const grid = floorGrid(floor);
+  const index = floor.rooms.findIndex((r2) => r2.id === room.id);
+  let best = null;
+  if (index >= 0)
+    for (const w of interior)
+      for (const desired of doorCenters(w, spec.width.def)) {
+        const center = freeCenter(w, desired, spec.width.def, openings);
+        if (center === void 0) continue;
+        const score = doorScore(grid, floor.rooms, index, w, center, accept);
+        if (score === null) continue;
+        if (!best || score < best.score || score === best.score && rank(w, best.w) < 0)
+          best = { w, center, score };
+        break;
+      }
+  if (best) return door(best.w, best.center);
+  if (accept) return void 0;
+  return pick2(interior) ?? // An attached bathroom never gets its own front door.
+  (floor.elevation === 0 && !ensuiteHost(floor.rooms, room) ? pick2(near.filter((w) => w.exterior && w.length >= 120)) : void 0);
+}
+function repairCirculation(floor, segments, openings, used, notices) {
+  const grid = floorGrid(floor);
+  let next = [...openings];
+  const roomAt = (o) => floor.rooms.filter((r2) => openingSide(o, r2.bounds) !== null);
+  for (const o of openings) {
+    if (!isPassable(o.kind)) continue;
+    const wall = segmentAt(segments, o.axis, o.line, o.center);
+    if (!wall || wall.exterior) continue;
+    if (sideOf(grid, o, 1).kind !== "blocked" && sideOf(grid, o, -1).kind !== "blocked") continue;
+    const rooms = roomAt(o);
+    const without = next.filter((x) => x !== o);
+    const moved = [];
+    for (const room of rooms) {
+      if (roomHasPassage(room, [...without, ...moved])) continue;
+      const door = findRoomDoor(floor, segments, room, [...without, ...moved]);
+      if (door) moved.push({ id: o.id, ...door, ...o.style ? { style: o.style } : {} });
+    }
+    if (!moved.length && rooms.some((room) => !roomHasPassage(room, without))) continue;
+    next = [...without, ...moved];
+    if (rooms[0])
+      notices.push(
+        makeIssue("door-moved", `Moved the door of ${rooms[0].name} so it opens onto open floor, not a wall.`, {
+          severity: "notice",
+          source: { kind: "room", id: rooms[0].id, floorId: floor.id },
+          floorIds: [floor.id]
+        })
+      );
+  }
+  for (let pass = 0; pass < floor.rooms.length; pass++) {
+    const reached = reachableNodes(floor, grid, next);
+    if (!reached) break;
+    const k = floor.rooms.findIndex((_, i) => !reached.has(`r${i}`));
+    if (k < 0) break;
+    const stranded = floor.rooms[k];
+    let door = findRoomDoor(floor, segments, stranded, next, (node) => reached.has(node));
+    if (!door) {
+      const { privateBoundary, blocked } = wallHelpers(floor);
+      const bridge = bridgeDoor(floor, grid, segments, next, reached, k, (w) => !privateBoundary(w) && !blocked(w));
+      if (bridge) {
+        const center = freeCenter(bridge.wall, bridge.center, OPENING_SPECS.door.width.def, next);
+        if (center !== void 0)
+          door = {
+            kind: "door",
+            axis: bridge.wall.axis,
+            line: wallLine(bridge.wall),
+            center,
+            width: OPENING_SPECS.door.width.def,
+            height: OPENING_SPECS.door.height.def,
+            sill: 0
+          };
+      }
+    }
+    if (!door) break;
+    next = [...next, { id: allocateId("opening", used), ...door }];
+  }
+  return next;
+}
+function clampAlong(center, start, end, width) {
+  const lo = start + OPENING_END_MARGIN + width / 2, hi = end - OPENING_END_MARGIN - width / 2;
+  if (lo > hi) return snapCenter((start + end) / 2);
+  return snapCenter(Math.min(hi, Math.max(lo, center)));
+}
+function carryWith(o, side, from, to) {
+  if (side === "north" || side === "south")
+    return {
+      ...o,
+      line: side === "north" ? to.z : to.z + to.d,
+      center: clampAlong(o.center + (to.x - from.x), to.x, to.x + to.w, o.width)
+    };
+  return {
+    ...o,
+    line: side === "west" ? to.x : to.x + to.w,
+    center: clampAlong(o.center + (to.z - from.z), to.z, to.z + to.d, o.width)
+  };
+}
+function balconyEdge(floor, b) {
+  const fp = floor.footprint, rect2 = balconyBounds(floor, b), horizontal = b.edge === "north" || b.edge === "south";
+  return {
+    axis: horizontal ? "x" : "z",
+    line: b.edge === "north" ? fp.z : b.edge === "south" ? fp.z + fp.d : b.edge === "west" ? fp.x : fp.x + fp.w,
+    start: horizontal ? rect2.x : rect2.z,
+    span: horizontal ? rect2.w : rect2.d
+  };
+}
+var structureKey = (g) => JSON.stringify([
+  g.footprint,
+  g.elevation,
+  g.rooms.map((room) => [room.id, room.bounds]),
+  g.unitAreas,
+  g.balconies,
+  g.voids
+]);
+function reconcileFloor(before, after, openings, used, notices) {
+  const segsBefore = deriveWallSegments(before), segsAfter = deriveWallSegments(after);
+  const roomsAfter = new Map(after.rooms.map((room) => [room.id, room]));
+  const roomsBefore = new Set(before.rooms.map((room) => room.id));
+  const moved = before.rooms.filter(
+    (room) => roomsAfter.has(room.id) && !sameRect(room.bounds, roomsAfter.get(room.id).bounds)
+  );
+  const removed = before.rooms.filter((room) => !roomsAfter.has(room.id));
+  const voidsAfter = new Map(after.voids.map((v) => [v.id, v]));
+  const movedVoids = before.voids.filter(
+    (v) => voidsAfter.has(v.id) && !sameRect(v.bounds, voidsAfter.get(v.id).bounds)
+  );
+  const balconies = before.balconies.flatMap((b) => {
+    const next2 = after.balconies.find((a) => a.id === b.id);
+    return next2 && JSON.stringify(next2) !== JSON.stringify(b) ? [[b, next2]] : [];
+  });
+  const footprintMoved = !sameRect(before.footprint, after.footprint);
+  const entries = openings.map((o) => {
+    const wallBefore = segmentAt(segsBefore, o.axis, o.line, o.center);
+    if (isPassable(o.kind) && !wallBefore?.exterior)
+      for (const room of moved) {
+        const side = openingSide(o, room.bounds);
+        if (side)
+          return {
+            o: carryWith(o, side, room.bounds, roomsAfter.get(room.id).bounds),
+            carried: true,
+            orphan: false
+          };
+      }
+    for (const v of movedVoids) {
+      const side = openingSide(o, v.bounds);
+      if (side)
+        return {
+          o: carryWith(o, side, v.bounds, voidsAfter.get(v.id).bounds),
+          carried: true,
+          orphan: false
+        };
+    }
+    if (isPassable(o.kind))
+      for (const [b, next2] of balconies) {
+        const edge = balconyEdge(before, b);
+        if (o.axis !== edge.axis || o.line !== edge.line || o.center - o.width / 2 < edge.start || o.center + o.width / 2 > edge.start + edge.span)
+          continue;
+        const to = balconyEdge(after, next2);
+        const center = next2.edge === b.edge ? o.center - edge.start + to.start : to.start + to.span / 2;
+        return {
+          o: {
+            ...o,
+            axis: to.axis,
+            line: to.line,
+            center: clampAlong(center, to.start, to.start + to.span, o.width)
+          },
+          carried: true,
+          orphan: false
+        };
+      }
+    if (footprintMoved && wallBefore?.exterior) {
+      const side = openingSide(o, before.footprint);
+      if (side)
+        return {
+          o: carryWith(o, side, before.footprint, after.footprint),
+          carried: true,
+          orphan: false
+        };
+    }
+    return {
+      o,
+      carried: false,
+      orphan: removed.some((room) => openingSide(o, room.bounds) !== null)
+    };
+  });
+  const placed = entries.map(() => null);
+  const current = () => placed.filter((o) => !!o);
+  const valid = (o) => !placementProblems(o, segsAfter, current()).length;
+  entries.forEach((e, i) => {
+    if (!e.carried && valid(e.o)) placed[i] = e.o;
+  });
+  entries.forEach((e, i) => {
+    if (placed[i]) return;
+    if (valid(e.o)) {
+      placed[i] = e.o;
+      return;
+    }
+    if (!e.orphan) {
+      const slide = (o) => {
+        for (let step = 5; step <= 100; step += 5)
+          for (const center of [o.center - step, o.center + step]) {
+            const next2 = { ...o, center };
+            if (valid(next2)) return next2;
+          }
+        return void 0;
+      };
+      let fitted = valid(e.o) ? e.o : slide(e.o);
+      if (!fitted && isWindow(e.o.kind))
+        for (let width = e.o.width - 10; !fitted && width >= OPENING_SPECS[e.o.kind].width.min; width -= 10) {
+          const narrower = { ...e.o, width };
+          fitted = valid(narrower) ? narrower : slide(narrower);
+        }
+      if (fitted) {
+        placed[i] = fitted;
+        return;
+      }
+    }
+    notices.push(
+      makeIssue(
+        "opening-removed",
+        `A ${openingLabel(e.o.kind).toLowerCase()} on ${after.name} no longer had room on its wall, so it was removed.`,
+        {
+          severity: "notice",
+          source: { kind: "opening", id: e.o.id, floorId: after.id },
+          floorIds: [after.id]
+        }
+      )
+    );
+  });
+  const next = current();
+  for (const room of after.rooms) {
+    if (roomsBefore.has(room.id) || roomHasPassage(room, next)) continue;
+    const door = findRoomDoor(after, segsAfter, room, next);
+    if (door) next.push({ id: allocateId("opening", used), ...door });
+  }
+  return repairCirculation(after, segsAfter, next, used, notices);
+}
+function reconcileOpenings(before, after, notices) {
+  if (before === after) return after;
+  let used;
+  let changed = false;
+  const floors = after.floors.map((floor) => {
+    if (!floor.openings || !before.floors.some((f) => f.id === floor.id))
+      return floor;
+    const prev = floorForGeometry(before, floor.id), next = floorForGeometry(after, floor.id);
+    if (structureKey(prev) === structureKey(next)) return floor;
+    used ??= componentIds(after);
+    const openings = reconcileFloor(prev, next, floor.openings, used, notices);
+    if (openings.length === floor.openings.length && openings.every((o, i) => o === floor.openings[i]))
+      return floor;
+    changed = true;
+    return { ...floor, openings };
+  });
+  return changed ? { ...after, floors } : after;
+}
+registerReconciler(reconcileOpenings);
+
+// src/domain/ensuiteRules.ts
+function reconcileEnsuites(_before, after, notices) {
+  let changed = false;
+  const floors = after.floors.map((f) => {
+    let touched = false;
+    const rooms = f.rooms.map((r2) => {
+      if (!r2.attachedTo || ensuiteHost(f.rooms, r2)) return r2;
+      touched = true;
+      const { attachedTo: _gone, ...rest } = r2;
+      void _gone;
+      if (r2.kind === "bathroom")
+        notices.push({
+          code: "ensuite-unlinked",
+          severity: "notice",
+          message: `${r2.name} is no longer attached to a bedroom, so it opens like any room.`,
+          source: { kind: "room", id: r2.id, floorId: f.id },
+          blockers: [],
+          floorIds: [f.id],
+          fixes: []
+        });
+      return rest;
+    });
+    if (!touched) return f;
+    changed = true;
+    return { ...f, rooms };
+  });
+  const stagedRooms = after.stagedRooms?.map((s) => {
+    if (!s.room.attachedTo) return s;
+    changed = true;
+    const { attachedTo: _gone, ...room } = s.room;
+    void _gone;
+    return { ...s, room };
+  });
+  if (!changed) return after;
+  return { ...after, floors, ...stagedRooms ? { stagedRooms } : {} };
+}
+registerReconciler(reconcileEnsuites);
+
+// src/domain/migration.ts
+function migrateV1(value) {
+  const obj2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const str3 = (v) => typeof v === "string" && !!v.trim() && v.length <= 80;
+  const num2 = (v) => typeof v === "number" && Number.isFinite(v);
+  const rectangle = (v) => obj2(v) && ["x", "z", "w", "d"].every((k) => num2(v[k]));
+  if (!obj2(value) || value.schemaVersion !== 1 || !str3(value.name) || !obj2(value.plot) || !["width", "depth", "north", "setback"].every(
+    (k) => num2(value.plot[k])
+  ) || !str3(value.plot.road) || typeof value.garden !== "boolean" || typeof value.parking !== "boolean" || !Array.isArray(value.floors) || value.floors.length < 1 || value.floors.length > 3)
+    throw new Error("This is not a supported version 1 Dream-Home project.");
+  const used = /* @__PURE__ */ new Set();
+  const checkId = (id) => {
+    if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,64}$/.test(id) || used.has(id))
+      throw new Error("Legacy components must have unique, valid IDs.");
+    used.add(id);
+  };
+  for (const floor of value.floors) {
+    if (!obj2(floor) || !str3(floor.id) || !str3(floor.name) || !num2(floor.height) || !num2(floor.elevation) || !rectangle(floor.footprint) || typeof floor.balcony !== "boolean" || !Array.isArray(floor.rooms) || floor.rooms.length > 24 || !Array.isArray(floor.voids) || floor.voids.length > 8)
+      throw new Error("The legacy project contains an invalid floor.");
+    checkId(floor.id);
+    for (const r2 of floor.rooms) {
+      if (!obj2(r2) || !str3(r2.id) || !str3(r2.name) || !str3(r2.kind) || !rectangle(r2.bounds))
+        throw new Error("The legacy project contains an invalid room.");
+      checkId(r2.id);
+    }
+    for (const v of floor.voids) {
+      if (!obj2(v) || !str3(v.id) || !["courtyard", "stairs"].includes(v.kind) || !rectangle(v.bounds))
+        throw new Error(
+          "The legacy project contains an invalid reserved space."
+        );
+      checkId(v.id);
+    }
+  }
+  const legacy = value, base = legacy.floors[0];
+  for (const floor of legacy.floors)
+    if (floor.voids.length !== base.voids.length || base.voids.some(
+      (v) => !floor.voids.some(
+        (other) => other.kind === v.kind && sameRect(other.bounds, v.bounds)
+      )
+    ))
+      throw new Error(
+        "Legacy stairs and courtyards must align across every floor."
+      );
+  const unitId = allocateId("unit-home", used);
+  const project = {
+    schemaVersion: 2,
+    name: legacy.name,
+    plot: { ...legacy.plot },
+    garden: legacy.garden,
+    parking: legacy.parking,
+    ...legacy.finish !== void 0 ? { finish: legacy.finish } : {},
+    units: [{ id: unitId, name: "Home", use: "residential" }],
+    verticalSpaces: base.voids.map((v) => ({
+      ...v,
+      bounds: { ...v.bounds },
+      floorIds: legacy.floors.map((f) => f.id),
+      unitId
+    })),
+    floors: legacy.floors.map((f) => {
+      const width = Math.min(360, f.footprint.w);
+      const balconies = f.balcony ? [
+        {
+          id: allocateId("balcony", used),
+          edge: "south",
+          offset: snap((f.footprint.w - width) / 2),
+          width,
+          depth: 150
+        }
+      ] : [];
+      return {
+        id: f.id,
+        name: f.name,
+        elevation: f.elevation,
+        height: f.height,
+        footprint: { ...f.footprint },
+        rooms: f.rooms.map((r2) => ({ ...r2, bounds: { ...r2.bounds }, unitId })),
+        balconies,
+        unitAreas: [{ unitId, bounds: { ...f.footprint } }]
+      };
+    })
+  };
+  return parseProject(JSON.stringify(project));
+}
+
+// src/domain/model.ts
+function roomPresentation(room) {
+  return {
+    ...room.furnishingRotation !== void 0 ? { furnishingRotation: room.furnishingRotation } : {},
+    ...room.floorFinish !== void 0 ? { floorFinish: room.floorFinish } : {},
+    ...room.furnishing !== void 0 ? { furnishing: room.furnishing } : {}
+  };
+}
+function parseProject(text2) {
+  if (new TextEncoder().encode(text2).byteLength > LIMITS.importBytes)
+    throw new Error("Project file is too large (maximum 1 MB).");
+  let value;
+  try {
+    value = JSON.parse(text2);
+  } catch {
+    throw new Error("This file is not valid JSON.");
+  }
+  const obj2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const str3 = (v) => typeof v === "string" && v.length > 0 && v.length <= 80;
+  const num2 = (v) => typeof v === "number" && Number.isFinite(v);
+  const nullableId = (v) => v === null || str3(v);
+  const rectangle = (v) => obj2(v) && ["x", "z", "w", "d"].every((k) => num2(v[k]));
+  const copyRect = (v) => {
+    const r2 = v;
+    return { x: r2.x, z: r2.z, w: r2.w, d: r2.d };
+  };
+  if (obj2(value) && value.schemaVersion === 1) return migrateV1(value);
+  if (!obj2(value) || value.schemaVersion !== 2 || !str3(value.name) || !obj2(value.plot) || !["width", "depth", "north", "setback"].every(
+    (k) => num2(value.plot[k])
+  ) || !str3(value.plot.road) || typeof value.garden !== "boolean" || typeof value.parking !== "boolean" || !Array.isArray(value.floors) || value.floors.length < 1 || value.floors.length > LIMITS.floors || !Array.isArray(value.units) || value.units.length > LIMITS.units || !Array.isArray(value.verticalSpaces) || value.verticalSpaces.length > LIMITS.verticalSpaces)
+    throw new Error("This is not a supported Dream-Home project.");
+  checkProjectExtras(value);
+  for (const unit of value.units)
+    if (!obj2(unit) || !str3(unit.id) || !str3(unit.name) || !str3(unit.use))
+      throw new Error("Project contains an invalid unit.");
+  for (const v of value.verticalSpaces)
+    if (!obj2(v) || !str3(v.id) || !str3(v.kind) || !rectangle(v.bounds) || !nullableId(v.unitId) || !Array.isArray(v.floorIds) || v.floorIds.length > LIMITS.floors || !v.floorIds.every(str3))
+      throw new Error("Project contains an invalid vertical space.");
+  for (const f of value.floors) {
+    if (!obj2(f) || !str3(f.id) || !str3(f.name) || !num2(f.height) || !num2(f.elevation) || !rectangle(f.footprint) || !Array.isArray(f.rooms) || f.rooms.length > LIMITS.roomsPerFloor || !Array.isArray(f.balconies) || f.balconies.length > LIMITS.balconiesPerFloor || !Array.isArray(f.unitAreas) || f.unitAreas.length > LIMITS.units)
+      throw new Error("Project contains an invalid floor.");
+    if ("voids" in f || "balcony" in f)
+      throw new Error(
+        "Version 2 floors must use canonical balconies and project-level vertical spaces."
+      );
+    for (const r2 of f.rooms)
+      if (!obj2(r2) || !str3(r2.id) || !str3(r2.name) || !str3(r2.kind) || !rectangle(r2.bounds) || !nullableId(r2.unitId))
+        throw new Error("Project contains an invalid room.");
+    for (const r2 of f.rooms) checkRoomExtras(r2);
+    checkFloorExtras(f);
+    for (const b of f.balconies)
+      if (!obj2(b) || !str3(b.id) || !str3(b.edge) || !["offset", "width", "depth"].every((k) => num2(b[k])))
+        throw new Error("Project contains an invalid balcony.");
+    for (const a of f.unitAreas)
+      if (!obj2(a) || !str3(a.unitId) || !rectangle(a.bounds))
+        throw new Error("Project contains an invalid unit area.");
+  }
+  if (value.stagedRooms !== void 0) {
+    if (!Array.isArray(value.stagedRooms) || value.stagedRooms.length > LIMITS.stagedRooms)
+      throw new Error("A home can keep at most 48 rooms for later.");
+    for (const entry of value.stagedRooms) {
+      if (!obj2(entry) || !str3(entry.sourceFloorId) || !obj2(entry.room))
+        throw new Error("Project contains an invalid room kept for later.");
+      const r2 = entry.room;
+      if (!str3(r2.id) || !str3(r2.name) || !str3(r2.kind) || !rectangle(r2.bounds) || !nullableId(r2.unitId))
+        throw new Error("Project contains an invalid room kept for later.");
+      checkRoomExtras(r2);
+    }
+  }
+  const raw = value;
+  const copyRoom = (room) => ({
+    id: room.id,
+    name: room.name,
+    kind: room.kind,
+    bounds: copyRect(room.bounds),
+    unitId: room.unitId,
+    ...roomPresentation(room),
+    ...copyRoomExtras(room)
+  });
+  const project = {
+    schemaVersion: 2,
+    name: raw.name,
+    plot: {
+      width: raw.plot.width,
+      depth: raw.plot.depth,
+      north: raw.plot.north,
+      road: raw.plot.road,
+      setback: raw.plot.setback,
+      ...raw.plot.location ? {
+        location: {
+          city: raw.plot.location.city,
+          // Rounded: a city is enough for the sun, and kinder to privacy.
+          lat: Math.round(raw.plot.location.lat * 100) / 100,
+          lon: Math.round(raw.plot.location.lon * 100) / 100
+        }
+      } : {}
+    },
+    garden: raw.garden,
+    parking: raw.parking,
+    ...raw.finish !== void 0 ? { finish: raw.finish } : {},
+    ...copyProjectExtras(raw),
+    ...raw.stagedRooms !== void 0 ? {
+      stagedRooms: raw.stagedRooms.map((entry) => ({
+        room: copyRoom(entry.room),
+        sourceFloorId: entry.sourceFloorId
+      }))
+    } : {},
+    units: raw.units.map((u) => ({ id: u.id, name: u.name, use: u.use })),
+    verticalSpaces: raw.verticalSpaces.map((v) => ({
+      id: v.id,
+      kind: v.kind,
+      bounds: copyRect(v.bounds),
+      floorIds: [...v.floorIds],
+      unitId: v.unitId
+    })),
+    floors: raw.floors.map((f) => ({
+      id: f.id,
+      name: f.name,
+      height: f.height,
+      elevation: f.elevation,
+      footprint: copyRect(f.footprint),
+      rooms: f.rooms.map(copyRoom),
+      balconies: f.balconies.map((b) => ({
+        id: b.id,
+        edge: b.edge,
+        offset: b.offset,
+        width: b.width,
+        depth: b.depth
+      })),
+      unitAreas: f.unitAreas.map((a) => ({
+        unitId: a.unitId,
+        bounds: copyRect(a.bounds)
+      })),
+      ...f.openings !== void 0 ? { openings: f.openings.map(copyOpening) } : {}
+    }))
+  };
+  const errors = validateProject(project);
+  if (errors.length) throw new Error(errors[0]);
+  return project;
+}
+
+// server/bytes.ts
+async function pipe(bytes, stream, limit) {
+  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader();
+  const chunks = [];
+  let total = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel().catch(() => void 0);
+      throw new RangeError("Too big.");
+    }
+    chunks.push(value);
+  }
+  return concat(chunks, total);
+}
+function concat(chunks, total = chunks.reduce((n, c) => n + c.byteLength, 0)) {
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.byteLength;
+  }
+  return out;
+}
+var gzip = (text2) => pipe(new TextEncoder().encode(text2), new CompressionStream("gzip"), Infinity);
+var gunzip = async (bytes, limit) => new TextDecoder().decode(await pipe(bytes, new DecompressionStream("gzip"), limit));
+async function sha256(text2) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text2));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+var BASE62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+function randomId(length = 10) {
+  const out = [];
+  while (out.length < length) {
+    for (const b of crypto.getRandomValues(new Uint8Array(length * 2)))
+      if (b < 248 && out.length < length) out.push(BASE62[b % 62]);
+  }
+  return out.join("");
+}
+function randomToken() {
+  let binary = "";
+  for (const b of crypto.getRandomValues(new Uint8Array(32))) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function sameSecret(a, b) {
+  const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
+// server/share.ts
+var LIMITS2 = {
+  /** A home as JSON, as sent. */
+  projectBytes: 1e6,
+  /** The same home gzipped, as stored. */
+  storedBytes: 2e5,
+  /** The preview picture. */
+  imageBytes: 3e5,
+  imageSide: 1600
+};
+var DAY2 = 24 * 3600;
+var keys2 = (id) => ({
+  meta: `dh:v1:share:${id}`,
+  views: `dh:v1:share:${id}:views`,
+  remixes: `dh:v1:share:${id}:remixes`,
+  reports: `dh:v1:share:${id}:reports`,
+  seen: (what, ip) => `dh:v1:share:${id}:seen:${what}:${ip}`
+});
+var files = (id) => ({ project: `shares/${id}.json.gz`, image: `shares/${id}.jpg` });
+function publicName(name, fallback = "A Dream Home") {
+  const cleaned = name.replace(/\b(?:https?:\/\/|www\.)\S+/gi, "").replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g, "").replace(/\b[\w-]+\.(?:com|in|net|org|io|co|me|ly|app|xyz|info|biz)\b\S*/gi, "").replace(/\+?\d[\d\s().-]{6,}\d/g, (run) => run.replace(/\D/g, "").length >= 8 ? "" : run).replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 60).trim();
+  return cleaned.length >= 2 ? cleaned : fallback;
+}
+function jpegSize(bytes) {
+  if (bytes.length < 4 || bytes[0] !== 255 || bytes[1] !== 216 || bytes[2] !== 255) return null;
+  let i = 2;
+  while (i + 9 < bytes.length) {
+    if (bytes[i] !== 255) return null;
+    const marker = bytes[i + 1];
+    const length = bytes[i + 2] << 8 | bytes[i + 3];
+    const sof = marker >= 192 && marker <= 207 && marker !== 196 && marker !== 200 && marker !== 204;
+    if (sof) return { height: bytes[i + 5] << 8 | bytes[i + 6], width: bytes[i + 7] << 8 | bytes[i + 8] };
+    if (length < 2) return null;
+    i += 2 + length;
+  }
+  return null;
+}
+async function prepare(request) {
+  if (!(request.headers.get("content-type") ?? "").includes("application/json"))
+    return fail("invalid", "Send the home as JSON.", void 0, 415);
+  let text2;
+  try {
+    text2 = await readBody(request, LIMITS2.projectBytes + 2e3);
+  } catch (error) {
+    return error instanceof BodyTooLarge ? fail("too-big", "This home is too big to share.", void 0, 413) : fail("invalid", "That request isn't readable.", void 0, 400);
+  }
+  let body;
+  try {
+    body = JSON.parse(text2);
+  } catch {
+    return fail("invalid", "That request isn't readable.", void 0, 400);
+  }
+  const raw = body.project;
+  if (!raw || typeof raw !== "object" || raw.schemaVersion !== 2)
+    return fail("invalid", "That isn't a Dream Home home.", void 0, 400);
+  let project;
+  try {
+    project = parseProject(JSON.stringify(raw));
+  } catch (error) {
+    return fail("invalid", `That home couldn\u2019t be shared: ${error instanceof Error ? error.message : "it isn\u2019t valid"}`, void 0, 400);
+  }
+  const plot = { ...project.plot };
+  if (body.showCity !== true) delete plot.location;
+  project = { ...project, plot, name: body.showName === false ? "A Dream Home" : publicName(project.name) };
+  const gz = await gzip(JSON.stringify(project));
+  if (gz.byteLength > LIMITS2.storedBytes) return fail("too-big", "This home is too big to share.", void 0, 413);
+  return { project, gz };
+}
+async function readMeta(kv, id) {
+  const text2 = await kv.get(keys2(id).meta);
+  if (!text2) return null;
+  try {
+    return JSON.parse(text2);
+  } catch {
+    return null;
+  }
+}
+var writeMeta = (kv, id, meta) => kv.set(keys2(id).meta, JSON.stringify(meta));
+var bearer = (request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
+var isAdmin = (request, env) => !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 24 && sameSecret(bearer(request), env.ADMIN_TOKEN);
+async function isOwner(request, meta) {
+  const token = bearer(request);
+  return token.length >= 32 && sameSecret(await sha256(token), meta.tokenHash);
+}
+var publicMeta = (id, m) => ({
+  id,
+  name: m.name,
+  createdAt: m.createdAt,
+  updatedAt: m.updatedAt,
+  appVersion: m.appVersion,
+  image: m.image,
+  ...m.remixOf ? { remixOf: m.remixOf } : {}
+});
+var missing = () => fail("missing", "This home isn\u2019t available.", void 0, 404);
+var offline = () => fail("offline", "Sharing isn\u2019t switched on yet.", void 0, 503);
+async function handleShare(request, env, deps, params = []) {
+  const kv = kvFor(env, deps);
+  const blobs = blobsFor(env, deps);
+  if (!kv || !blobs) return offline();
+  const [id, action, ...rest] = params;
+  if (rest.length) return missing();
+  if (id === void 0) {
+    if (request.method !== "POST") return fail("invalid", "Use POST.", void 0, 405);
+    return create(request, env, deps, kv, blobs);
+  }
+  if (!SHARE_ID.test(id)) return missing();
+  const now = (deps.now ?? (() => /* @__PURE__ */ new Date()))().getTime();
+  switch (action) {
+    case void 0: {
+      if (request.method === "GET") return read(request, env, deps, kv, blobs, id);
+      const meta = await readMeta(kv, id);
+      if (!meta) return missing();
+      if (request.method === "DELETE") {
+        if (!(isAdmin(request, env) || await isOwner(request, meta)))
+          return fail("forbidden", "Only the person who shared this home can stop sharing it.", void 0, 403);
+        await blobs.remove(files(id).project, files(id).image).catch(() => void 0);
+        const k = keys2(id);
+        await kv.del(k.meta, k.views, k.remixes, k.reports);
+        return json({ ok: true });
+      }
+      if (request.method !== "PUT") return fail("invalid", "Use GET, PUT or DELETE.", void 0, 405);
+      if (!await isOwner(request, meta))
+        return fail("forbidden", "Only the person who shared this home can update it.", void 0, 403);
+      const limited = await reserve(request, env, deps, "share");
+      if (limited) return limited;
+      const prepared = await prepare(request);
+      if (prepared instanceof Response) return prepared;
+      await blobs.put(files(id).project, prepared.gz, "application/gzip");
+      await writeMeta(kv, id, { ...meta, name: prepared.project.name, updatedAt: now, bytes: prepared.gz.byteLength });
+      return json({ ok: true, id, updatedAt: now });
+    }
+    case "image":
+      return image(request, kv, blobs, id);
+    case "stats": {
+      const meta = await readMeta(kv, id);
+      if (!meta) return missing();
+      if (!await isOwner(request, meta)) return fail("forbidden", "Only the sharer can see this.", void 0, 403);
+      const [views, remixes] = await kv.counts(keys2(id).views, keys2(id).remixes);
+      return json({ ok: true, views, remixes, hidden: meta.hidden });
+    }
+    case "view":
+    case "remix": {
+      if (request.method !== "POST") return fail("invalid", "Use POST.", void 0, 405);
+      const meta = await readMeta(kv, id).catch(() => null);
+      if (!meta || meta.hidden) return missing();
+      const first = await kv.set(keys2(id).seen(action, clientIp(request)), "1", { ttl: action === "view" ? 6 * 3600 : DAY2, onlyIfNew: true }).catch(() => false);
+      if (first) await kv.incr(action === "view" ? keys2(id).views : keys2(id).remixes).catch(() => void 0);
+      return json({ ok: true });
+    }
+    case "report":
+      return report(request, env, deps, kv, id);
+    case "hide":
+    case "unhide": {
+      if (request.method !== "POST") return fail("invalid", "Use POST.", void 0, 405);
+      if (!isAdmin(request, env)) return fail("forbidden", "Admins only.", void 0, 403);
+      const meta = await readMeta(kv, id);
+      if (!meta) return missing();
+      const hidden = action === "hide";
+      await writeMeta(kv, id, { ...meta, hidden, ...hidden ? { hiddenReason: "admin" } : { hiddenReason: void 0 } });
+      if (!hidden) await kv.del(keys2(id).reports);
+      return json({ ok: true, hidden });
+    }
+    default:
+      return missing();
+  }
+}
+async function reserve(request, env, deps, kind) {
+  const device = deviceOf(request);
+  if (!device) return fail("invalid", "Missing device id.", void 0, 400);
+  const limiter = limiterFor(env, deps);
+  if (!limiter) return offline();
+  try {
+    const verdict = await limiter.reserve(kind, device, clientIp(request));
+    if (!verdict.ok) return fail("limit", "That\u2019s a lot of sharing for one day. Try again tomorrow.", 0, 429);
+  } catch (error) {
+    console.error("share limit store", error);
+    return fail("busy", "Sharing is busy right now. Please try again.", void 0, 503);
+  }
+  return null;
+}
+async function create(request, env, deps, kv, blobs) {
+  const limited = await reserve(request, env, deps, "share");
+  if (limited) return limited;
+  const prepared = await prepare(request);
+  if (prepared instanceof Response) return prepared;
+  const now = (deps.now ?? (() => /* @__PURE__ */ new Date()))().getTime();
+  let id = randomId();
+  for (let i = 0; i < 3 && await kv.get(keys2(id).meta); i++) id = randomId();
+  const token = randomToken();
+  await blobs.put(files(id).project, prepared.gz, "application/gzip");
+  const meta = {
+    tokenHash: await sha256(token),
+    name: prepared.project.name,
+    createdAt: now,
+    updatedAt: now,
+    bytes: prepared.gz.byteLength,
+    appVersion: (env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7),
+    image: false,
+    hidden: false,
+    ...prepared.project.remixOf ? { remixOf: prepared.project.remixOf } : {}
+  };
+  await writeMeta(kv, id, meta);
+  return json({ ok: true, id, editToken: token, updatedAt: now }, 201);
+}
+async function read(request, env, deps, kv, blobs, id) {
+  const limiter = limiterFor(env, deps);
+  const verdict = await limiter?.reserve("read", "-", clientIp(request)).catch(() => null);
+  if (verdict && !verdict.ok) return fail("busy", "Too many homes opened from here today.", void 0, 429);
+  const meta = await readMeta(kv, id);
+  if (!meta || meta.hidden) return missing();
+  const gz = await blobs.get(files(id).project);
+  if (!gz) return missing();
+  let project;
+  try {
+    project = await gunzip(gz, LIMITS2.projectBytes);
+  } catch {
+    return missing();
+  }
+  return new Response(`{"ok":true,"meta":${JSON.stringify(publicMeta(id, meta))},"project":${project}}`, {
+    headers: {
+      "Content-Type": "application/json",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex",
+      // A viral link is served by the CDN, not one function call per visitor.
+      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=300"
+    }
+  });
+}
+async function image(request, kv, blobs, id) {
+  const meta = await readMeta(kv, id);
+  if (!meta) return missing();
+  if (request.method === "GET") {
+    if (meta.hidden || !meta.image) return missing();
+    const bytes2 = await blobs.get(files(id).image);
+    if (!bytes2) return missing();
+    return new Response(bytes2, {
+      headers: {
+        "Content-Type": "image/jpeg",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; img-src 'self'; sandbox",
+        "Cache-Control": "public, max-age=300, s-maxage=600"
+      }
+    });
+  }
+  if (request.method !== "PUT") return fail("invalid", "Use GET or PUT.", void 0, 405);
+  if (!await isOwner(request, meta))
+    return fail("forbidden", "Only the person who shared this home can change its picture.", void 0, 403);
+  if (!(request.headers.get("content-type") ?? "").startsWith("image/jpeg"))
+    return fail("invalid", "Send the picture as a JPEG.", void 0, 415);
+  let bytes;
+  try {
+    bytes = await readBytes(request, LIMITS2.imageBytes);
+  } catch {
+    return fail("too-big", "That picture is too big.", void 0, 413);
+  }
+  const size = jpegSize(bytes);
+  if (!size || size.width > LIMITS2.imageSide || size.height > LIMITS2.imageSide || !size.width || !size.height)
+    return fail("invalid", "That picture isn\u2019t a JPEG of a sensible size.", void 0, 400);
+  await blobs.put(files(id).image, bytes, "image/jpeg");
+  await writeMeta(kv, id, { ...meta, image: true });
+  return json({ ok: true });
+}
+async function report(request, env, deps, kv, id) {
+  if (request.method !== "POST") return fail("invalid", "Use POST.", void 0, 405);
+  const limited = await reserve(request, env, deps, "report");
+  if (limited) return limited;
+  const meta = await readMeta(kv, id);
+  if (!meta) return missing();
+  const reporters = await kv.addToSet(keys2(id).reports, clientIp(request));
+  const [views] = await kv.counts(keys2(id).views);
+  if (!meta.hidden && reporters >= 3 && reporters >= views * 0.05) {
+    await writeMeta(kv, id, { ...meta, hidden: true, hiddenReason: "reports" });
+    console.warn(JSON.stringify({ share: id, hidden: "reports", reporters, views }));
+  }
+  return json({ ok: true });
+}
+
+// server/og.ts
+var ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+var escapeHtml = (text2) => text2.replace(/[&<>"']/g, (c) => ESCAPES[c]);
+var DESCRIPTION = "A 3D home designed on Dream Home \u2014 tap to walk inside.";
+function ogPage({ title, url, image: image2 }) {
+  const t = escapeHtml(title), u = escapeHtml(url);
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${t}</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="${DESCRIPTION}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Dream Home">
+<meta property="og:title" content="${t}">
+<meta property="og:description" content="${DESCRIPTION}">
+<meta property="og:url" content="${u}">
+${image2 ? `<meta property="og:image" content="${escapeHtml(image2)}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">` : `<meta name="twitter:card" content="summary">`}
+</head>
+<body><p><a href="${u}">${t}</a></p></body>
+</html>`;
+}
+async function handleOg(request, env, deps) {
+  const id = new URL(request.url).searchParams.get("id") ?? "";
+  const origin = publicOrigin(request, env);
+  let meta = null;
+  if (SHARE_ID.test(id)) {
+    try {
+      const text2 = await kvFor(env, deps)?.get(`dh:v1:share:${id}`);
+      meta = text2 ? JSON.parse(text2) : null;
+    } catch {
+      meta = null;
+    }
+  }
+  const live = meta && !meta.hidden;
+  const html = ogPage({
+    title: live ? `${publicName(meta.name)} \u2014 a home on Dream Home` : "Dream Home \u2014 design your home in 3D",
+    url: live ? `${origin}/h/${id}` : origin,
+    image: live && meta.image ? `${origin}/api/share/${id}/image?v=${meta.updatedAt}` : void 0
+  });
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex",
+      "Cache-Control": "public, max-age=0, s-maxage=300"
+    }
+  });
+}
+
 // server/router.ts
 var ROUTES = {
-  design: handleDesign
+  design: handleDesign,
+  share: handleShare,
+  og: handleOg
 };
 function routeName(url) {
   const fromQuery = url.searchParams.get("__route");
@@ -3458,12 +5277,12 @@ function routeName(url) {
   return raw.replace(/^\/+|\/+$/g, "");
 }
 async function route(request, env, deps = {}) {
-  const name = routeName(new URL(request.url));
+  const [name, ...params] = routeName(new URL(request.url)).split("/");
   const handler = Object.hasOwn(ROUTES, name) ? ROUTES[name] : void 0;
   if (!handler) return fail("missing", "There\u2019s nothing here.", void 0, 404);
   if (!sameSite(request, env)) return fail("forbidden", "This request must come from Dream Home.", void 0, 403);
   try {
-    return await handler(request, env, deps);
+    return await handler(request, env, deps, params);
   } catch (error) {
     console.error("route failed", name, error instanceof Error ? error.message : error);
     return fail("busy", "Something went wrong. Please try again.", void 0, 500);

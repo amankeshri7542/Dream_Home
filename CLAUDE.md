@@ -61,6 +61,11 @@ git diff --check
   - The shelf index lives in `dream-home.homes.v1`, and every home's full copy in IndexedDB.
   - New homes go through `editor.homes.create(project)` (or `addHome` in `src/shell/Dialogs.tsx`, which explains failures), never by overwriting the open home.
 - **Text size:** every font size is written as `calc(Npx * var(--dh-text))` (`--dh-text` is 1, 1.18 or 1.36; see `src/ui/styles/textsize.css`). New CSS must follow the same pattern. Check new screens at 320 px in Extra large.
+- **Share links** (`src/share/`, `server/share.ts`, `server/og.ts`):
+  - `/h/:id` opens `src/share/ViewerApp.tsx`, routed in `src/main.tsx`. It never mounts the editor; Remix writes My homes directly (`src/share/remix.ts`).
+  - The server re-validates every shared home with `parseProject` and stores the cleaned copy, gzipped, in private Vercel Blob. Records live in KV. Edit tokens are stored only as SHA-256 hashes.
+  - Link-preview robots get `/api/og` through a user-agent rewrite in `vercel.json`.
+  - Admin actions are in `docs/SECURITY.md`.
 - **Feedback:** `feedback.pop() / click() / error() / success()` from `src/ui/feedback.ts` play soft generated sounds and vibration. `run()` already calls them for edits.
 - **Server (`server/`):**
   - Every `/api/*` request goes through `server/router.ts`. Handlers take `(request, env, deps)` so tests inject a fake Claude and store.

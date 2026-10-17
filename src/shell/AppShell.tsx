@@ -15,6 +15,7 @@ import { Icon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
 import { DialogHost, ProjectFileInput, addHome } from "./Dialogs";
 import { ImportFromLink, MoveBanner } from "./MoveHomes";
+import { REMIXED_KEY } from "../share/remix";
 import { ConfirmDialog, Notifications } from "./Feedback";
 import { CameraHud, FloorSwitcher, ViewOptions } from "./Hud";
 import { Inspector } from "./Inspector";
@@ -67,6 +68,17 @@ export function AppShell() {
   useEffect(() => {
     if (design && editor.project !== design.project) setDesign(null);
   }, [design, editor.project]);
+  // Just remixed a shared home: welcome them to their own copy.
+  useEffect(() => {
+    try {
+      const from = sessionStorage.getItem(REMIXED_KEY);
+      if (!from) return;
+      sessionStorage.removeItem(REMIXED_KEY);
+      dispatch({ type: "notify", text: `This is your own copy of ${from}. Make it yours!`, tone: "success" });
+    } catch {
+      /* No session storage: no welcome, nothing lost. */
+    }
+  }, [dispatch]);
   const enterWorkspace = useCallback(() => {
     saveSession({ titleDismissed: true });
     setScreen("workspace");
@@ -127,6 +139,28 @@ export function AppShell() {
     },
     [editor.project],
   );
+  // A snapshot for a share link's picture goes to whoever asked, not the photo dialog.
+  const snapshotFor = useRef<((blob: Blob | null) => void) | null>(null);
+  const capture = useCallback(
+    () =>
+      new Promise<Blob | null>((resolve) => {
+        const timer = window.setTimeout(() => {
+          snapshotFor.current = null;
+          resolve(null);
+        }, 6000);
+        snapshotFor.current = (blob) => {
+          window.clearTimeout(timer);
+          snapshotFor.current = null;
+          resolve(blob);
+        };
+        setPhotoRequest((r) => ({ id: (r?.id ?? 0) + 1 }));
+      }),
+    [],
+  );
+  const onPhoto = useCallback((blob: Blob) => {
+    if (snapshotFor.current) snapshotFor.current(blob);
+    else setPhoto(blob);
+  }, []);
   const takePhoto = useCallback(() => {
     setPhotoRequest((r) => ({ id: (r?.id ?? 0) + 1 }));
     if (!reduced) setFlash((n) => n + 1);
@@ -185,7 +219,7 @@ export function AppShell() {
         preview={screen === "gallery" ? preview : null}
         showcase={screen !== "workspace"}
         photoRequest={photoRequest}
-        onPhoto={setPhoto}
+        onPhoto={onPhoto}
         onWalkStatus={onWalkStatus}
       />
       {flash > 0 && <div key={flash} className="dh-photo-flash" aria-hidden />}
@@ -356,6 +390,8 @@ export function AppShell() {
         onHomeOpened={() => {
           if (screen !== "workspace") enterWorkspace();
         }}
+        capture={capture}
+        onTakePhoto={takePhoto}
       />
       <ImportFromLink
         onAdded={() => {

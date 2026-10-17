@@ -5,11 +5,16 @@
 import type { Deps } from "./context";
 import { handleDesign } from "./design";
 import { fail, sameSite, type Env } from "./http";
+import { handleOg } from "./og";
+import { handleShare } from "./share";
 
-type Handler = (request: Request, env: Env, deps: Deps) => Promise<Response>;
+/** `params` are the path parts after the route name: /api/share/abc/image → ["abc", "image"]. */
+type Handler = (request: Request, env: Env, deps: Deps, params: string[]) => Promise<Response>;
 
 const ROUTES: Record<string, Handler> = {
   design: handleDesign,
+  share: handleShare,
+  og: handleOg,
 };
 
 /**
@@ -23,12 +28,12 @@ export function routeName(url: URL): string {
 }
 
 export async function route(request: Request, env: Env, deps: Deps = {}): Promise<Response> {
-  const name = routeName(new URL(request.url));
+  const [name, ...params] = routeName(new URL(request.url)).split("/");
   const handler = Object.hasOwn(ROUTES, name) ? ROUTES[name] : undefined;
   if (!handler) return fail("missing", "There’s nothing here.", undefined, 404);
   if (!sameSite(request, env)) return fail("forbidden", "This request must come from Dream Home.", undefined, 403);
   try {
-    return await handler(request, env, deps);
+    return await handler(request, env, deps, params);
   } catch (error) {
     console.error("route failed", name, error instanceof Error ? error.message : error);
     return fail("busy", "Something went wrong. Please try again.", undefined, 500);

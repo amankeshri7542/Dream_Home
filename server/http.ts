@@ -14,6 +14,9 @@ export type Env = Partial<
     | "PUBLIC_ORIGIN"
     | "ALLOWED_ORIGINS"
     | "VERCEL"
+    | "VERCEL_GIT_COMMIT_SHA"
+    | "BLOB_READ_WRITE_TOKEN"
+    | "ADMIN_TOKEN"
     | `LIMIT_${string}`,
     string
   >
@@ -34,20 +37,26 @@ const API_HEADERS = {
 export const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { ...API_HEADERS, ...headers } });
 
-export type FailReason = "limit" | "busy" | "offline" | "invalid" | "forbidden" | "missing";
+export type FailReason = "limit" | "busy" | "offline" | "invalid" | "forbidden" | "missing" | "too-big";
+
+/** The site's public address: PUBLIC_ORIGIN, or the host this request came to. */
+export function publicOrigin(request: Request, env: Env): string {
+  if (env.PUBLIC_ORIGIN) return env.PUBLIC_ORIGIN.replace(/\/$/, "");
+  const url = new URL(request.url);
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? url.host;
+  const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
+  return `${proto}://${host}`;
+}
 export const fail = (reason: FailReason, message: string, left?: number, status = 200) =>
   json({ ok: false, reason, message, ...(left !== undefined ? { left } : {}) }, status);
 
 export class BodyTooLarge extends Error {}
 
-/**
- * Reads a request body as text, giving up as soon as it passes `maxBytes`
- * (a lying or missing Content-Length can't make the server buffer more).
- */
-export async function readBody(request: Request, maxBytes: number): Promise<string> {
+/** Reads a request body as bytes, giving up as soon as it passes `maxBytes`. */
+export async function readBytes(request: Request, maxBytes: number): Promise<Uint8Array> {
   const declared = Number(request.headers.get("content-length") ?? "0");
   if (declared > maxBytes) throw new BodyTooLarge();
-  if (!request.body) return "";
+  if (!request.body) return new Uint8Array();
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -63,11 +72,19 @@ export async function readBody(request: Request, maxBytes: number): Promise<stri
   }
   const bytes = new Uint8Array(total);
   let at = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, at);
-    at += chunk.byteLength;
+  for (const c of chunks) {
+    bytes.set(c, at);
+    at += c.byteLength;
   }
-  return new TextDecoder().decode(bytes);
+  return bytes;
+}
+
+/**
+ * Reads a request body as text, giving up as soon as it passes `maxBytes`
+ * (a lying or missing Content-Length can't make the server buffer more).
+ */
+export async function readBody(request: Request, maxBytes: number): Promise<string> {
+  return new TextDecoder().decode(await readBytes(request, maxBytes));
 }
 
 /** Expands an IPv6 address to its eight 16-bit groups, or null if it isn't one. */

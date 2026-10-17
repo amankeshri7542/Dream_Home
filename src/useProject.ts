@@ -17,6 +17,7 @@ import {
   isFull,
   loadShelf,
   newHomeId,
+  PROJECT_KEY,
   removeHome,
   saveShelf,
   switchTo,
@@ -27,7 +28,7 @@ import { deviceHomeStore } from "./homes/store";
 
 /** What happened when a home was created, opened or removed. */
 export type HomeOutcome = "ok" | "full" | "unsupported" | "missing" | "failed" | "open";
-const KEY = "dream-home.project.v2";
+const KEY = PROJECT_KEY;
 const LEGACY_KEY = "dream-home.project.v1";
 function load() {
   let stored: string | null = null;

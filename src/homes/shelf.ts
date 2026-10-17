@@ -6,6 +6,8 @@ import { projectStats } from "../domain/model";
 import type { Project } from "../domain/types";
 
 export const SHELF_KEY = "dream-home.homes.v1";
+/** Where the open home is saved (unchanged since v2). */
+export const PROJECT_KEY = "dream-home.project.v2";
 export const MAX_HOMES = 12;
 
 export type HomeEntry = {

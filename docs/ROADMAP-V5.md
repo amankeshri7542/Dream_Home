@@ -4,11 +4,17 @@ The full plan is [`docs/PLAN-V5.md`](PLAN-V5.md). This file tracks progress so
 work can resume after any interruption. Update it at the end of every phase.
 
 ## Resume here
-- **M0a and M0b are done and shipped** (17 Oct 2026). M0a: server router, limiter, Claude pricing, security headers. M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
-- **Next phase: M1.** Live link, Remix and the WhatsApp preview (see the plan).
-- **Owner actions pending:**
-  - Connect **Upstash Redis / Vercel KV** to the Vercel project. Until then the live AI designer is switched off on purpose and the built-in planner is used.
-  - When `home.amankeshri.com` works, set `PUBLIC_ORIGIN` and `VITE_PUBLIC_ORIGIN` to it in Vercel and redeploy. The old address then shows "Move my home".
+- **Done and shipped (17 Oct 2026):**
+  - M0a: server router, limiter, Claude pricing, security headers.
+  - M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
+  - M1: share links, the viewer, Remix, WhatsApp previews, reports, admin.
+- **Next phase: M2.** Photo mode. It also gives share links a render-quality preview picture.
+- **Owner actions pending** (sharing and the AI designer are off on the live site until these are done):
+  1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
+  2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
+  3. Add `ADMIN_TOKEN`: a long random secret, for hiding or deleting reported homes (`docs/SECURITY.md`).
+  4. Redeploy.
+  5. Later, when `home.amankeshri.com` works: set `PUBLIC_ORIGIN` and `VITE_PUBLIC_ORIGIN` to it and redeploy.
 
 ## Decisions
 - **15–17 Oct 2026 (owner):**
@@ -53,10 +59,28 @@ work can resume after any interruption. Update it at the end of every phase.
     - The move stays off until `VITE_PUBLIC_ORIGIN` is set.
   - **`vite:preloadError`:** reloads once (at most once a minute) when a deploy removed old lazy chunks.
 
+- **17 Oct 2026 (M1):**
+  - **Storage:**
+    - Vercel Blob with **private** access, version 2.8.0, pinned (released more than two weeks earlier, `npm audit` clean). It holds the gzipped shared home and its picture. Every read goes through our routes, so we set every header.
+    - KV holds the records: a token hash, name, times, an image flag, hidden, `remixOf`.
+    - View and remix counters are de-duplicated per connection (6 h and 24 h).
+  - **Server validation:**
+    - `schemaVersion` 1 is refused; only homes that `parseProject` accepts are stored, in their normalised form.
+    - Names pass through `publicName`, which removes links, e-mail addresses and phone numbers (runs of 8+ digits; "Plot 12 - 2024" survives) and `<` `>`.
+    - The city is stripped unless `showCity`.
+  - **Reads** are CDN-cacheable (`s-maxage=30, stale-while-revalidate=300`) and never fail because a counter failed.
+  - **Link-preview robots** reach `/api/og` through a `has: user-agent` rewrite. The bot list includes WhatsApp/, facebookexternalhit, Twitterbot, TelegramBot and others, and deliberately leaves out in-app-browser tokens (Line, Snapchat, Instagram) so real people never get the bare page.
+  - **The preview picture** is a 1200 × 630 JPEG built in the browser: the current 3D view (through the existing photo capture), with the floor plan as fallback, plus the name band. It must stay ≤ 290 KB, and the server checks the JPEG header and size. M2 will swap in a render-quality picture.
+  - **Two-step sharing:** *Make my link*, then *Send link* / *Copy* / *WhatsApp*. Phones only open the share sheet straight after a tap, and making the link takes a few seconds.
+  - **The viewer** is a separate lazy root (`src/main.tsx`). Both App and ViewerApp are lazy, so link openers never download the editor: viewer 3 KB plus the shared chunks. It renders the Scene directly, as the scene lab does, with Walkthrough and the Joystick for walking.
+  - **Remix** writes My homes directly: the visitor's current home is copied to IndexedDB first. It refuses on a full shelf, asks before replacing on one-home browsers, and nudges in-app-browser users to open the link in Chrome or Safari.
+  - `plot.location`, `vastu` and `remixOf` were added to the schema and whitelists now, because the server validates shares. New looks wait for M3, and the viewer parses leniently.
+  - **Dev fix:** Vite now ignores `node_modules.nosync`. Stray file events there were forcing full page reloads every 30 seconds.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
-- [ ] **M1** Live link + Remix + WhatsApp preview
+- [x] **M1** Live link + Remix + WhatsApp preview
 - [ ] **M2** Photo mode
 - [ ] **M3** Regional looks + lived-in details
 - [ ] **M4** "My dream home" reel
@@ -99,3 +123,18 @@ work can resume after any interruption. Update it at the end of every phase.
     - Unit: shelf, store, move links (including the zip bomb), edited-time wording, preferences.
     - `tests/homes.spec.ts`, 7 browser tests: the first screen; My homes create/open/reload/delete; My homes on the first screen; Extra large at 320 px with no overflow; the sounds switch; arrival by link; a broken link.
     - Existing specs were updated for the new wording.
+- **2026-10-17, M1:**
+  - **Server:**
+    - `server/share.ts`: create, read, update, delete, picture, stats, view, remix, report, hide and unhide.
+    - `server/og.ts`, `server/kv.ts`, `server/blob.ts`, `server/bytes.ts`.
+    - The router passes path parts on to handlers.
+  - **Client:**
+    - `src/share/`: `ShareSheet`, `ViewerApp`, `api`, `links`, `poster`, `remix`, `parse`.
+    - The top-bar Share opens the new sheet; plan drawings moved under "More ways to share".
+    - `src/ui/BrandMark.tsx` was split out so the viewer doesn't pull in the editor.
+  - **Tests:**
+    - `server/share.test.ts` (10): create/read/update/delete, token rules, fuzzed invalid homes, size and type caps, cross-site refusal, name cleaning, view and remix counting, reports and admin, JPEG checks, OG escaping, fail-closed without storage, and the helpers.
+    - `src/share/share.test.ts` (7).
+    - `tests/share.spec.ts` (5 browser tests): the whole share, view and remix loop across two browsers; update and stop; offline; previews; report.
+    - `tests/preview/security.spec.ts`: the viewer under the production CSP.
+  - **Docs:** `docs/SECURITY.md` (with the admin runbook).

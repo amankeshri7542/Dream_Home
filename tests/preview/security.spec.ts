@@ -3,6 +3,7 @@
 // Content-Security-Policy, and the bundled API must hold its line.
 import { expect, test, type Page } from "@playwright/test";
 import { SECURITY_HEADERS } from "../../server/headers";
+import { createPreset } from "../../src/domain/model";
 import { freshVisit, homeAction, renderedModel } from "../support/dreamHome";
 
 /** Collects CSP violations reported by the page and by the console. */
@@ -60,4 +61,24 @@ test("the policy really blocks outside hosts (and the watcher sees it)", async (
   await page.evaluate(() => fetch("https://example.com/").catch(() => undefined));
   await expect.poll(() => violations.length).toBeGreaterThan(0);
   expect(violations.join("\n")).toMatch(/connect-src/);
+});
+
+test("a share link opens the viewer cleanly under the policy", async ({ page, request }) => {
+  const created = await request.post("/api/share", {
+    headers: { "x-dream-device": "device-0123456789abcdef", "content-type": "application/json" },
+    data: { project: createPreset("compact") },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = await created.json();
+  const violations = await watchCsp(page);
+  const response = await page.goto(`/h/${id}`);
+  expect(response?.headers()["content-security-policy"]).toBe(SECURITY_HEADERS["Content-Security-Policy"]);
+  await expect(page.getByRole("button", { name: "Remix this home" })).toBeVisible();
+  await renderedModel(page);
+  await page.getByRole("button", { name: "Walk inside" }).click();
+  await page.waitForTimeout(1500);
+  expect(violations).toEqual([]);
+  // Link-preview robots get their own little page from the bundled API.
+  const og = await request.get(`/api/og?id=${id}`);
+  expect(await og.text()).toContain('property="og:url"');
 });

@@ -39,6 +39,7 @@ export type Overlay =
   | "shortcuts"
   | "photo"
   | "homes"
+  | "plans"
   | null;
 export type Notice = {
   id: number;

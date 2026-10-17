@@ -317,6 +317,8 @@ M0 ships in two phases:
 - `git diff --exit-code api/` is clean after `build:api`.
 
 ### M1: Live link + Remix + WhatsApp preview
+✅ Done on 17 Oct 2026 (see the roadmap log).
+
 **Goal:** the shareable core of the viral loop.
 
 **Experience:**
@@ -749,4 +751,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a and M0b shipped on 17 Oct 2026. The next phase is **M1** (live link + Remix + WhatsApp preview).
+- M0a, M0b and M1 shipped on 17 Oct 2026. The next phase is **M2** (Photo mode).

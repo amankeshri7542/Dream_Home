@@ -113,8 +113,13 @@ fails if it's stale).
    morning to a glowing night, take a photo to save or share, and walk inside
    with the keyboard, a thumb joystick or tap-to-walk; stairs take you between
    floors.
-8. **Share** — a dimensioned plan image per floor, or the whole project as an
-   editable JSON backup.
+8. **Share** — *Make my link* gives a short link (`/h/…`) anyone can open on
+   any phone to see the home turning in golden light, walk inside it, and
+   **Remix this home** into their own My homes (their own home stays safe).
+   WhatsApp and other apps show a preview picture and the home's name. The
+   sharer sees views and remixes, can *Update link* after changes and *Stop
+   sharing* at any time; the city and name are private unless chosen. Plan
+   images per floor and a JSON backup are under *More ways to share*.
 
 **Never lost:** every change can be undone (with a description of what it
 undid), removing a room asks first and offers *Set aside instead*, and the

@@ -161,6 +161,8 @@ export type Project = {
     north: number;
     road: EdgeSide;
     setback: number;
+    /** Where the plot is, for a true sun path (rounded; never shared unless asked). */
+    location?: PlotLocation;
   };
   floors: Floor[];
   units: Unit[];
@@ -172,7 +174,12 @@ export type Project = {
   style?: ProjectStyle;
   site?: SiteStyle;
   landscape?: LandscapeItem[];
+  /** Show Vastu tips for this home (opt-in). */
+  vastu?: boolean;
+  /** The shared home this one was remixed from. */
+  remixOf?: { id: string; name: string };
 };
+export type PlotLocation = { city: string; lat: number; lon: number };
 export type Wall = {
   id: string;
   axis: "x" | "z";
