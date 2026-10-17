@@ -29,6 +29,7 @@ import { VIBE_LOOK } from "./planner";
 
 const MARGIN = 60;
 const BALCONY_DEPTH = 150;
+const BALCONY_WIDTH = 360;
 /** The road runs along the plan's south edge; `north` turns the compass to match the facing. */
 const NORTH_FOR_FACING: Record<EdgeSide, number> = { south: 0, east: 90, north: 180, west: 270 };
 
@@ -398,11 +399,22 @@ function buildOnce(brief: HomeBrief, plan: HomePlan): Attempt | null {
   for (const kind of plan.garden) p = attempt(p, (q) => addLandscape(q, kind)).project;
   if (brief.musts.includes("balcony")) {
     const upper = p.floors[1];
-    const r = upper
-      ? attempt(p, (q) => addBalcony(q, upper.id, { edge: "south", depth: BALCONY_DEPTH }))
-      : { project: p, ok: false };
-    p = r.project;
-    if (!r.ok)
+    // The balcony door takes the window on the wall it opens from, so try it
+    // centred, then flush to either end, and keep the first that leaves every
+    // essential (a bedroom's only window, above all) in place.
+    let added = false;
+    if (upper) {
+      const span = upper.footprint.w;
+      const width = Math.min(BALCONY_WIDTH, span);
+      for (const offset of [undefined, 0, span - width]) {
+        const r = addBalcony(p, upper.id, { edge: "south", depth: BALCONY_DEPTH, width, offset });
+        if (!r.ok || failing(r.project) > failing(p)) continue;
+        p = r.project;
+        added = true;
+        break;
+      }
+    }
+    if (!added)
       notes.push(
         upper
           ? "There wasn’t room for a balcony on this plot."

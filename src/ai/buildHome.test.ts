@@ -32,6 +32,7 @@ describe("AI home engine", () => {
     ["a Kerala home", { vibe: "kerala" }],
     ["a Chettinad home with a courtyard-sized plot", { plot: { w: 40, d: 60 }, vibe: "chettinad" }],
     ["a Bengaluru home", { vibe: "bengaluru-contemporary", musts: ["garden", "parking"] }],
+    ["a 30×50 home with a garden and a balcony", { musts: ["garden", "balcony"] }],
   ];
   for (const [label, over] of cases)
     for (const variant of [0, 1])
@@ -50,6 +51,24 @@ describe("AI home engine", () => {
         // Rooms are styled, not left on defaults.
         expect(p.floors.flatMap((f) => f.rooms).some((r) => r.wallColor && r.floorMaterial && r.furniture?.length)).toBe(true);
       });
+
+  // The balcony door takes the window on the wall it opens from, so a balcony
+  // must never cost a bedroom its only window, whatever the plot, look or facing.
+  for (const [label, over] of cases)
+    it(`keeps every essential with a balcony: ${label}`, () => {
+      for (const facing of ["south", "east", "north", "west"] as const)
+        for (const variant of [0, 1]) {
+          const b = brief({ ...over, facing });
+          b.musts = [...new Set([...b.musts, "balcony" as const])];
+          const built = buildHome(b, plannerHomePlan(b, variant))!;
+          const at = `${facing} facing, look ${variant + 1}`;
+          expect(validateProject(built.project), at).toEqual([]);
+          expect(homeChecks(built.project).essentials.filter((c) => !c.done).map((c) => c.id), at).toEqual([]);
+          // A balcony, or a note that says why there isn't one.
+          const balcony = built.project.floors.some((f) => f.balconies.length > 0);
+          expect(balcony || built.notes.some((n) => n.includes("balcony")), at).toBe(true);
+        }
+    });
 
   it("knows the regional looks: the brief, the prompt and the planner", () => {
     for (const vibe of REGIONAL_VIBES) {
