@@ -6,6 +6,7 @@ import type { Deps } from "./context";
 import { handleDesign } from "./design";
 import { fail, sameSite, type Env } from "./http";
 import { handleOg } from "./og";
+import { handlePlanRead } from "./planRead";
 import { handleShare } from "./share";
 
 /** `params` are the path parts after the route name: /api/share/abc/image → ["abc", "image"]. */
@@ -15,6 +16,7 @@ const ROUTES: Record<string, Handler> = {
   design: handleDesign,
   share: handleShare,
   og: handleOg,
+  "plan-read": handlePlanRead,
 };
 
 /**

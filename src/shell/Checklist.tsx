@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { homeChecks, type HomeCheck } from "../domain/advice";
 import { BADGES, BADGE_ORDER, homeScore, type BadgeId } from "../insights/score";
 import { useVastuScore } from "../insights/useVastu";
+// The score ring, parts and badges are styled here (the Vastu card loads lazily).
+import "../insights/insights.css";
 import { linkFor } from "../share/links";
 import { addRoomWindow, ensureRoomDoor } from "../domain/openingCommands";
 import { addAttachedBathroom } from "../domain/ensuite";

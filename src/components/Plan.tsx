@@ -58,6 +58,10 @@ type Props = {
     key: number;
   } | null;
   onTrayDropHandled?: () => void;
+  /** A photo of the builder's plan, faint under the rooms (cm on the plot). */
+  underlay?: { href: string; rect: Rect } | null;
+  /** Rooms to check: drawn with a dashed outline. */
+  unsure?: string[];
 };
 type Gesture = {
   pointerId: number;
@@ -99,6 +103,8 @@ export default function Plan({
   trayDrag,
   trayDrop,
   onTrayDropHandled,
+  underlay,
+  unsure,
 }: Props) {
   const activeTool = tool ?? (editable ? "move" : "select");
   const svg = useRef<SVGSVGElement>(null);
@@ -596,6 +602,19 @@ export default function Plan({
           stroke="#66746f"
           strokeWidth="12"
         />
+        {underlay && (
+          <image
+            className="plan-underlay"
+            href={underlay.href}
+            x={underlay.rect.x}
+            y={underlay.rect.z}
+            width={underlay.rect.w}
+            height={underlay.rect.d}
+            preserveAspectRatio="none"
+            opacity={0.55}
+            pointerEvents="none"
+          />
+        )}
         {displayFloor.unitAreas.map((area) => (
           <rect
             key={area.unitId}
@@ -644,9 +663,11 @@ export default function Plan({
                 width={b.w - 10}
                 height={b.d - 10}
                 fill={ROOM_META[room.kind].color}
-                fillOpacity={active ? 0.94 : 0.72}
-                stroke={outline}
-                strokeWidth={active ? 3 * pixel : pixel}
+                // Over a plan photo, rooms are light enough to see the drawing through.
+                fillOpacity={underlay ? (active ? 0.6 : 0.32) : active ? 0.94 : 0.72}
+                stroke={unsure?.includes(room.id) && !active ? "#b5562f" : outline}
+                strokeWidth={active ? 3 * pixel : unsure?.includes(room.id) ? 2.5 * pixel : pixel}
+                strokeDasharray={unsure?.includes(room.id) ? `${8 * pixel} ${5 * pixel}` : undefined}
               />
               {view.furnishings !== false && (
                 <RoomDetailsPlan room={room} walls={walls} />

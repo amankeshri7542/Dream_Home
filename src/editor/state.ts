@@ -41,6 +41,7 @@ export type Overlay =
   | "photo"
   | "reel"
   | "sunlight"
+  | "plan"
   | "homes"
   | "plans"
   | null;

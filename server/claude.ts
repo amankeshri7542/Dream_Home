@@ -15,8 +15,11 @@ const PRICES: Array<[prefix: string, price: Price]> = [
 const UNKNOWN: Price = { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 };
 export const priceOf = (model: string) => PRICES.find(([prefix]) => model.startsWith(prefix))?.[1] ?? UNKNOWN;
 
-/** Server-side refusal fallback ("default") is offered for the Opus line only; Haiku rejects it. */
-export const supportsFallback = (model: string) => model.startsWith("claude-opus-");
+/**
+ * Server-side refusal fallback ("default") is offered for the Opus line and
+ * Sonnet 5.5 on the Claude API; Haiku rejects it.
+ */
+export const supportsFallback = (model: string) => model.startsWith("claude-opus-") || model.startsWith("claude-sonnet-5-5");
 
 export type DesignCall = {
   apiKey: string;
@@ -26,6 +29,11 @@ export type DesignCall = {
   schema: Record<string, unknown>;
   effort: "low" | "medium" | "high";
   maxTokens: number;
+  /** A picture to read alongside the text (a builder's plan). Never logged. */
+  image?: { mediaType: "image/jpeg"; data: string };
+  /** What the call is for, in the usage log. */
+  label?: string;
+  timeoutMs?: number;
 };
 export type DesignAnswer = { json: unknown; costUsd: number; model: string };
 export type CallClaude = (call: DesignCall) => Promise<DesignAnswer>;
@@ -68,7 +76,7 @@ export function costOf(usage: Usage, model: string = MODEL): number {
 
 export const callClaude: CallClaude = async (call) => {
   const model = call.model ?? MODEL;
-  const client = new Anthropic({ apiKey: call.apiKey, timeout: 100_000, maxRetries: 1 });
+  const client = new Anthropic({ apiKey: call.apiKey, timeout: call.timeoutMs ?? 100_000, maxRetries: 1 });
   const message = await client.beta.messages
     .stream({
       model,
@@ -78,12 +86,23 @@ export const callClaude: CallClaude = async (call) => {
       thinking: { type: "adaptive", display: "omitted" },
       output_config: { effort: call.effort, format: { type: "json_schema", schema: call.schema } },
       system: [{ type: "text", text: call.system, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: call.user }],
+      messages: [
+        {
+          role: "user",
+          content: call.image
+            ? [
+                { type: "image", source: { type: "base64", media_type: call.image.mediaType, data: call.image.data } },
+                { type: "text", text: call.user },
+              ]
+            : call.user,
+        },
+      ],
     })
     .finalMessage();
   const costUsd = costOf(message.usage as Usage, message.model ?? model);
   console.info(
-    JSON.stringify({ ai: "design", model: message.model, stop: message.stop_reason, usage: message.usage, costUsd }),
+    // Usage only: never the prompt, the picture or the answer.
+    JSON.stringify({ ai: call.label ?? "design", model: message.model, stop: message.stop_reason, usage: message.usage, costUsd }),
   );
   if (message.stop_reason === "refusal") throw new DesignRefused("The designer declined this brief.", costUsd);
   if (message.stop_reason === "max_tokens") throw new BilledError("The design ran out of room.", costUsd);

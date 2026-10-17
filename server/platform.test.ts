@@ -254,7 +254,8 @@ describe("pricing", () => {
   it("asks for the server-side fallback only where it exists", () => {
     expect(supportsFallback("claude-opus-5-5")).toBe(true);
     expect(supportsFallback("claude-haiku-5-5")).toBe(false);
-    expect(supportsFallback("claude-sonnet-5-5")).toBe(false);
+    expect(supportsFallback("claude-sonnet-5-5")).toBe(true);
+    expect(supportsFallback("claude-sonnet-5")).toBe(false);
   });
 });
 

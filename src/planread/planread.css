@@ -1,0 +1,67 @@
+/* Starting from a builder's plan: the photo step and the check panel in the 2D plan. */
+@layer components {
+  .dh-plan-preview {
+    display: block;
+    width: 100%;
+    max-height: 42vh;
+    object-fit: contain;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-2);
+  }
+  .dh-plan-tips {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 14px 16px 14px 34px;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-0);
+    font-size: calc(15px * var(--dh-text));
+  }
+  .dh-plan-pick {
+    display: grid;
+    gap: 8px;
+  }
+  .dh-plan-check {
+    display: grid;
+    gap: 10px;
+    max-height: 46%;
+    overflow-y: auto;
+    padding: 12px 14px 14px;
+    border-top: 1px solid var(--dh-line);
+    background: var(--dh-glass-solid);
+  }
+  .dh-plan-check-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .dh-plan-check h3 {
+    margin: 0;
+    font-size: calc(17px * var(--dh-text));
+  }
+  .dh-plan-check .dh-note {
+    margin: 0;
+  }
+  .dh-plan-row {
+    display: grid;
+    gap: 6px;
+  }
+  .dh-plan-row > span {
+    color: var(--dh-ink-muted);
+    font-size: calc(13px * var(--dh-text));
+    font-weight: 700;
+  }
+  .dh-plan-row .dh-photo-chips button[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+  }
+  .dh-plan-row .dh-photo-chips button.is-ok {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-color: var(--dh-sage-600);
+    color: var(--dh-sage-700, var(--dh-ink));
+  }
+}

@@ -602,6 +602,14 @@ Crossfades between shots happen in the compositor.
 - Update `environment.test.ts` only for the location path.
 
 ### M6: Start from your builder's plan (photo/PDF → 3D, user confirms)
+✅ Done on 17 Oct 2026 (see the roadmap log). Differences from the text below:
+- the photo goes up as a raw JPEG (not base64 JSON), and the server checks its header and size before anything else;
+- the road is picked as a side of the drawing (Bottom, Top, Left, Right); plot chips are in feet; city and facing are set later in the plot sheet;
+- a room that still breaks a rule after snapping is left out and named in a note, so the check screen always opens a valid home;
+- the Add room entry reads "Have your builder's plan? Start a new home from a photo of it", because it starts a new home;
+- "Make it 3D" doesn't force a look; rooms get the designer auto layouts and automatic doors and windows;
+- the doors and stairs the reading lists aren't used yet (automatic doors give every room a working door; stairs get a note).
+
 **Goal:** "my builder gave me this plan" → my 3D home in about a minute.
 
 **Experience:**
@@ -781,4 +789,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b, M1, M2, M3, M4 and M5 shipped on 17 Oct 2026. The next phase is **M6** (builder's plan → 3D).
+- M0a, M0b, M1, M2, M3, M4, M5 and M6 shipped on 17 Oct 2026. The next phase is **M7** (talk to your home: voice and chat, Haiku 5.5).

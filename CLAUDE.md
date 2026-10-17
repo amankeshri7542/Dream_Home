@@ -81,6 +81,12 @@ git diff --check
   - `plot.north` turns plan-up to true north; `plot.compass` says it's real (the homeowner set which way the home faces: `setFacing` in `src/domain/place.ts`). Until then sides are Front/Back/Left/Right (`sideName`).
   - With `plot.location`, `lighting(hour, north, place)` uses the real sun (`solar.ts`, NOAA, IST); the day comes from the editor's `season` as `sunDate`.
   - `sunHours`/`sunTips` (`sun.ts`), `vastuReport` (`vastu.ts`, loaded lazily via `useVastuScore`) and `homeScore` (`score.ts`) are pure. The Home score ring is `src/shell/Checklist.tsx`.
+- **Builder's plan** (`src/planread/`, `server/planRead.ts`):
+  - `reading.ts` is shared by server and app: the schema, limits and `sanitizeReading`, which both sides run (a label that names a room beats the model's guess). Add new Indian labels to its `LABELS` table.
+  - `planFromReading` (pure) turns a reading into a valid home through `finalizeEdit`; it never returns an invalid one (rooms that break a rule are left out and named in `notes`).
+  - The photo is prepared on the phone (`image.ts`: upright, EXIF-free JPEG ≤ 2000 px, ≤ 1.5 MB) and posted raw to `/api/plan-read`. It is never stored or logged; on the plan it is an object URL in `AppShell`'s `planCheck`, for this session only.
+  - The check screen is the Edit in 2D lens with `Plan`'s `underlay` and `unsure` props; `PlanStart` and `PlanCheck` load lazily.
+  - Tests mock `/api/plan-read` (see `tests/planread.spec.ts`).
 - **Looks and lived-in details:**
   - A look's outside bundle, room palettes, garden and card text live in `src/domain/looks.ts`; card pictures are `public/looks/<id>.webp` (`npm run looks:thumbs`).
   - Lived-in details are derived, never saved: `livedInDecor` (`src/domain/livedIn.ts`) places them, `src/scene/life/LivedIn.tsx` draws them in Explore and Photo only. Their models come from `public/models/life.glb` (sizes in `src/domain/catalog/life.json`).
@@ -112,11 +118,12 @@ git diff --check
 | `src/photo/` | Photo mode: the studio, the offline renderer, framing, moods |
 | `src/reel/` | the "My dream home" reel: studio, shot list, filming, compositor, music, QR end card |
 | `src/insights/` | cities, the real sun, sunlight per room, Vastu, the Home score and badges; the Sunlight sheet and pickers |
+| `src/planread/` | start from a builder's plan: the reading, its sanitiser, reading → home, photo prep, the two steps and the check panel |
 | `src/share/` | share sheet, the `/h/:id` viewer, Remix |
 | `src/homes/` | My homes shelf (IndexedDB) and move links |
 | `src/ai/` | the AI brief, prompts, strict schemas, built-in planner, plan → home builder |
 | `src/onboarding/` | title screen, template gallery, tour |
-| `server/` | the API (router, design, limiter, Claude caller, headers); bundled to `api/index.js` |
+| `server/` | the API (router, design, plan reading, share, limiter, Claude caller, headers); bundled to `api/index.js` |
 | `scripts/blender/`, `scripts/assets/` | the Blender furniture kit and asset build (`npm run assets`, needs Blender) |
 | `tests/` | Playwright specs (`tests/preview/` runs against the production build) |
 | `docs/` | plans, roadmaps, verification notes, screenshots |

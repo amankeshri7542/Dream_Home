@@ -107,3 +107,36 @@ test("a share link opens the viewer cleanly under the policy", async ({ page, re
   const og = await request.get(`/api/og?id=${id}`);
   expect(await og.text()).toContain('property="og:url"');
 });
+
+test("starting from a builder's plan works under the policy, and its API holds its line", async ({ page, request }) => {
+  // Without an AI key the reading is off, so this never calls Claude.
+  const device = { "x-dream-device": "device-0123456789abcdef" };
+  expect(await (await request.get("/api/plan-read", { headers: device })).json()).toMatchObject({ ok: true, live: false });
+  const notJpeg = await request.post("/api/plan-read", { headers: { ...device, "content-type": "text/plain" }, data: "hello" });
+  expect(notJpeg.status()).toBe(415);
+
+  const violations = await watchCsp(page);
+  await page.addInitScript(() => localStorage.setItem("dream-home.preferences.v1", JSON.stringify({ language: "en", unit: "ft", tourSeen: true })));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Upload my builder’s plan" }).click();
+  const photo = await page.evaluate(async () => {
+    const canvas = new OffscreenCanvas(800, 600);
+    const g = canvas.getContext("2d")!;
+    g.fillStyle = "#fbfaf4";
+    g.fillRect(0, 0, 800, 600);
+    g.lineWidth = 6;
+    g.strokeRect(100, 60, 600, 480);
+    const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.9 });
+    return [...new Uint8Array(await blob.arrayBuffer())];
+  });
+  await page.getByLabel("Choose a picture of your plan").setInputFiles({ name: "plan.jpg", mimeType: "image/jpeg", buffer: Buffer.from(photo) });
+  await expect(page.getByRole("img", { name: "Your plan photo" })).toBeVisible();
+  await page.getByRole("button", { name: "Next: my plot" }).click();
+  await expect(page.getByText("Plan reading isn’t available right now.")).toBeVisible();
+  await page.getByRole("button", { name: "Draw it yourself" }).click();
+  // The photo lies under the plan as a blob: image.
+  await expect(page.getByRole("region", { name: "Check your plan" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Floor plan" }).locator("image.plan-underlay")).toHaveAttribute("href", /^blob:/);
+  await page.waitForTimeout(500);
+  expect(violations).toEqual([]);
+});

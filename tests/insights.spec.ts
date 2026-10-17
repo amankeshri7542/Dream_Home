@@ -137,6 +137,8 @@ test("Home score: a ring with a number, and a regional look earns a badge withou
   await seed(page, createPreset("compact"));
   const ring = page.getByRole("button", { name: /^Home score \d+\. Home checklist/ });
   await expect(ring.locator("svg text")).toHaveText(/^\d+$/);
+  // Styled from the first load (its styles once lived only in a lazy chunk): a small ring, not a black disc.
+  expect(await ring.locator("svg").evaluate((svg) => [svg.getBoundingClientRect().width, getComputedStyle(svg.querySelector("circle")!).fill])).toEqual([34, "none"]);
   await ring.click();
   const card = page.getByRole("dialog", { name: "Home score" });
   await expect(card.getByRole("heading", { name: /^Home score \d+$/ })).toBeVisible();

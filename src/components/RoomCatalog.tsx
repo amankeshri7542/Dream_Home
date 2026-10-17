@@ -45,7 +45,10 @@ export default function RoomCatalog({
   onUse,
   onExpand,
   initialPick,
+  onFromPlan,
 }: {
+  /** Start a new home from a photo of the builder's plan. */
+  onFromPlan?: () => void;
   /** Open on this room (e.g. "kitchen" from a checklist hint). */
   initialPick?: string | null;
   project: Project;
@@ -185,6 +188,11 @@ export default function RoomCatalog({
             ? "Choose a room. We’ll find a clear place for it. You can move or resize it afterwards."
             : "Add outdoor space or an opening through the building. Each one can be moved and resized."}
         </p>
+        {tab === "rooms" && onFromPlan && (
+          <button type="button" className="dh-title-link catalog-from-plan" onClick={onFromPlan}>
+            Have your builder’s plan? Start a new home from a photo of it
+          </button>
+        )}
         {floor.unitAreas.length > 0 && (
           <label className="select-label">
             Add to

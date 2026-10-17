@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Plan from "../components/Plan";
 import type { TrayPointer } from "../components/RoomTray";
 import { transformComponent } from "../domain/model";
@@ -15,7 +16,14 @@ export function PlanLens({
   trayDrag,
   trayDrop,
   onTrayDropHandled,
+  underlay,
+  unsure,
+  check,
 }: {
+  /** Checking a builder's plan: its photo under the rooms, the rooms to check, and the panel. */
+  underlay?: { href: string; rect: Rect } | null;
+  unsure?: string[];
+  check?: ReactNode;
   desktop: boolean;
   primary: boolean;
   trayDrag: TrayPointer | null;
@@ -144,8 +152,11 @@ export function PlanLens({
           trayDrag={trayDrag}
           trayDrop={trayDrop}
           onTrayDropHandled={onTrayDropHandled}
+          underlay={underlay}
+          unsure={unsure}
         />
       </div>
+      {check}
     </section>
   );
 }

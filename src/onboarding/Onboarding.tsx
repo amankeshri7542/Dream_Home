@@ -46,6 +46,7 @@ export function TitleScreen({
   onOpen,
   onAi,
   onHomes,
+  onPlan,
 }: {
   onContinue: () => void;
   onNew: () => void;
@@ -53,6 +54,8 @@ export function TitleScreen({
   onOpen: () => void;
   onAi: () => void;
   onHomes: () => void;
+  /** Start from a photo of the builder's plan. */
+  onPlan: () => void;
 }) {
   const editor = useEditor();
   const { project, hasSavedProject, error, recovery, homes } = editor;
@@ -131,6 +134,10 @@ export function TitleScreen({
             </button>
           </>
         )}
+        <button type="button" className="dh-title-link" onClick={onPlan}>
+          <Icon.floorPlan size={18} aria-hidden />
+          Upload my builder’s plan
+        </button>
         <button type="button" className="dh-title-link" onClick={onOpen}>
           <Icon.upload size={18} aria-hidden />
           Open a saved file

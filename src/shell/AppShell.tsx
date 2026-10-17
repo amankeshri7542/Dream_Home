@@ -34,6 +34,8 @@ import { Inspector } from "./Inspector";
 import { HomeBar } from "./HomeBar";
 import { ActionDock, ModeHint } from "./Palette";
 import { ChecklistPill } from "./Checklist";
+import { photoRect, type PlanCheckState } from "../planread/check";
+import type { PlanStartResult } from "../planread/PlanStart";
 import { SelectionAnnouncer } from "./Announcer";
 import { useBackButton } from "./useBackButton";
 import { PlanLens } from "./PlanLens";
@@ -45,6 +47,9 @@ import "./studio/studio.css";
 // The video studio loads only when opened (the filming itself loads later still).
 const ReelStudio = lazy(() => import("../reel/ReelStudio"));
 const SunlightSheet = lazy(() => import("../insights/SunlightSheet"));
+// Starting from a builder's plan: the steps load when chosen.
+const PlanStart = lazy(() => import("../planread/PlanStart"));
+const PlanCheck = lazy(() => import("../planread/PlanCheck"));
 
 /** The construction reveal: five steps, then "Ta-da!" for a moment. */
 const REVEAL_MS = 5 * 520 + 1800;
@@ -60,7 +65,7 @@ export function AppShell() {
   const onWebGL = useCallback((value: boolean) => setNoWebGL(value), []);
   const [trayDrag, setTrayDrag] = useState<TrayPointer | null>(null);
   const [trayDrop, setTrayDrop] = useState<(TrayPointer & { key: number }) | null>(null);
-  const [screen, setScreen] = useState<"title" | "gallery" | "ai" | "workspace">(() =>
+  const [screen, setScreen] = useState<"title" | "gallery" | "ai" | "plan" | "workspace">(() =>
     loadSession().titleDismissed ? "workspace" : "title",
   );
   const [preview, setPreview] = useState<Project | null>(null);
@@ -140,6 +145,47 @@ export function AppShell() {
    * undoable replacement.
    */
   const adopt = (project: Project, label: string) => addHome(editor, project, label);
+  // Checking a home read from a builder's plan: its photo under the 2D plan.
+  const [planCheck, setPlanCheck] = useState<PlanCheckState | null>(null);
+  const planOpen = screen === "plan" || (screen === "workspace" && state.overlay === "plan");
+  const closePlanStart = () => (screen === "plan" ? setScreen("title") : dispatch({ type: "overlay", overlay: null }));
+  const fromPlan = async ({ plan, photo, read }: PlanStartResult) => {
+    if (!(await adopt(plan.project, read ? "Start from my builder’s plan" : "Draw my builder’s plan"))) return URL.revokeObjectURL(photo.url);
+    if (planCheck) URL.revokeObjectURL(planCheck.url);
+    dispatch({ type: "overlay", overlay: null });
+    enterWorkspace();
+    dispatch({ type: "choose-floor", floor: plan.project.floors[0].id });
+    dispatch({ type: "lens", open: true });
+    setPlanCheck({
+      homeId: "",
+      url: photo.url,
+      rect: plan.photo,
+      offset: { x: 0, z: 0 },
+      scale: 1,
+      show: true,
+      unsure: plan.unsure,
+      notes: read
+        ? plan.notes
+        : ["Your photo is under the plan. Add rooms with Add room, then move and resize them to match the drawing.", ...plan.notes],
+    });
+  };
+  // The check belongs to the home it was made for.
+  useEffect(() => {
+    if (planCheck && !planCheck.homeId) setPlanCheck({ ...planCheck, homeId: editor.homes.activeId });
+    else if (planCheck && planCheck.homeId !== editor.homes.activeId) {
+      URL.revokeObjectURL(planCheck.url);
+      setPlanCheck(null);
+    }
+  }, [planCheck, editor.homes.activeId]);
+  const makeIt3d = () => {
+    if (planCheck) URL.revokeObjectURL(planCheck.url);
+    setPlanCheck(null);
+    dispatch({ type: "lens", open: false });
+    dispatch({ type: "select", target: null });
+    dispatch({ type: "camera", command: { type: "fit", subject: "home", view: "hero" } });
+    constructionReveal();
+    dispatch({ type: "notify", text: "Your plan is in 3D! Tap any room to make it yours.", tone: "success" });
+  };
   const [photoRequest, setPhotoRequest] = useState<{ id: number } | null>(null);
   const [walkStatus, setWalkStatus] = useState("");
   const [walkFloorId, setWalkFloorId] = useState<string | undefined>();
@@ -236,6 +282,7 @@ export function AppShell() {
   const layerOpen =
     screen === "gallery" ||
     screen === "ai" ||
+    screen === "plan" ||
     (screen === "workspace" &&
       (!!state.selection ||
         !!state.panel ||
@@ -247,7 +294,7 @@ export function AppShell() {
         state.mode === "outside" ||
         explore));
   useBackButton(layerOpen, () => {
-    if (screen === "gallery" || screen === "ai") setScreen("title");
+    if (screen === "gallery" || screen === "ai" || screen === "plan") setScreen("title");
     else if (state.overlay) dispatch({ type: "overlay", overlay: null });
     else if (explore && state.explore !== "walk")
       dispatch({ type: "set-mode", mode: state.lastEditMode });
@@ -353,6 +400,15 @@ export function AppShell() {
         trayDrag={trayDrag}
         trayDrop={trayDrop}
         onTrayDropHandled={() => setTrayDrop(null)}
+        underlay={planCheck?.show ? { href: planCheck.url, rect: photoRect(planCheck) } : null}
+        unsure={planCheck?.unsure}
+        check={
+          planCheck && (
+            <Suspense fallback={null}>
+              <PlanCheck check={planCheck} onChange={setPlanCheck} onDone={makeIt3d} />
+            </Suspense>
+          )
+        }
       />
       {screen === "title" && (
         <TitleScreen
@@ -371,6 +427,7 @@ export function AppShell() {
           onOpen={() => fileInput.current?.click()}
           onAi={() => setScreen("ai")}
           onHomes={() => dispatch({ type: "overlay", overlay: "homes" })}
+          onPlan={() => setScreen("plan")}
         />
       )}
       {screen === "ai" && (
@@ -384,6 +441,11 @@ export function AppShell() {
             showDesign(result);
           }}
         />
+      )}
+      {planOpen && (
+        <Suspense fallback={null}>
+          <PlanStart onBack={closePlanStart} onDone={(result) => void fromPlan(result)} />
+        </Suspense>
       )}
       {screen === "gallery" && (
         <TemplateGallery

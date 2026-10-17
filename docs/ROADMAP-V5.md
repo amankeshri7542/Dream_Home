@@ -12,9 +12,11 @@ work can resume after any interruption. Update it at the end of every phase.
   - M3: six regional looks with new materials and rendered look cards; lived-in details (everyday and Diwali) with idle motion.
   - M4: the "My dream home" reel: a 15 s (or 8 s) vertical MP4 with a title, room names, generated music and an end card with the link and a QR code.
   - M5: a city and the way the home faces give the real sun; the Sunlight sheet (seasons, hour slider, sun per room, tips); opt-in Vastu with swaps; the Home score ring and badges, on the reel's end card and shared homes too.
-- **Next phase: M6.** Builder's plan → 3D. The first-load budget is tight: about 5.5 KB gzip left of the +30 KB (keep plan reading lazy).
+  - M6: start from a photo of the builder's plan. The AI (Sonnet 5.5) reads it once per device; the homeowner checks the rooms over the faint photo on the 2D plan, fixes them, then "Make it 3D". "Draw it yourself" works with no reading at all.
+- **Next phase: M7.** Talk to your home (voice and chat, Haiku 5.5). First-load budget: about 4.6 KB gzip left of the +30 KB, so keep the chat sheet and speech code lazy.
+- **Live check still owed for M6:** one real plan reading with a sample plan (about ₹4–8), only with the owner's go-ahead. Reading also needs KV connected (below); until then the live site offers "Draw it yourself" only.
 - **Waiting for the owner's review (not merged):** three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist).
-- **Owner actions pending** (sharing and the AI designer are off on the live site until these are done):
+- **Owner actions pending** (sharing, the AI designer and plan reading are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
   3. Add `ADMIN_TOKEN`: a long random secret, for hiding or deleting reported homes (`docs/SECURITY.md`).
@@ -166,6 +168,30 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Size:** first-load JS is +24.5 KB gzip over v4 in all (measured by adding up every chunk the editor loads: 194.9 → 219.4 KB). M5's share is about 6.7 KB, after making Vastu's rules and card, the city list and picker, the plot sheet's place section and the Sunlight sheet lazy.
   - **Not done (as planned or for later):** windows shaded by walls and neighbours; photo and reel moods keep their clock hours (with a city, a winter "Golden hour" at 5:15 pm is nearly sunset).
 
+- **17 Oct 2026 (M6):**
+  - **Images only.** A PDF is a screenshot (the first step says so). The phone prepares the photo: `createImageBitmap` turns it upright from its EXIF orientation, a canvas redraws it (dropping EXIF and GPS), at most 2000 px on the long edge, as a JPEG stepped from quality 0.85 down to 0.45 until it is ≤ 1.5 MB.
+  - **The wire is the raw JPEG** (`POST /api/plan-read`, `content-type: image/jpeg`), not base64 in JSON: a third smaller, and the server reads the JPEG header with the share picture's `jpegSize` (long edge ≤ 2000, short edge ≥ 200) before anything else. Plot size and road side ride in the query, each checked by a strict pattern.
+  - **The reading:** Sonnet 5.5 (`PLAN_MODEL` overrides it), an image block plus the strict JSON schema, adaptive thinking at effort `medium`, `max_tokens` 12 000 (thinking and answer share it; only what's used is billed), 55 s timeout. The system prompt says text in the image is data, never instructions. The answer's `outlineBox` is in fractions of the photo and rooms are fractions of that box, as planned.
+  - **Server-side refusal fallback is now also sent to Sonnet 5.5** (the claude-api skill lists it for `claude-sonnet-5-5`); Haiku still rejects it.
+  - **Limits:** one reading per device for life and three per connection a day (`plan` in the limiter), refunded when the call fails. It is paid work, so a Vercel deployment without KV refuses it (`live: false`) and the app offers "Draw it yourself".
+  - **Nothing about the plan is kept or logged.** The usage log holds only the label, model, tokens and cost; a failed call logs only the error's name. A unit test checks that neither the plan's text nor the picture's bytes reach the log.
+  - **The sanitiser** (`sanitizeReading`) runs on the server and again in the app: every number clamped to 0–1, at most 30 rooms, 40 doors and 4 stairs, `<` `>` stripped, and a label that clearly names a room (English or Hindi: Pooja, Puja, Mandir, पूजा, Toilet, WC, शौचालय, Rasoi, रसोई, बैठक, शयन…) beats the type the model guessed.
+  - **`planFromReading`:**
+    - The house takes the drawing's own size when it gives dimensions, else the photo's proportions fitted to 92% of the buildable area; if it is bigger than the plot it is scaled to fit, with a note.
+    - It sits centred across the plot and at the back, 60 cm from the edge, away from the road.
+    - Rooms snap to the 10 cm grid, the surest and biggest first; an overlap is cut back to the shared edge from the side that loses least; anything under 120 cm is dropped and named in a note.
+    - Open areas (parking, porch, balcony, lawn) and stairs aren't rooms: stairs get a note to add a second floor.
+    - Names are plain ("Main bedroom", "Bedroom 1", "Pooja room", "Store"); a pooja room is a utility room named so, which is how Vastu finds it.
+    - It builds on a one-floor bungalow blueprint and runs `finalizeEdit`, so doors and windows are automatic and every room gets the designer auto layouts. If a room still breaks a rule, it is left out and named; the plan's "best partial result plus issues" became this, so the check screen always opens a valid home.
+  - **The road is a side of the drawing** (Bottom, Top, Left, Right), which is how a homeowner sees it; Left and Right swap the plot's width and depth. Plot chips are in feet, as plots are sold. City and facing are set afterwards in the plot sheet, not in these two steps, to keep them short.
+  - **The check screen is the existing Edit in 2D lens.** The photo lies under the plan at 55% (rooms at 32% fill), aligned from `outlineBox`. Nudge buttons move it 20 cm, Smaller and Bigger scale it 3%, and it can be hidden. A room the reading was unsure of (below 0.6) is outlined dashed in terracotta, with "Check {room}". Eight big type chips relabel the selected room. Every change is an ordinary edit with Undo. The photo is an object URL for this session only: it is never saved, and leaving that home drops it.
+  - **"Make it 3D"** closes the lens, fits the hero camera and runs the construction reveal: "Your plan is in 3D! Tap any room to make it yours." No look is forced; the Looks tab is a tap away.
+  - **Entries:** the first screen's "Upload my builder's plan", and on Add room's rooms tab "Have your builder's plan? Start a new home from a photo of it". The plan's "From a plan photo" is named for what it does, since it starts a new home. The open home stays on My homes.
+  - **"Draw it yourself"** is always there, and becomes the main button when no reading is left or reading is off. It opens the same check screen over an empty house in the drawing's proportions.
+  - **Size:** M6 adds 0.9 KB gzip to the first load (measured the same way on the M5 and M6 builds: 224.7 → 225.6 KB). The two-step sheet (6.3 KB) and the check panel load only when used.
+  - **Found on the way (live since M5):** the Home score ring showed as a black disc on a first load. Its styles were only in the lazy Vastu chunk; `Checklist.tsx` now imports `insights.css`, and the score test checks the ring's size and fill.
+  - **Not done (for later):** the doors the reading lists are not used yet (automatic doors give every room a working door); stairs and a second floor from the drawing; metres on the plot chips.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
@@ -174,7 +200,7 @@ work can resume after any interruption. Update it at the end of every phase.
 - [x] **M3** Regional looks + lived-in details
 - [x] **M4** "My dream home" reel
 - [x] **M5** Location, real sun, sunlight, Vastu, Home score
-- [ ] **M6** Builder's plan → 3D
+- [x] **M6** Builder's plan → 3D
 - [ ] **M7** Talk to your home (voice + chat, Haiku 5.5)
 - [ ] **M8** PWA, usability and security review, docs
 
@@ -282,3 +308,19 @@ work can resume after any interruption. Update it at the end of every phase.
     - Unit: `src/insights/insights.test.ts` (26): solar positions, noon times, day lengths and time zones; the real-sun lighting; the 212 cities; the compass (facing round trips, side names, saving the flag); the city command; sun per room (only lit windows, east mornings, hot west afternoons, north windows in June only, phrases, tips); every Vastu rule on fixture homes and real swaps; the score's parts, its drop with a missing essential, and each badge. `openings.test.ts` now checks road and compass wall names.
     - Browser: `tests/insights.spec.ts` (6): a city by its old name and the facing from the plot sheet, both undone; the Sunlight sheet's season and hour moving the real sun (higher at 9 am in June), Sunset, the hour put back and 0 idle frames; the sheet from a room on a phone, fitting; Vastu opted in from the Home score with a swap and Undo; the score ring, and a Kerala look earning a badge after the look's Undo message; a shared home showing its city and score. `DH_SHOTS=1` writes `docs/screenshots/insights/`. `modes.spec.ts` follows the dialog's new name.
   - **Gate:** typecheck, lint, 877 unit tests, build, `check:api`, 124 browser tests (36 screenshot- and timing-only skipped), 4 preview tests (now also the Sunlight sheet and city search under the CSP), `diff --check`: all green.
+- **2026-10-17, M6:**
+  - **New `src/planread/`:**
+    - `reading.ts` (shared by server and app): the reading's type, limits, strict schema, Indian label table, `sanitizeReading`, the system prompt.
+    - `fromReading.ts`: `planFromReading` (reading + plot → a valid home, the photo's place, unsure rooms, notes).
+    - `image.ts` (upright, EXIF-free JPEG ≤ 2000 px, ≤ 1.5 MB), `api.ts` (readings left, read), `check.ts` (the check screen's state and the photo's place).
+    - `PlanStart.tsx` (lazy: photo, plot and road, reading, Draw it yourself), `PlanCheck.tsx` (lazy: the check panel) and `planread.css`.
+  - **New `server/planRead.ts`:** `GET` answers whether reading is live and how many are left; `POST` takes the raw JPEG. Routed at `/api/plan-read`.
+  - **Changed:**
+    - `server/claude.ts` (an optional image block, a log label and timeout; fallback for Sonnet 5.5), `server/http.ts` (`PLAN_MODEL`), `server/router.ts`, `api/index.js`, `.env.example`.
+    - `Plan.tsx` (a photo underlay and dashed unsure rooms), `PlanLens.tsx` (passes them, plus the check panel), `AppShell.tsx` (the plan screen and overlay, adopting the home, the check, Make it 3D), the editor's `"plan"` overlay, the first screen and Add room links.
+    - `Checklist.tsx` imports the score ring's styles (the M5 black-ring fix).
+  - **Tests:**
+    - Unit: `src/planread/planread.test.ts` (9): five synthetic readings (clean, overlapping, rotated with the road on the right, no dimensions, Hindi labels with wrong types) each become a valid home inside the setbacks, rooms on the grid and ≥ 120 cm, with no room lacking a door, no blocked door and no unreachable room (the v4 circulation checks); the photo lands on the house; an oversized drawing is scaled with a note; an empty reading gives a house to draw in; the sanitiser clamps, caps and strips; 22 label cases. `server/planRead.test.ts` (6): Sonnet with the image and schema, answers clamped; one free reading per device, refunded on failure; PNGs, 1.6 MB, 4000 px, 100 px and bad device ids refused without calling Claude; offline without a key, fail-closed on Vercel without KV, off with `AI_DISABLED`; nothing of the plan logged; routing and the same-site check. `platform.test.ts` follows the fallback change.
+    - Browser: `tests/planread.spec.ts` (3, with `/api/plan-read` mocked): from the first screen on a phone, a drawn plan photo is sent as a JPEG with the plot and road, the eight rooms come back over the photo, the photo is nudged, the unsure pooja room is checked, retyped and undone, and Make it 3D renders the home on My homes; with the free reading used, Draw it yourself over the photo with no request sent; a failed reading says what to do, Draw it yourself works, from Add room, and the open home stays on the shelf. `insights.spec.ts` checks the score ring is styled on a first load. `DH_SHOTS=1` writes `docs/screenshots/planread/`.
+    - `tests/preview/security.spec.ts`: the plan flow under the production CSP (the lazy chunks and the `blob:` photo under the plan) and the bundled `/api/plan-read` answering offline and refusing a non-JPEG.
+  - **Gate:** typecheck, lint, 892 unit tests, build, `check:api`, 127 browser tests (36 screenshot- and timing-only skipped), 5 preview tests (now also the plan flow under the CSP), `diff --check`: all green.
