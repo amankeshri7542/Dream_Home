@@ -107,6 +107,23 @@ test("on a phone: type a change, it happens as one undo step, and Undo brings it
   if (shots) await page.screenshot({ path: "docs/screenshots/talk/room-390.png" });
 });
 
+test("the Talk button is a round button above the Home bar on phones and tablets", async ({ page }) => {
+  await mockCommand(page);
+  await seed(page, createPreset("family"));
+  for (const size of [mobile, { width: 768, height: 1024 }]) {
+    await page.setViewportSize(size);
+    const talk = page.getByRole("button", { name: "Talk to your home" });
+    await expect(talk).toBeVisible();
+    const box = (await talk.boundingBox())!;
+    const bar = (await page.getByRole("toolbar", { name: "Home actions" }).boundingBox())!;
+    expect([Math.round(box.width), Math.round(box.height)]).toEqual([64, 64]);
+    expect(box.y + box.height).toBeLessThanOrEqual(bar.y);
+    expect(box.x + box.width).toBeGreaterThan(size.width - 80);
+    await noOverflow(page);
+    if (shots) await page.screenshot({ path: `docs/screenshots/talk/button-${size.width}.png` });
+  }
+});
+
 test("removing a room asks first; No changes nothing, Yes removes it", async ({ page }) => {
   await mockCommand(page);
   await seed(page, createPreset("family"));

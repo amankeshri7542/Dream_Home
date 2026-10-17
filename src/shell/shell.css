@@ -1127,7 +1127,7 @@
     .dh-app.is-compact .dh-bottom {
       align-items: center;
     }
-    .dh-app.is-compact .dh-bottom > :not(.dh-mode-hint) {
+    .dh-app.is-compact .dh-bottom > :not(.dh-mode-hint, .dh-talk-btn) {
       width: min(560px, 100%);
     }
   }
