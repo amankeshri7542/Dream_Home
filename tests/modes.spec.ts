@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createPreset } from "../src/domain/model";
+import { addBalcony, createPreset } from "../src/domain/model";
 import { createStarter } from "../src/domain/starters";
 import { TEMPLATES, buildTemplate } from "../src/onboarding/templates";
 import { dock, enterRoom, homeAction, mobile, roomTab, seed, stored, tool, undo } from "./support/dreamHome";
@@ -147,6 +147,33 @@ test("the home checklist reports progress and offers fixes", async ({ page }) =>
   await party.getByRole("button", { name: "Explore my home" }).click();
   await expect(page.getByRole("button", { name: "Back to home" })).toBeVisible();
   await expect(party).toHaveCount(0);
+});
+
+test("the checklist hands over a balcony whose door took a bedroom's window", async ({ page }) => {
+  const home = buildTemplate(TEMPLATES.find((t) => t.id === "villa")!, { plot: { w: 30, d: 50 }, floors: 2 });
+  if (!home.ok) throw new Error(home.error);
+  const result = addBalcony(home.project, home.project.floors[1].id, {
+    edge: "south",
+    width: 300,
+    depth: 120,
+    offset: 250,
+  });
+  if (!result.ok) throw new Error(result.error);
+  await seed(page, result.project);
+  await page.getByRole("button", { name: /Home checklist, \d+ of \d+ done/ }).click();
+  await page
+    .getByRole("dialog", { name: "Home checklist" })
+    .getByRole("listitem")
+    .filter({ hasText: "Every bedroom has a window" })
+    .getByRole("button", { name: "Fix it" })
+    .click();
+  await expect(page.getByRole("status", { name: "Notifications" })).toContainText("Slide the balcony");
+  // The balcony is selected, ready to slide; sliding it to the corner gives the window back.
+  const position = page.getByLabel("Position along this side", { exact: true });
+  await position.fill("0");
+  await position.press("Enter");
+  await expect.poll(async () => (await stored(page)).floors[1].balconies[0].offset).toBe(0);
+  await expect(page.getByRole("dialog", { name: "Ready to move in!" })).toBeVisible();
 });
 
 test("a bedroom gets its own attached bathroom from the action bar, and undo removes it", async ({ page }) => {

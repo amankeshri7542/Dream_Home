@@ -4,7 +4,8 @@ import { homeChecks, isCommercialOnly, projectAdvisories } from "./advice";
 import { addFurniture } from "./furnitureCommands";
 import { customizeLandscape } from "./landscapeCommands";
 import { setRoomWallColor, setStyle } from "./materials";
-import { createPreset, deriveWalls } from "./model";
+import { TEMPLATES, buildTemplate } from "../onboarding/templates";
+import { addBalcony, createPreset, deriveWalls, updateBalcony } from "./model";
 import { floorForGeometry } from "./core";
 import {
   addOpening,
@@ -100,6 +101,31 @@ describe("advisories", () => {
       projectAdvisories(fixed, "f1").some((i) => i.code === "room-no-window" && i.source?.id === "Bedroom"),
     ).toBe(false);
   });
+  it("offers to move a room whose outside walls have no space left for a window", () => {
+    let p = ok(customizeOpenings(sketch(), "f1"));
+    const bedroom = p.floors[1].rooms[0];
+    for (const o of p.floors[1].openings!.filter(
+      (o) => o.kind === "window" && openingSide(o, bedroom.bounds),
+    ))
+      p = ok(removeOpening(p, "f1", o.id));
+    // Doors along both outside walls leave no stretch long enough for a window.
+    for (const [axis, center] of [["x", 600], ["x", 750], ["x", 900], ["z", 600], ["z", 800]] as const)
+      p = ok(addOpening(p, "f1", "door", { axis, line: 500, center }));
+    expect(addRoomWindow(p, "f1", "Bedroom").ok).toBe(false);
+    const warning = projectAdvisories(p, "f1").find(
+      (i) => i.code === "room-no-window" && i.source?.id === "Bedroom",
+    )!;
+    expect(warning.fixes).toEqual([
+      { kind: "edit", target: { kind: "room", id: "Bedroom", floorId: "f1" }, focus: "move" },
+    ]);
+  });
+  it("only offers a window where one fits", () => {
+    for (const { project } of corpus())
+      for (const issue of projectAdvisories(project))
+        for (const fix of issue.fixes)
+          if (fix.kind === "add-window")
+            expect(addRoomWindow(project, fix.floorId, fix.roomId).ok).toBe(true);
+  });
   it("warns about upper-floor doors that open onto a drop", () => {
     let p = ok(customizeOpenings(sketch(), "f1"));
     for (const o of p.floors[1].openings!.filter((o) => o.axis === "x" && o.line === 500))
@@ -182,5 +208,27 @@ describe("home checklist", () => {
     const doors = homeChecks(p).essentials.find((c) => c.id === "doors")!;
     expect(doors.done).toBe(false);
     expect(doors.fix).toMatchObject({ kind: "add-door", floorId: "f0" });
+  });
+  it("points at the balcony when its door takes a bedroom's only window", () => {
+    // A balcony slid over Bedroom 3's outside wall on the 30×50 villa: its door
+    // takes the window, and the rest of the wall is too short for another.
+    const villa = TEMPLATES.find((t) => t.id === "villa")!;
+    const home = ok(buildTemplate(villa, { plot: { w: 30, d: 50 }, floors: 2 }));
+    const floorId = home.floors[1].id;
+    const p = ok(addBalcony(home, floorId, { edge: "south", width: 300, depth: 120, offset: 250 }));
+    const balcony = p.floors[1].balconies[0];
+    const dark = projectAdvisories(p).filter((i) => i.code === "room-no-window");
+    expect(dark.map((i) => i.source?.id)).toEqual(["floor-1-bedroom-3"]);
+    expect(addRoomWindow(p, floorId, "floor-1-bedroom-3").ok).toBe(false);
+    const windows = homeChecks(p).essentials.find((c) => c.id === "windows")!;
+    expect(windows.done).toBe(false);
+    expect(windows.fix).toEqual({
+      kind: "edit",
+      target: { kind: "balcony", id: balcony.id, floorId },
+      focus: "move",
+    });
+    // Sliding the balcony along the wall gives the bedroom its window back.
+    const slid = ok(updateBalcony(p, floorId, balcony.id, { offset: 0 }));
+    expect(homeChecks(slid).essentials.find((c) => c.id === "windows")!.done).toBe(true);
   });
 });

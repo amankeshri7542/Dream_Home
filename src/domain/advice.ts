@@ -1,11 +1,12 @@
 // Friendly, non-blocking advice: warnings with one-tap fixes, and the "Home
 // checklist" (essentials plus playful quests) derived from project data.
 import { floorCirculation } from "./circulation";
-import { balconyBounds, floorForGeometry } from "./core";
+import { balconyBounds, floorForGeometry, replaceFloor } from "./core";
 import { furnitureDoorConflicts, furnitureLabel, furnitureMisfit } from "./furniture";
 import { makeIssue } from "./issues";
+import { addRoomWindow } from "./openingCommands";
 import { openingSide, roomHasPassage } from "./openings";
-import type { ComponentRef, EditIssue, IssueFix, Project } from "./types";
+import type { ComponentRef, EditIssue, IssueFix, Project, Rect } from "./types";
 import {
   deriveWallSegments,
   deriveWalls,
@@ -18,6 +19,13 @@ import {
 } from "./walls";
 
 const WINDOW_KINDS = new Set(["bedroom", "living"]);
+
+function hasWindow(project: Project, floorId: string, bounds: Rect): boolean {
+  const geo = floorForGeometry(project, floorId);
+  return resolveFloorOpenings(geo, project.plot.road, deriveWallSegments(geo)).some(
+    (o) => isWindow(o.kind) && openingSide(o, bounds),
+  );
+}
 
 /**
  * Advisory warnings for one floor (or all): rooms without a door, bedrooms and
@@ -53,19 +61,46 @@ export function projectAdvisories(
         const outside = segments.some(
           (w) => w.exterior && touches(w, room.bounds),
         );
+        // Offer a window only where one fits. A balcony's door takes the
+        // window on the wall it opens from: if the room would have a window
+        // (or space for one) without the balcony, sliding it is the fix.
+        const fits = outside && addRoomWindow(project, floor.id, room.id).ok;
+        const balcony =
+          outside && !fits
+            ? floor.balconies.find((b) => {
+                const without = replaceFloor(project, {
+                  ...floor,
+                  balconies: floor.balconies.filter((x) => x.id !== b.id),
+                });
+                return (
+                  hasWindow(without, floor.id, room.bounds) ||
+                  addRoomWindow(without, floor.id, room.id).ok
+                );
+              })
+            : undefined;
         out.push(
           makeIssue(
             "room-no-window",
-            outside
+            fits
               ? `${room.name} has no window.`
-              : `${room.name} has no window and no outside wall for one.`,
+              : balcony
+                ? `${room.name} has no window: the balcony's door is on its outside wall.`
+                : `${room.name} has no window and no outside wall for one.`,
             {
               severity: "warning",
               source,
               floorIds,
-              fixes: outside
+              fixes: fits
                 ? [{ kind: "add-window", floorId: floor.id, roomId: room.id }]
-                : [{ kind: "edit", target: source, focus: "move" }],
+                : balcony
+                  ? [
+                      {
+                        kind: "edit",
+                        target: { kind: "balcony", id: balcony.id, floorId: floor.id },
+                        focus: "move",
+                      },
+                    ]
+                  : [{ kind: "edit", target: source, focus: "move" }],
             },
           ),
         );

@@ -158,6 +158,13 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
           type: "notify",
           text: `${name} has no outside wall for a window. Drag it to an edge of the house — or swap it with a room that has one.`,
         });
+      } else if (f.focus === "move" && t.kind === "balcony") {
+        // Its door took a bedroom's window: hand over Move to slide it along.
+        dispatch({ type: "set-tool", tool: "move", lens: false });
+        dispatch({
+          type: "notify",
+          text: "The balcony's door is where a bedroom's window should be. Slide the balcony along the wall to let the light back in.",
+        });
       }
     } else if (f.kind === "set-aside") {
       dispatch({ type: "open-panel", panel: "tray" });
