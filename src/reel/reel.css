@@ -1,0 +1,54 @@
+/* The video studio: the photo studio's frame, plus the filming thumbnail and the finished video. */
+@layer components {
+  .dh-reel-filming {
+    display: grid;
+    grid-template-columns: minmax(96px, 30%) 1fr;
+    align-items: center;
+    gap: 14px;
+  }
+  .dh-reel-thumb {
+    aspect-ratio: 9 / 16;
+    overflow: hidden;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-2);
+    box-shadow: var(--dh-shadow-1);
+  }
+  .dh-reel-thumb canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .dh-reel-status,
+  .dh-reel-status > [role="status"] {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+  .dh-reel-status p {
+    margin: 0;
+    font-weight: 650;
+    font-size: calc(15px * var(--dh-text));
+  }
+  .dh-reel-result video {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 46vh;
+    margin: 0 auto;
+    aspect-ratio: 9 / 16;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-2);
+  }
+  .dh-reel-unsupported {
+    display: grid;
+    gap: 10px;
+  }
+  .dh-reel-unsupported p {
+    margin: 0;
+    font-size: calc(15px * var(--dh-text));
+  }
+  .dh-reel-studio .dh-field input {
+    width: 100%;
+  }
+}

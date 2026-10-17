@@ -135,6 +135,9 @@ export function ViewOptions() {
       >
         Take a photo
       </Button>
+      <Button icon={Icon.video} full onClick={() => dispatch({ type: "overlay", overlay: "reel" })}>
+        Make a video
+      </Button>
       <Button
         icon={Icon.fitHome}
         full

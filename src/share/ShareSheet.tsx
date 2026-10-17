@@ -8,9 +8,9 @@ import { download } from "../domain/export";
 import { useEditor } from "../editor/EditorProvider";
 import { Icon } from "../ui/icons";
 import { Button } from "../ui/primitives";
-import { createShare, deleteShare, shareStats, updateShare, uploadPoster } from "./api";
+import { deleteShare, shareStats, updateShare } from "./api";
 import { fingerprint, forgetLink, linkFor, saveLink, shareUrl, type ShareLink } from "./links";
-import { makePoster } from "./poster";
+import { addPicture, publishHome } from "./publish";
 import "./share.css";
 
 export const SHARE_TEXT = "See our dream home in 3D 🏠";
@@ -19,12 +19,14 @@ export function ShareSheet({
   onClose,
   capture,
   onTakePhoto,
+  onMakeVideo,
   onPlans,
 }: {
   onClose: () => void;
   /** A snapshot of the 3D view for the link's preview picture. */
   capture: () => Promise<Blob | null>;
   onTakePhoto: () => void;
+  onMakeVideo: () => void;
   onPlans: () => void;
 }) {
   const { project, homes, notify } = useEditor();
@@ -49,27 +51,13 @@ export function ShareSheet({
     };
   }, [link]);
 
-  /** The preview picture: best effort, never blocks sharing. */
-  const addPicture = async (id: string, token: string) => {
-    setBusy("Adding a picture…");
-    const poster = await makePoster(project, await capture().catch(() => null)).catch(() => null);
-    if (poster) await uploadPoster(id, token, poster);
-  };
-
   const make = async () => {
     setProblem("");
     setBusy("Making your link…");
-    const options = { showName, showCity };
-    const res = await createShare(project, options);
-    if (!res.ok) {
-      setBusy("");
-      return setProblem(res.message);
-    }
-    const next: ShareLink = { id: res.id, token: res.editToken, updatedAt: res.updatedAt, ...options, fingerprint: print };
-    saveLink(homeId, next);
-    await addPicture(res.id, res.editToken);
+    const res = await publishHome(project, homeId, { showName, showCity }, capture, setBusy);
     setBusy("");
-    setLink(next);
+    if (!res.ok) return setProblem(res.message);
+    setLink(res.link);
   };
 
   const update = async () => {
@@ -82,7 +70,8 @@ export function ShareSheet({
       setBusy("");
       return setProblem(res.message);
     }
-    await addPicture(link.id, link.token);
+    setBusy("Adding a picture…");
+    await addPicture(project, link, capture);
     const next = { ...link, ...options, updatedAt: res.updatedAt, fingerprint: print };
     saveLink(homeId, next);
     setLink(next);
@@ -215,6 +204,11 @@ export function ShareSheet({
         )}
         <section className="dh-share-more" aria-label="More ways to share">
           <h3>More ways to share</h3>
+          <button type="button" className="menu-row" onClick={onMakeVideo}>
+            <Icon.video size={21} aria-hidden />
+            Make a video
+            <Icon.right size={17} aria-hidden />
+          </button>
           <button type="button" className="menu-row" onClick={onTakePhoto}>
             <Icon.photo size={21} aria-hidden />
             Take a photo

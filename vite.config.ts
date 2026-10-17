@@ -84,6 +84,10 @@ export default defineConfig({
     // would force full page reloads.
     watch: { ignored: ["**/node_modules.nosync/**"] },
   },
+  // Scan only our own pages for dependencies. Vite skips folders named
+  // node_modules, not node_modules.nosync, and a package's stray test pages
+  // there broke the scan, so the dev server kept reloading to add dependencies.
+  optimizeDeps: { entries: ["index.html", "scene-lab.html"] },
   // The production headers (CSP and friends), so the built app can be tested locally.
   preview: { port: 4173, headers: SECURITY_HEADERS },
 });

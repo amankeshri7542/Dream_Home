@@ -1,15 +1,8 @@
 // Rendered pixels → a JPEG, with an optional small "Dream Home" mark.
 import type { PhotoPixels } from "./render";
 
-/** Draws the Dream Home mark and name in the bottom-right corner. */
-function watermark(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  const s = Math.max(18, Math.round(Math.min(w, h) * 0.035));
-  const pad = Math.round(s * 0.9);
-  ctx.font = `650 ${Math.round(s * 0.62)}px "Fraunces Variable", Georgia, serif`;
-  const label = "Dream Home";
-  const textW = ctx.measureText(label).width;
-  const x = w - pad - s - s * 0.35 - textW,
-    y = h - pad - s;
+/** The Dream Home mark (a little house on terracotta), `s` pixels square. */
+export function brandMark(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
   ctx.save();
   ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
   ctx.shadowBlur = s * 0.4;
@@ -27,6 +20,18 @@ function watermark(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.lineTo(x + s * 0.22, y + s * 0.8);
   ctx.closePath();
   ctx.fill();
+}
+
+/** Draws the Dream Home mark and name in the bottom-right corner. */
+function watermark(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const s = Math.max(18, Math.round(Math.min(w, h) * 0.035));
+  const pad = Math.round(s * 0.9);
+  ctx.font = `650 ${Math.round(s * 0.62)}px "Fraunces Variable", Georgia, serif`;
+  const label = "Dream Home";
+  const textW = ctx.measureText(label).width;
+  const x = w - pad - s - s * 0.35 - textW,
+    y = h - pad - s;
+  brandMark(ctx, x, y, s);
   ctx.save();
   ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
   ctx.shadowBlur = s * 0.3;

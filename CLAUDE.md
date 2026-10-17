@@ -72,6 +72,11 @@ git diff --check
   - What each framing shows lives in `photoView` (`src/shell/SceneHost.tsx`); where the camera stands is in `src/photo/framing.ts`. Moods and sizes are in `src/photo/settings.ts`.
   - Tests make tiny photos with `window.__dreamHomePhotoTest = { longEdge, samples, fail }` (see `tests/photo.spec.ts`).
   - Shader uniforms must not use GLSL reserved words (`sample` silently broke a shader once).
+- **The reel** (`src/reel/`):
+  - Ask for a video through `makeReel` in `src/shell/AppShell.tsx`: it sets a job that `ReelRenderer` films inside the Canvas. Filming (`film.ts`, with mediabunny and the QR encoder) loads only then; the studio is its own lazy chunk.
+  - `reelPath` (`path.ts`) is the pure shot list: each shot's view, light and camera move. Filming shows each shot's scene through `setReelScene`, settles, then renders every frame offline with the photo pipeline (`createPipeline` in `src/photo/render.ts`) on the store's clock, never on screen.
+  - The music is pure synthesis (`music.ts`), so it is testable and royalty-free.
+  - Tests make tiny reels with `window.__dreamHomeReelTest = { width, height, seconds, samples, capture, noVideo }` (see `tests/reel.spec.ts`); `DH_REEL_BENCH=1` times full-quality ones.
 - **Looks and lived-in details:**
   - A look's outside bundle, room palettes, garden and card text live in `src/domain/looks.ts`; card pictures are `public/looks/<id>.webp` (`npm run looks:thumbs`).
   - Lived-in details are derived, never saved: `livedInDecor` (`src/domain/livedIn.ts`) places them, `src/scene/life/LivedIn.tsx` draws them in Explore and Photo only. Their models come from `public/models/life.glb` (sizes in `src/domain/catalog/life.json`).
@@ -101,6 +106,7 @@ git diff --check
 | `src/shell/` | app chrome: Home bar, Room Studio (`studio/`), inspectors, dialogs, checklist |
 | `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge; `life/` draws lived-in details |
 | `src/photo/` | Photo mode: the studio, the offline renderer, framing, moods |
+| `src/reel/` | the "My dream home" reel: studio, shot list, filming, compositor, music, QR end card |
 | `src/share/` | share sheet, the `/h/:id` viewer, Remix |
 | `src/homes/` | My homes shelf (IndexedDB) and move links |
 | `src/ai/` | the AI brief, prompts, strict schemas, built-in planner, plan → home builder |

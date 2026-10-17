@@ -8,6 +8,7 @@ import { useReducedMotion } from "../editor/hooks";
 import { setAsideRoom } from "../domain/tray";
 import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
 import type { PhotoScene } from "../photo/settings";
+import type { ReelJobRequest, ReelOutcome, ReelProgress, ReelScene } from "../reel/settings";
 import type { SceneView } from "../scene/types";
 
 /**
@@ -50,7 +51,20 @@ export function SceneHost({
   photoCancel,
   onPhotoProgress,
   onPhotoDone,
+  reel,
+  reelJob,
+  reelCancel,
+  onReelScene,
+  onReelProgress,
+  onReelDone,
 }: {
+  /** While the reel studio is open: its preview, then each shot's view and light while filming. */
+  reel?: ReelScene | null;
+  reelJob?: ReelJobRequest | null;
+  reelCancel?: { current: boolean };
+  onReelScene?: (scene: ReelScene) => void;
+  onReelProgress?: (progress: ReelProgress) => void;
+  onReelDone?: (outcome: ReelOutcome) => void;
   /** While the photo studio is open (or a share picture is made): the mood's hour and the framing's view. */
   photo?: PhotoScene | null;
   photoJob?: PhotoJobRequest | null;
@@ -108,6 +122,8 @@ export function SceneHost({
     }
   });
   useEffect(() => onWebGLUnavailable(unsupported), [unsupported, onWebGLUnavailable]);
+  // A photo (the share link's picture) wins over the reel studio's preview.
+  const filmed = reel && !showcase && !photo ? reel : null;
   const onSelect = useCallback(
     (target: SelectionTarget | null) => {
       if (target) select(target, "canvas");
@@ -134,6 +150,8 @@ export function SceneHost({
             view={
               photo && !showcase && !(walking && photo.framing === "view")
                 ? photoView(photo, sceneView(state), state.view.streetLife)
+                : filmed
+                ? filmed.view
                 : showcase
                 ? { ...DEFAULT_VIEW, stage: 5, roof: true, cutaway: false, labels: false }
                 : walking
@@ -154,16 +172,16 @@ export function SceneHost({
                     }
                   : sceneView(state)
             }
-            mode={showcase || photo ? "explore" : state.mode}
-            selection={showcase || photo ? null : (selected?.target ?? null)}
+            mode={showcase || photo || filmed ? "explore" : state.mode}
+            selection={showcase || photo || filmed ? null : (selected?.target ?? null)}
             onSelect={onSelect}
             highlight={state.flash}
             cameraCommand={state.camera}
             insets={insets}
-            hour={showcase ? GOLDEN_HOUR : photo ? photo.hour : state.hour}
+            hour={showcase ? GOLDEN_HOUR : photo ? photo.hour : filmed ? filmed.hour : state.hour}
             quality={state.quality}
             onQualityResolved={() => undefined}
-            explore={showcase ? "showcase" : photo && !walking ? "orbit" : state.explore}
+            explore={showcase ? "showcase" : (photo && !walking) || filmed ? "orbit" : state.explore}
             photoJob={photoJob}
             photoCancel={photoCancel}
             onPhotoProgress={onPhotoProgress}
@@ -171,6 +189,12 @@ export function SceneHost({
             photoRequest={photoRequest}
             onPhoto={onPhoto}
             onWalkStatus={walkStatus}
+            reelJob={reelJob}
+            reelKey={filmed?.key ?? null}
+            reelCancel={reelCancel}
+            onReelScene={onReelScene}
+            onReelProgress={onReelProgress}
+            onReelDone={onReelDone}
             areaUnit={unit === "ft" ? "ft" : "m"}
             ghost={editing || decorating ? ghost : null}
           >

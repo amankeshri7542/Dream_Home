@@ -474,6 +474,14 @@ M0 ships in two phases:
 - `DH_SHOTS` writes each look × day/night at 390 and 1440 to `docs/screenshots/looks/`, inspected by eye.
 
 ### M4: "My dream home" reel
+✅ Done on 17 Oct 2026 (see the roadmap log). Differences from the text below:
+- the music is synthesised in plain code (seeded, so it is unit-tested and identical on every device), not with `OfflineAudioContext`;
+- a dissolve starts from the previous shot's last frame (changing a shot's view rebuilds the scene, so two shots are never drawn at once), and the roof "lifts" by that dissolve into the open dollhouse;
+- the quick 8 s reel is the establishing shot, the dollhouse, two rooms and the end card;
+- the reel films street life and idle motion even with reduced motion (nothing moves on screen; it's a file), and has its own Lived-in switch;
+- without a link (none made, or sharing off) the end card says "Design yours at" the app's address, with its QR code;
+- samples per frame drop during filming if it would run past its time budget, instead of a benchmark before it.
+
 **Goal:** the hook. A 15-second vertical video worth posting.
 
 **Experience:**
@@ -765,4 +773,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b, M1, M2 and M3 shipped on 17 Oct 2026. The next phase is **M4** (the "My dream home" reel).
+- M0a, M0b, M1, M2, M3 and M4 shipped on 17 Oct 2026. The next phase is **M5** (location, real sun, sunlight, Vastu, Home score).

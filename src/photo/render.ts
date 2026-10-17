@@ -9,6 +9,7 @@
 //     mapping, a warm grade, vignette and fine grain, then sRGB.
 //  4. The pixels are read back for the watermark and JPEG encoding.
 // Everything it changes (render target, shadow size, sun, fog) is restored.
+// `createPipeline` is the core; the reel (src/reel) films with it frame by frame.
 import {
   Color,
   DirectionalLight,
@@ -189,17 +190,50 @@ function hideOverlays(scene: Scene): () => void {
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
-export async function renderPhoto(job: PhotoJob): Promise<PhotoPixels> {
-  const { gl, scene, camera, width: W, height: H, sun } = job;
-  const samples = Math.max(1, Math.round(job.samples));
+export type PipelineOptions = {
+  gl: WebGLRenderer;
+  scene: Scene;
+  /** The camera every sample is drawn from (it may move between samples). */
+  camera: PerspectiveCamera;
+  width: number;
+  height: number;
+  /** The shadow-casting sun, jittered for soft shadows. */
+  sun: DirectionalLight | null;
+  shadowSize: number;
+  /** Quarter-cost ambient occlusion (video frames on phones). */
+  aoHalfRes?: boolean;
+};
 
+/**
+ * The renderer's core, shared by photos and the reel: draw samples of the
+ * scene into half-float targets and average them, then finish the picture
+ * (glow, grade, sRGB) into an 8-bit target. Built once, used for any number
+ * of samples and frames, and `dispose()` puts back everything it changed.
+ */
+export type Pipeline = {
+  width: number;
+  height: number;
+  /**
+   * Draws sample `index` (0 starts a new average, centred) through the camera
+   * and averages it in. `softSun` moves the sun across a small disc (the
+   * shadow map is redrawn); `shadows` redraws the shadow map with the sun put.
+   */
+  sample(index: number, options?: { softSun?: boolean; shadows?: boolean }): void;
+  /** The finished picture of the samples so far, in sRGB (bottom row first). */
+  finish(mood: PhotoMood): WebGLRenderTarget;
+  /** Reads a finished picture back, bottom row first. */
+  read(target: WebGLRenderTarget, into?: Uint8Array): Promise<Uint8Array>;
+  dispose(): void;
+};
+
+export function createPipeline(options: PipelineOptions): Pipeline {
+  const { gl, scene, camera, width: W, height: H, sun } = options;
   // What we change, to put back afterwards.
   const saved = {
     target: gl.getRenderTarget(),
     autoClear: gl.autoClear,
     toneMapping: gl.toneMapping,
     shadowAuto: gl.shadowMap.autoUpdate,
-    sunPosition: sun?.position.clone(),
     shadowSize: sun?.shadow.mapSize.clone(),
     fog: scene.fog instanceof Fog ? { near: scene.fog.near, far: scene.fog.far } : null,
     clear: gl.getClearColor(new Color()),
@@ -207,7 +241,7 @@ export async function renderPhoto(job: PhotoJob): Promise<PhotoPixels> {
   };
   const restoreOverlays = hideOverlays(scene);
 
-  const sample = target(W, H);
+  const sampleTarget = target(W, H);
   const accum = [target(W, H), target(W, H)];
   const gw = Math.max(1, Math.round(W / 4)),
     gh = Math.max(1, Math.round(H / 4));
@@ -224,7 +258,7 @@ export async function renderPhoto(job: PhotoJob): Promise<PhotoPixels> {
     aoSamples: 16,
     denoiseSamples: 8,
     denoiseRadius: 12,
-    halfRes: false,
+    halfRes: !!options.aoHalfRes,
     gammaCorrection: false,
     transparencyAware: false,
     accumulate: false,
@@ -238,110 +272,140 @@ export async function renderPhoto(job: PhotoJob): Promise<PhotoPixels> {
     quad.render(gl);
   };
 
-  try {
-    gl.autoClear = true;
-    gl.toneMapping = NoToneMapping;
-    gl.shadowMap.autoUpdate = false;
-    // Fog that suits this camera, not the live one.
-    if (scene.fog instanceof Fog) {
-      const d = camera.position.length();
-      scene.fog.near = d + 30;
-      scene.fog.far = Math.max(scene.fog.near + 160, 300);
-    }
-    if (sun && sun.shadow.mapSize.x !== job.shadowSize) {
-      sun.shadow.mapSize.set(job.shadowSize, job.shadowSize);
-      sun.shadow.map?.dispose();
-      (sun.shadow as { map: unknown }).map = null;
-    }
-    // The sun's spot and a sideways axis for the soft-shadow jitter.
-    const sunTarget = sun ? sun.target.getWorldPosition(new Vector3()) : null;
-    const sunHome = sun?.position.clone();
-    const toSun = sun && sunTarget ? sunHome!.clone().sub(sunTarget) : null;
-    const spread = toSun ? toSun.length() * 0.035 : 0;
-    const side = toSun ? new Vector3(0, 1, 0).cross(toSun).normalize() : null;
-    const up = toSun && side ? toSun.clone().cross(side).normalize() : null;
+  gl.autoClear = true;
+  gl.toneMapping = NoToneMapping;
+  gl.shadowMap.autoUpdate = false;
+  if (sun && sun.shadow.mapSize.x !== options.shadowSize) {
+    sun.shadow.mapSize.set(options.shadowSize, options.shadowSize);
+    sun.shadow.map?.dispose();
+    (sun.shadow as { map: unknown }).map = null;
+  }
 
-    let read = accum[0],
-      write = accum[1];
-    for (let i = 0; i < samples; i++) {
-      if (job.cancelled?.()) throw new PhotoCancelled();
-      const n = i + 1;
+  // The sun's own spot, kept the first time soft shadows move it.
+  let sunHome: Vector3 | null = null;
+  let side: Vector3 | null = null,
+    up: Vector3 | null = null,
+    spread = 0;
+  let read = accum[0],
+    write = accum[1];
+
+  return {
+    width: W,
+    height: H,
+    sample(index, { softSun = false, shadows = false } = {}) {
+      const n = index + 1;
+      // Fog that suits this camera, not the live one.
+      if (scene.fog instanceof Fog) {
+        scene.fog.near = camera.position.length() + 30;
+        scene.fog.far = Math.max(scene.fog.near + 160, 300);
+      }
       // Sub-pixel shift (anti-aliasing). The first sample is centred.
-      const jx = i === 0 ? 0 : halton(n, 2) - 0.5,
-        jy = i === 0 ? 0 : halton(n, 3) - 0.5;
+      const jx = index === 0 ? 0 : halton(n, 2) - 0.5,
+        jy = index === 0 ? 0 : halton(n, 3) - 0.5;
       camera.setViewOffset(W, H, jx, jy, W, H);
       camera.updateProjectionMatrix();
-      // The sun wanders across a small disc: overlapping shadows read as soft.
-      if (sun && sunHome && side && up && i > 0) {
-        const r = Math.sqrt(halton(n, 5)) * spread,
+      if (sun && softSun) {
+        if (!sunHome) {
+          sunHome = sun.position.clone();
+          const toSun = sunHome.clone().sub(sun.target.getWorldPosition(new Vector3()));
+          spread = toSun.length() * 0.035;
+          side = new Vector3(0, 1, 0).cross(toSun).normalize();
+          up = toSun.clone().cross(side).normalize();
+        }
+        // The sun wanders across a small disc: overlapping shadows read as soft.
+        const r = index === 0 ? 0 : Math.sqrt(halton(n, 5)) * spread,
           a = halton(n, 7) * Math.PI * 2;
-        sun.position.copy(sunHome).addScaledVector(side, Math.cos(a) * r).addScaledVector(up, Math.sin(a) * r);
+        sun.position.copy(sunHome).addScaledVector(side!, Math.cos(a) * r).addScaledVector(up!, Math.sin(a) * r);
         sun.updateMatrixWorld();
       }
-      gl.shadowMap.needsUpdate = true;
-      ao.render(gl, sample, null);
+      if (softSun || shadows) gl.shadowMap.needsUpdate = true;
+      ao.render(gl, sampleTarget, null);
+      if (index === 0) [read, write] = [accum[0], accum[1]];
       mats.blend.uniforms.previous.value = read.texture;
-      mats.blend.uniforms.current.value = sample.texture;
+      mats.blend.uniforms.current.value = sampleTarget.texture;
       mats.blend.uniforms.weight.value = 1 / n;
       draw(mats.blend, write);
       [read, write] = [write, read];
-      job.onProgress?.(n / samples);
+    },
+    finish(mood) {
+      // Lamp glow: bright parts, blurred at quarter size.
+      mats.bright.uniforms.image.value = read.texture;
+      draw(mats.bright, glowA);
+      for (let pass = 0; pass < 2; pass++) {
+        mats.blur.uniforms.image.value = glowA.texture;
+        mats.blur.uniforms.step.value.set(1.5 / gw, 0);
+        draw(mats.blur, glowB);
+        mats.blur.uniforms.image.value = glowB.texture;
+        mats.blur.uniforms.step.value.set(0, 1.5 / gh);
+        draw(mats.blur, glowA);
+      }
+      const u = mats.finish.uniforms;
+      u.image.value = read.texture as Texture;
+      u.glow.value = glowA.texture;
+      u.exposure.value = mood.exposure;
+      u.bloom.value = mood.bloom;
+      u.warmth.value = mood.warmth;
+      u.vignette.value = mood.vignette;
+      u.aspect.value = W / H;
+      draw(mats.finish, output);
+      return output;
+    },
+    async read(from, into) {
+      const pixels = into ?? new Uint8Array(from.width * from.height * 4);
+      const async = (gl as unknown as { readRenderTargetPixelsAsync?: WebGLRenderer["readRenderTargetPixels"] })
+        .readRenderTargetPixelsAsync;
+      if (async) await async.call(gl, from, 0, 0, from.width, from.height, pixels);
+      else gl.readRenderTargetPixels(from, 0, 0, from.width, from.height, pixels);
+      return pixels;
+    },
+    dispose() {
+      camera.clearViewOffset();
+      camera.updateProjectionMatrix();
+      if (sun) {
+        if (sunHome) {
+          sun.position.copy(sunHome);
+          sun.updateMatrixWorld();
+        }
+        if (saved.shadowSize && sun.shadow.mapSize.x !== saved.shadowSize.x) {
+          sun.shadow.mapSize.copy(saved.shadowSize);
+          sun.shadow.map?.dispose();
+          (sun.shadow as { map: unknown }).map = null;
+        }
+      }
+      if (scene.fog instanceof Fog && saved.fog) {
+        scene.fog.near = saved.fog.near;
+        scene.fog.far = saved.fog.far;
+      }
+      restoreOverlays();
+      gl.setRenderTarget(saved.target);
+      gl.autoClear = saved.autoClear;
+      gl.toneMapping = saved.toneMapping;
+      gl.shadowMap.autoUpdate = saved.shadowAuto;
+      gl.shadowMap.needsUpdate = true;
+      gl.setClearColor(saved.clear, saved.clearAlpha);
+      ao.dispose();
+      quad.dispose();
+      Object.values(mats).forEach((m) => m.dispose());
+      [sampleTarget, ...accum, glowA, glowB, output].forEach((t) => t.dispose());
+    },
+  };
+}
+
+export async function renderPhoto(job: PhotoJob): Promise<PhotoPixels> {
+  const { width, height } = job;
+  const samples = Math.max(1, Math.round(job.samples));
+  const pipeline = createPipeline(job);
+  try {
+    for (let i = 0; i < samples; i++) {
+      if (job.cancelled?.()) throw new PhotoCancelled();
+      pipeline.sample(i, { softSun: true });
+      job.onProgress?.((i + 1) / samples);
       // Let the page breathe (progress ring, Cancel button) between samples.
       await nextFrame();
     }
-
-    // Lamp glow: bright parts, blurred at quarter size.
-    mats.bright.uniforms.image.value = read.texture;
-    draw(mats.bright, glowA);
-    for (let pass = 0; pass < 2; pass++) {
-      mats.blur.uniforms.image.value = glowA.texture;
-      mats.blur.uniforms.step.value.set(1.5 / gw, 0);
-      draw(mats.blur, glowB);
-      mats.blur.uniforms.image.value = glowB.texture;
-      mats.blur.uniforms.step.value.set(0, 1.5 / gh);
-      draw(mats.blur, glowA);
-    }
-    const u = mats.finish.uniforms;
-    u.image.value = read.texture as Texture;
-    u.glow.value = glowA.texture;
-    u.exposure.value = job.mood.exposure;
-    u.bloom.value = job.mood.bloom;
-    u.warmth.value = job.mood.warmth;
-    u.vignette.value = job.mood.vignette;
-    u.aspect.value = W / H;
-    draw(mats.finish, output);
-
-    const pixels = new Uint8Array(W * H * 4);
-    const async = (gl as unknown as { readRenderTargetPixelsAsync?: WebGLRenderer["readRenderTargetPixels"] })
-      .readRenderTargetPixelsAsync;
-    if (async) await async.call(gl, output, 0, 0, W, H, pixels);
-    else gl.readRenderTargetPixels(output, 0, 0, W, H, pixels);
-    return { width: W, height: H, pixels };
+    const pixels = await pipeline.read(pipeline.finish(job.mood));
+    return { width, height, pixels };
   } finally {
-    camera.clearViewOffset();
-    if (sun && saved.sunPosition) {
-      sun.position.copy(saved.sunPosition);
-      sun.updateMatrixWorld();
-      if (saved.shadowSize && sun.shadow.mapSize.x !== saved.shadowSize.x) {
-        sun.shadow.mapSize.copy(saved.shadowSize);
-        sun.shadow.map?.dispose();
-        (sun.shadow as { map: unknown }).map = null;
-      }
-    }
-    if (scene.fog instanceof Fog && saved.fog) {
-      scene.fog.near = saved.fog.near;
-      scene.fog.far = saved.fog.far;
-    }
-    restoreOverlays();
-    gl.setRenderTarget(saved.target);
-    gl.autoClear = saved.autoClear;
-    gl.toneMapping = saved.toneMapping;
-    gl.shadowMap.autoUpdate = saved.shadowAuto;
-    gl.shadowMap.needsUpdate = true;
-    gl.setClearColor(saved.clear, saved.clearAlpha);
-    ao.dispose();
-    quad.dispose();
-    Object.values(mats).forEach((m) => m.dispose());
-    [sample, ...accum, glowA, glowB, output].forEach((t) => t.dispose());
+    pipeline.dispose();
   }
 }

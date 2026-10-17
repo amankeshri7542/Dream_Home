@@ -3,7 +3,7 @@
 import type { EdgeSide, Project } from "../domain/types";
 import { PerspectiveCamera, Vector3 } from "three";
 import { boxCorners, fitBox, type Vec3 } from "../scene/camera/fit";
-import { HERO_OFFSET, HERO_POLAR, ROAD_AZIMUTH, frontPose, plotBox, roomBox, roomHeroPose, type Pose } from "../scene/camera/poses";
+import { HERO_OFFSET, HERO_POLAR, ROAD_AZIMUTH, frontPose, plotBox, roomBox, roomHeroPose, type Box, type Pose } from "../scene/camera/poses";
 import type { SceneView } from "../scene/types";
 import type { Framing } from "./settings";
 
@@ -57,20 +57,24 @@ export function photoShot(
         : aerialPose(project.plot.road, width / height);
   // The whole plot (compound wall, garden, a strip of street), not just the
   // house: a photo of the house with its wall cut off looks like a mistake.
-  const box = room ?? plotBox(project, view);
-  const fit = fitBox({ min: box.min, max: box.max, azimuth: pose.azimuth, polar: pose.polar, fov, width, height, margin: MARGIN });
-  return centre({ target: fit.target, position: fit.position }, boxCorners(box.min, box.max), fov, width / height);
+  return frameBox(room ?? plotBox(project, view), pose, fov, width, height);
 }
 
 /** Breathing room kept around the subject, as a fraction of the half-frame. */
 const MARGIN = 0.1;
+
+/** Where to stand, looking along `pose`, so the box fills the frame, centred. */
+export function frameBox(box: Box, pose: Pose, fov: number, width: number, height: number, margin = MARGIN): Shot {
+  const fit = fitBox({ min: box.min, max: box.max, azimuth: pose.azimuth, polar: pose.polar, fov, width, height, margin });
+  return centre({ target: fit.target, position: fit.position }, boxCorners(box.min, box.max), fov, width / height, margin);
+}
 
 /**
  * fitBox fits around the box's middle, and perspective leaves one side of the
  * picture emptier than the other. A few passes of "look at the middle of what
  * you see, then step to fill the frame" centre the subject and fill the photo.
  */
-function centre(shot: Shot, corners: Vec3[], fov: number, aspect: number): Shot {
+function centre(shot: Shot, corners: Vec3[], fov: number, aspect: number, margin: number): Shot {
   const camera = new PerspectiveCamera(fov, aspect, 0.05, 5000);
   const target = new Vector3(...shot.target),
     position = new Vector3(...shot.position);
@@ -102,7 +106,7 @@ function centre(shot: Shot, corners: Vec3[], fov: number, aspect: number): Shot 
       .multiplyScalar(((minX + maxX) / 2) * distance * tanH)
       .addScaledVector(up, ((minY + maxY) / 2) * distance * tanV);
     target.add(shift);
-    const fill = Math.max(maxX - minX, maxY - minY) / 2 / (1 - MARGIN);
+    const fill = Math.max(maxX - minX, maxY - minY) / 2 / (1 - margin);
     position.sub(target).normalize().multiplyScalar(distance * fill).add(target);
   }
   return { target: target.toArray() as Vec3, position: position.toArray() as Vec3 };

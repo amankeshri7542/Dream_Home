@@ -38,6 +38,7 @@ export type Overlay =
   | "help"
   | "shortcuts"
   | "photo"
+  | "reel"
   | "homes"
   | "plans"
   | null;

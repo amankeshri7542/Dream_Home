@@ -24,7 +24,7 @@ import "./photo.css";
 
 export type PhotoSettings = { framing: Framing; mood: MoodId; aspect: number; watermark: boolean };
 
-function Chips<T extends string>({
+export function Chips<T extends string>({
   label,
   value,
   options,
@@ -57,7 +57,7 @@ function Chips<T extends string>({
 }
 
 /** A circular progress ring with the percentage inside. */
-function Ring({ fraction }: { fraction: number }) {
+export function Ring({ fraction }: { fraction: number }) {
   const r = 34,
     c = 2 * Math.PI * r;
   return (

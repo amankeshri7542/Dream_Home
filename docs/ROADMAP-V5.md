@@ -10,7 +10,9 @@ work can resume after any interruption. Update it at the end of every phase.
   - M1: share links, the viewer, Remix, WhatsApp previews, reports, admin.
   - M2: Photo mode (render-quality stills), also used for share-link pictures.
   - M3: six regional looks with new materials and rendered look cards; lived-in details (everyday and Diwali) with idle motion.
-- **Next phase: M4.** The "My dream home" reel. Its recorder can drive the scene's shared clock (`store.setClock`), which street life and the M3 idle motion already read.
+  - M4: the "My dream home" reel: a 15 s (or 8 s) vertical MP4 with a title, room names, generated music and an end card with the link and a QR code.
+- **Next phase: M5.** Location, real sun, sunlight timeline, Vastu, Home score. The reel's end card is where the Home score will show ("Our home scored 92!").
+- **Waiting for the owner's review (not merged):** three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist).
 - **Owner actions pending** (sharing and the AI designer are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
@@ -126,13 +128,31 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Size:** the editor's first-load chunks grew about 3.4 KB gzip (`shell` +2.8, `App` +0.6, `index` unchanged); the lazy 3D chunk grew 11.5 KB; `life.glb` (107 KB) and the look cards (9 × 11–16 KB) load only when needed.
   - **Found, not fixed (before M3, outside its scope):** an AI design that asks for a balcony can leave one room without a window (the home check then shows "windows"). It happens with the old looks too.
 
+- **17 Oct 2026 (M4):**
+  - **Filming takes over the canvas without drawing on screen.** A job reaches `ReelRenderer` inside the Canvas (like photos). It mounts an empty priority frame callback, so R3F never draws to the screen, sets the frameloop to "never" and steps frames itself with R3F's `advance`. The live effects step aside while filming. The reel has its own camera, so the live camera is never touched. Afterwards: frameloop "demand" and 0 idle frames (tested).
+  - **One view and light per shot.** Each shot's scene (view, hour, Diwali) goes to the editor through `setReelScene`; filming waits until the canvas shows it, lets it settle (sky, lamps, `life.glb` loading), then draws every frame of the shot. Only the camera and idle life move within a shot, so shadows are drawn once per shot. Shots that share a scene skip the wait (the end card carries on from the night shot).
+  - **The renderer core is shared.** `createPipeline` (`src/photo/render.ts`) is the M2 renderer split into build once / sample / finish / read / dispose; photos use it exactly as before (same output). Video frames are drawn with full ambient occlusion (half-resolution on phones) and the photo finish for the shot's light. Close-ups glow less (a porch lamp a metre away flooded the door).
+  - **The compositor** is one GL pass: the dissolve from the previous shot's last frame, the end card's dark wash, the words (painted on a 2D canvas, faded by a uniform) and a row flip, so the read-back pixels go straight into the encoder's canvas. That canvas is also the live thumbnail on the progress screen.
+  - **Encoding:** mediabunny **1.61.0** (MPL-2.0, pinned, released 18 days earlier; it only reads WebCodecs): MP4 with `fastStart: "in-memory"`, H.264 from the canvas at 30 fps, AAC 128 kbps in one-second chunks alongside the frames. Phones 720 × 1280 at 4.5 Mbps (about 7.7 MB for 15 s); desktops 1080 × 1920 at 6 Mbps (about 10 MB). It checks `canEncodeVideo` (falling back to 720 × 1280), then `canEncodeAudio` (silent video if AAC can't be encoded, and the done screen says so). No H.264 at all: "Take a photo instead". No WebM.
+  - **Quality and time:** desktops start at 3 samples a frame and drop one whenever the projected time passes the 30 s budget (measured on steady frames: a shot's first frames compile shaders and draw shadows); phones film 1 sample with half-resolution AO (budget 90 s). Measured on this Mac: the desktop grand tour at full quality (1080 × 1920, 3 samples) in **15–20 s**; the phone settings with the CPU slowed four times in **10–11 s**. A real mid-range Android is the owner's check in M8 (a GPU can't be slowed here).
+  - **The shot list** (`reelPath`, pure): establishing aerial turn with the title; a push-in from the street to the front door (toran, shoes, diyas at Diwali); the dollhouse swooping from straight above to 3/4; 2–4 rooms (the biggest living room, kitchen and bedroom, and the pooja room if any) each as the dollhouse hero with a slow dolly and a name card; the night pull-back with glowing windows; the end card. Moves are eased in orbit terms and every shot is checked to keep the camera out of the house. A tall frame fits the plot's width with sky to spare, so aerials sit closer and let the plot's corners go.
+  - **Quick 8 s:** establishing, dollhouse, two rooms (living room, main bedroom), end card in the mood's light.
+  - **Words:** Fraunces titles and Figtree labels; nothing in the bottom fifth or on the right edge, where Reels, Shorts and Status put their buttons.
+  - **Music** is synthesised in code (seeded), so it's unit-tested and sounds the same everywhere: Warm morning (tanpura-like drone, pad, bells in raag Bhupali), Festive (dholak-like drums, plucked strings, handclaps), Calm night (pad, quiet drone, slow bells). Faded in and out, normalised to −1 dBFS. The mood picks the music until someone chooses their own. The owner should give it a listen.
+  - **The link at the end:** if the home has a link, the end card shows it with a QR code (qrcode-generator **2.0.4**, MIT, pinned). If not, "Show link at the end" says plainly that it makes one ("anyone with it can see this home in 3D") and the studio makes it like the share sheet does (`publishHome`, now shared, with the share picture). If that fails (offline, or sharing not switched on), the video ends with "Design yours at" the app's address and its QR code.
+  - **Sharing:** the done screen's Share copies the caption ("Designed our dream home on Dream Home 🏠 {link} #DreamHome #MyDreamHome") without waiting, then opens the share sheet with the MP4 in the same tap; Save downloads it.
+  - **Reduced motion** still gets street life and idle motion in the video: nothing moves on screen, and the reel is a file the person asked for. Filming pauses while the page is hidden and holds a screen wake lock.
+  - **Entry points:** Share → Make a video, View options → Make a video, and the Explore camera bar.
+  - **Dev fix:** Vite scanned every `.html` under `node_modules.nosync` (it skips only folders named `node_modules`). The QR package ships test pages, so the dependency scan failed and the dev server kept reloading the page to add dependencies. `optimizeDeps.entries` now names our two pages.
+  - **Size:** the editor's first load grew about 1.3 KB gzip (`App` +0.6, the shared reel settings 0.65; `index` and `shell` unchanged). The studio (2.6 KB) and the filming code with mediabunny and the QR encoder (71 KB) load only when used.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
 - [x] **M1** Live link + Remix + WhatsApp preview
 - [x] **M2** Photo mode
 - [x] **M3** Regional looks + lived-in details
-- [ ] **M4** "My dream home" reel
+- [x] **M4** "My dream home" reel
 - [ ] **M5** Location, real sun, sunlight, Vastu, Home score
 - [ ] **M6** Builder's plan → 3D
 - [ ] **M7** Talk to your home (voice + chat, Haiku 5.5)
@@ -211,3 +231,21 @@ work can resume after any interruption. Update it at the end of every phase.
     - Unit: `livedIn.test.ts` (10: deterministic, never edits the project, inside rooms, out of door approaches, on the plot, clothes drying, vehicles), `looks.test.ts` (13: ids, palettes for every room use, gardens, round-trips, regional materials, built-in names, arches), `scene/life/life.test.ts` (9), `scene/materials/looks.test.ts` (12), the kit contract for `life.glb` (its 23 models, budget, pivots, and which kits are cut with the section) and for street-life part names, AI regional looks, preferences, and the lenient share reader.
     - Browser: `tests/looks.spec.ts` (4): look cards with real pictures apply and undo; Build idle and within budget while Explore at night with lived-in details stays at 115 draw calls; motion only in Explore and the Tidy switch remembered; the Photo studio's switch and the Diwali set. `DH_SHOTS=1` writes 8 looks × day and night × (390, 1440) to `docs/screenshots/looks/` and lived-in photos to `docs/screenshots/lived-in/`; the M2 photo set was re-shot with the Diwali decorations.
   - **Gate:** typecheck, lint, 837 unit tests, build, `check:api`, 113 browser tests (32 screenshot-only skipped), 4 preview tests, `diff --check`: all green.
+- **2026-10-17, M4:**
+  - **New `src/reel/`:**
+    - `settings.ts`: styles, moods, music, sizes and budgets per device, the caption, the test hook, and a tiny feed for progress.
+    - `path.ts`: `reelPath`, `tourRooms`, `shotCamera`, and when the words and the end card's wash show.
+    - `music.ts`: the three pieces of music; `qr.ts`: the end card's QR code.
+    - `overlay.ts`: the title, room name cards and end card on a 2D canvas.
+    - `compositor.ts`: the dissolve, wash, words and row flip in one GL pass.
+    - `film.ts` (lazy): scenes, settling, frames, pacing, encoding, wake lock, pause while hidden.
+    - `ReelRenderer.tsx` (inside the Canvas), `ReelStudio.tsx` (lazy) and `reel.css`.
+  - **Changed:**
+    - `src/photo/render.ts`: `createPipeline` (the renderer split for reuse); `renderPhoto` uses it. `framing.ts` exports `frameBox`; `encode.ts` exports `brandMark`; `PhotoStudio` exports `Chips` and `Ring`.
+    - `SceneRoot` (filming: effects aside, idle life on the video's clock, no idle ticker), `SceneHost` (reel scenes; a share picture wins over the studio's preview), `AppShell` (`makeReel`, the lazy studio), the overlay `"reel"`, Share sheet / View options / Explore (Make a video), `src/share/publish.ts` (making a link, shared by the share sheet and the studio), `vite.config.ts` (dependency scan entries).
+    - Dependencies: `mediabunny` 1.61.0, `qrcode-generator` 2.0.4.
+  - **Tests:**
+    - Unit: `src/reel/reel.test.ts` (14): deterministic; 15 s and 8 s, shots back to back; the story's order and dissolves; the living room, kitchen, main bedroom and pooja room as heroes; across every template (one and two floors), every road side, AI homes and the presets the camera looks at the plot, stays above ground and never enters the house (or dips below a room's cut); room shots centred; mood lights and night falling; words only in their shots; music length, peak ≤ 0.98 (−1 dBFS), audible, faded, seeded, silence for None, the Bhupali notes; the QR code's size and finder squares; the caption; device quality.
+    - Browser: `tests/reel.spec.ts` (5): a 1 s grand tour at 180 × 320 is an MP4 (`ftyp`) the browser plays at the right size and length, with music and every shot, then 0 idle frames; Cancel, then 0 idle frames; no H.264 → "Take a photo instead"; from Share on a phone, chips wrap and fit, the video ends with a newly made link that the share sheet then shows; the studio at 320 px in Extra large. `DH_SHOTS=1` writes each shot's middle frame of a golden and a Diwali grand tour (720 × 1280) to `docs/screenshots/reel/` and the videos to `test-results/`; `DH_REEL_BENCH=1` times full-quality grand tours (desktop, and a phone with the CPU slowed four times).
+    - `tests/preview/security.spec.ts`: a reel is filmed and plays under the production CSP.
+  - **Gate:** typecheck, lint, 851 unit tests, build, `check:api`, 118 browser tests (36 screenshot- and timing-only skipped), 4 preview tests, `diff --check`: all green.

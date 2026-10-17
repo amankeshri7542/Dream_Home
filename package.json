@@ -28,8 +28,10 @@
     "@react-three/postprocessing": "^3.2.0",
     "@vercel/blob": "2.8.0",
     "lucide-react": "^0.468.0",
+    "mediabunny": "1.61.0",
     "n8ao": "2.0.1",
     "postprocessing": "^6.39.5",
+    "qrcode-generator": "2.0.4",
     "react": "~19.2.0",
     "react-dom": "~19.2.0",
     "three": "^0.180.0"

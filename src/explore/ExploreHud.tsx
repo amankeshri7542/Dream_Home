@@ -36,11 +36,13 @@ export function hourText(hour: number) {
 /** The dark, cinematic HUD for admiring the finished home. */
 export function ExploreHud({
   onPhoto,
+  onVideo,
   walkAvailable,
   walkStatus,
   walkFloorId,
 }: {
   onPhoto: () => void;
+  onVideo: () => void;
   walkAvailable: boolean;
   walkStatus?: string;
   /** The floor the visitor is on, for the up/down buttons. */
@@ -67,6 +69,7 @@ export function ExploreHud({
         </Button>
         <div className="dh-explore-top-actions">
           <IconButton icon={Icon.photo} tone="hud" label="Take a photo" onClick={onPhoto} />
+          <IconButton icon={Icon.video} tone="hud" label="Make a video" onClick={onVideo} />
           <div className="dh-quality">
             <IconButton
               icon={Icon.quality}

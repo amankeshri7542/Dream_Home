@@ -34,6 +34,7 @@ export function DialogHost({
   onHomeOpened,
   capture,
   onTakePhoto,
+  onMakeVideo,
 }: {
   fileInput: React.RefObject<HTMLInputElement | null>;
   onReplayTour: () => void;
@@ -44,6 +45,7 @@ export function DialogHost({
   /** A snapshot of the 3D view (for a share link's preview picture). */
   capture: () => Promise<Blob | null>;
   onTakePhoto: () => void;
+  onMakeVideo: () => void;
 }) {
   const editor = useEditor();
   const { state, dispatch, project, unit, setPrefs, error } = editor;
@@ -78,6 +80,10 @@ export function DialogHost({
           onTakePhoto={() => {
             close();
             onTakePhoto();
+          }}
+          onMakeVideo={() => {
+            close();
+            onMakeVideo();
           }}
           onPlans={() => dispatch({ type: "overlay", overlay: "plans" })}
         />

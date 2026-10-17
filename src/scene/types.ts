@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import type { Project, ViewSettings } from "../domain/types";
 import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
+import type { ReelJobRequest, ReelOutcome, ReelProgress, ReelScene } from "../reel/settings";
 import type {
   CameraCommand,
   EditorMode,
@@ -62,4 +63,12 @@ export type SceneProps = {
   onPhotoDone?: (outcome: PhotoOutcome) => void;
   /** Fired while walking when the room under the visitor changes. */
   onWalkStatus?: (status: { floorId: string; roomId: string | null }) => void;
+  /** A reel to film (see src/reel); while it runs nothing is drawn on screen. */
+  reelJob?: ReelJobRequest | null;
+  /** The reel scene being shown (its key), so filming knows the view has caught up. */
+  reelKey?: string | null;
+  reelCancel?: { current: boolean };
+  onReelScene?: (scene: ReelScene) => void;
+  onReelProgress?: (progress: ReelProgress) => void;
+  onReelDone?: (outcome: ReelOutcome) => void;
 };

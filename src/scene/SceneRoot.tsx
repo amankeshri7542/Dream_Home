@@ -35,6 +35,7 @@ import { useIdleTicker, usePageVisible } from "./motion";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
 import { PhotoRenderer } from "../photo/PhotoRenderer";
+import { ReelRenderer } from "../reel/ReelRenderer";
 import { TIERS, MEASURE_FRAMES } from "./quality/quality";
 import type { QualityTier } from "../editor/types";
 import { useSceneStore } from "./store";
@@ -105,13 +106,16 @@ export function SceneRoot(props: RootProps) {
   });
 
   const vis = visibility(project, view);
-  // Lived-in details: Explore and Photo only (not the title showcase). Their
-  // idle motion (fans, curtains, the cat, diya flames) runs while they show,
-  // gated like street life (not battery, not reduced motion, page visible).
+  // Lived-in details: Explore, Photo and Reel only (not the title showcase).
+  // Their idle motion (fans, curtains, the cat, diya flames) runs while they
+  // show, gated like street life (not battery, not reduced motion, page
+  // visible). A reel films it on its own clock, frame by frame, so nothing
+  // moves on screen and the reduced-motion and visibility gates don't apply.
+  const filming = !!props.reelJob;
   const exploring = mode === "explore" && explore !== "showcase";
   const everyday = exploring && view.livedIn !== false;
   const diwali = exploring && !!view.festive;
-  const motion = (everyday || diwali) && tier !== "battery" && !reducedMotion && pageVisible;
+  const motion = (everyday || diwali) && tier !== "battery" && (filming || (!reducedMotion && pageVisible));
   // Room palettes, night lamps: what interior props need beyond their floor.
   const interiorExplore = mode === "explore" || explore === "showcase";
   const interior = useMemo(
@@ -156,9 +160,10 @@ export function SceneRoot(props: RootProps) {
     } else store.invalidate();
   });
 
-  // Effects mount lazily after the first frame (never on battery).
+  // Effects mount lazily after the first frame (never on battery). A reel
+  // draws its own frames, so they step aside while it films.
   const ready = useReadyFlag();
-  const wantEffects = spec.post !== "none" && ready;
+  const wantEffects = spec.post !== "none" && ready && !filming;
 
   // Intro frame timing for the auto tier measurement.
   const [measuring, setMeasuring] = useState(false);
@@ -185,11 +190,11 @@ export function SceneRoot(props: RootProps) {
   };
 
   const ground = view.landscape ? siteGround(project) : "soil";
-  // Street life: Explore / showcase only, never on battery or reduced motion.
+  // Street life: Explore / showcase only (and reels), never on battery or reduced motion.
   const streetLife =
-    (mode === "explore" || explore === "showcase") && tier !== "battery" && !reducedMotion && view.streetLife !== false;
+    (mode === "explore" || explore === "showcase") && tier !== "battery" && (filming || !reducedMotion) && view.streetLife !== false;
   // One ticker for all idle animation: two out-of-step timers would double the frame rate.
-  useIdleTicker((streetLife || motion) && pageVisible);
+  useIdleTicker(!filming && (streetLife || motion) && pageVisible);
   const pickLandscape = (id: string) => props.onSelect({ kind: "landscape", id });
   return (
     <>
@@ -263,6 +268,15 @@ export function SceneRoot(props: RootProps) {
         cancel={props.photoCancel}
         onProgress={props.onPhotoProgress}
         onDone={props.onPhotoDone}
+      />
+      <ReelRenderer
+        job={props.reelJob ?? null}
+        project={project}
+        sceneKey={props.reelKey ?? null}
+        cancel={props.reelCancel}
+        onScene={props.onReelScene}
+        onProgress={props.onReelProgress}
+        onDone={props.onReelDone}
       />
       <DebugBridge
         project={project}

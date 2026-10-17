@@ -38,6 +38,15 @@ test("the built app runs cleanly under its Content-Security-Policy", async ({ pa
   await studio.getByRole("button", { name: "Take photo" }).click();
   await expect(studio.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 30000 });
   await expect(studio.getByText("quick photo instead")).toHaveCount(0);
+  await studio.getByRole("button", { name: "Close photo studio" }).click();
+  // A reel loads its studio, the filming code and the encoder lazily, and plays back as a blob: video.
+  await page.evaluate(() => ((window as unknown as { __dreamHomeReelTest: unknown }).__dreamHomeReelTest = { width: 180, height: 320, seconds: 1, samples: 1 }));
+  await page.getByRole("button", { name: "Make a video" }).click();
+  const reel = page.getByRole("dialog", { name: "Video studio" });
+  await reel.getByRole("switch", { name: "Show link at the end" }).click();
+  await reel.getByRole("button", { name: "Make my video" }).click();
+  await expect(reel.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 60000 });
+  await expect.poll(() => reel.locator("video").evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
   expect(violations).toEqual([]);
 });
 

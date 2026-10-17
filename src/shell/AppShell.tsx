@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createStarter } from "../domain/starters";
 import type { Project } from "../domain/types";
 import { loadSession, saveSession } from "../editor/preferences";
@@ -11,6 +11,15 @@ import { PhotoStudio, type PhotoSettings } from "../photo/PhotoStudio";
 import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
 import { photoQuality, type PhotoScene } from "../photo/settings";
 import { GOLDEN_HOUR } from "../editor/state";
+import {
+  createFeed,
+  reelQuality,
+  type ReelJobRequest,
+  type ReelOutcome,
+  type ReelProgress,
+  type ReelScene,
+  type ReelSettings,
+} from "../reel/settings";
 import type { TrayPointer } from "../components/RoomTray";
 import { useEditor } from "../editor/EditorProvider";
 import { useChromeInsets, useDesktop } from "../editor/hooks";
@@ -32,6 +41,9 @@ import { SceneHost } from "./SceneHost";
 import { TopBar } from "./TopBar";
 import "./shell.css";
 import "./studio/studio.css";
+
+// The video studio loads only when opened (the filming itself loads later still).
+const ReelStudio = lazy(() => import("../reel/ReelStudio"));
 
 /** The construction reveal: five steps, then "Ta-da!" for a moment. */
 const REVEAL_MS = 5 * 520 + 1800;
@@ -191,8 +203,34 @@ export function AppShell() {
     setPhotoScene(null);
     return "blob" in outcome ? outcome.blob : capture();
   }, [makePhoto, capture, state.view.livedIn]);
+
+  // The "My dream home" reel (src/reel): the studio's preview and each shot's
+  // scene, the job the canvas films, and its progress (a feed, so filming
+  // never re-renders the editor).
+  const [reelScene, setReelScene] = useState<ReelScene | null>(null);
+  const [reelJob, setReelJob] = useState<ReelJobRequest | null>(null);
+  const reelCancel = useMemo(() => ({ current: false }), []);
+  const reelFeed = useMemo(() => createFeed<ReelProgress | null>(null), []);
+  const reelWaiter = useRef<((outcome: ReelOutcome) => void) | null>(null);
+  const onReelDone = useCallback((outcome: ReelOutcome) => {
+    setReelJob(null);
+    const resolve = reelWaiter.current;
+    reelWaiter.current = null;
+    resolve?.(outcome);
+  }, []);
+  const makeReel = useCallback(
+    (settings: ReelSettings) =>
+      new Promise<ReelOutcome>((resolve) => {
+        reelCancel.current = false;
+        reelWaiter.current = resolve;
+        reelFeed.set(null);
+        setReelJob({ id: Date.now(), ...reelQuality({ phone: !desktop }), ...settings });
+      }),
+    [desktop, reelCancel, reelFeed],
+  );
+  const openReelStudio = useCallback(() => dispatch({ type: "overlay", overlay: "reel" }), [dispatch]);
   const explore = state.mode === "explore";
-  const studioOpen = state.overlay === "photo" && screen === "workspace";
+  const studioOpen = (state.overlay === "photo" || state.overlay === "reel") && screen === "workspace";
   const chromeHidden = state.chromeHidden || screen !== "workspace" || studioOpen;
   const layerOpen =
     screen === "gallery" ||
@@ -253,8 +291,27 @@ export function AppShell() {
         photoCancel={photoCancel}
         onPhotoProgress={setPhotoProgress}
         onPhotoDone={onPhotoDone}
+        reel={reelScene}
+        reelJob={reelJob}
+        reelCancel={reelCancel}
+        onReelScene={setReelScene}
+        onReelProgress={reelFeed.set}
+        onReelDone={onReelDone}
       />
-      {studioOpen && (
+      {studioOpen && state.overlay === "reel" && (
+        <Suspense fallback={null}>
+          <ReelStudio
+            onClose={() => dispatch({ type: "overlay", overlay: null })}
+            onScene={setReelScene}
+            render={makeReel}
+            feed={reelFeed}
+            onCancel={() => (reelCancel.current = true)}
+            capture={sharePicture}
+            onTakePhoto={openPhotoStudio}
+          />
+        </Suspense>
+      )}
+      {studioOpen && state.overlay === "photo" && (
         <PhotoStudio
           onClose={() => dispatch({ type: "overlay", overlay: null })}
           onScene={setPhotoScene}
@@ -278,6 +335,7 @@ export function AppShell() {
       {explore && screen === "workspace" && !state.chromeHidden && !studioOpen && (
         <ExploreHud
           onPhoto={openPhotoStudio}
+          onVideo={openReelStudio}
           walkAvailable
           walkStatus={state.explore === "walk" ? walkStatus : undefined}
           walkFloorId={walkFloorId}
@@ -430,6 +488,7 @@ export function AppShell() {
         }}
         capture={sharePicture}
         onTakePhoto={openPhotoStudio}
+        onMakeVideo={openReelStudio}
       />
       <ImportFromLink
         onAdded={() => {
