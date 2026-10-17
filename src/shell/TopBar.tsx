@@ -35,7 +35,13 @@ export function TopBar({
       : `${project.floors.length} floors`,
   ];
   return (
-    <header className="dh-topbar" data-inset="top" data-chrome="topbar">
+    <header
+      className="dh-topbar"
+      data-inset="top"
+      data-chrome="topbar"
+      // Long names get a row of their own on phones (shell.css).
+      data-name={project.name.length > 30 ? "longer" : project.name.length > 18 ? "long" : undefined}
+    >
       <div className="dh-topbar-brand">
         <button
           type="button"
@@ -45,14 +51,16 @@ export function TopBar({
         >
           <BrandMark />
         </button>
-        <div className="dh-title">
+        {/* Phones: the name may take two lines, and "Saved" shrinks to a dot beside it. */}
+        <div className={`dh-title ${editor.saved ? "is-saved" : "is-unsaved"}`}>
           <h1 className="dh-title-name">{project.name}</h1>
           <p className="dh-title-meta dh-truncate">
             {meta.join(" · ")}
             <span
               className={`dh-save ${editor.saved ? "is-saved" : "is-unsaved"}`}
+              title={editor.saved ? "Saved on this device" : undefined}
             >
-              {editor.saved ? "Saved" : "Not saved"}
+              <span className="dh-save-word">{editor.saved ? "Saved" : "Not saved"}</span>
             </span>
           </p>
         </div>
@@ -69,9 +77,11 @@ export function TopBar({
             disabled={!editor.canUndo}
             onClick={editor.undo}
           />
+          {/* Phones show Redo only when there's something to redo: room for the name. */}
           <IconButton
             icon={Icon.redo}
             tone="plain"
+            className={editor.canRedo ? undefined : "is-idle"}
             label="Redo last change"
             title={editor.redoLabel ? `Redo: ${editor.redoLabel}` : "Redo"}
             disabled={!editor.canRedo}

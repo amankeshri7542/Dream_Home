@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useEditor } from "../editor/EditorProvider";
 import type { QualitySetting } from "../editor/types";
 import { Icon } from "../ui/icons";
-import { Button, IconButton } from "../ui/primitives";
+import { Button } from "../ui/primitives";
 import { Joystick } from "./Joystick";
 import { requestFloor } from "./walkInput";
 import "./explore.css";
@@ -64,21 +64,30 @@ export function ExploreHud({
   return (
     <div className="dh-explore" data-theme="hud" data-chrome="explore">
       <div className="dh-explore-top" data-inset="top">
-        <Button variant="secondary" icon={Icon.left} className="dh-hud-btn" onClick={back}>
-          Back to building
+        {/* "Home" with a house, like the room's and Outside's way back. */}
+        <Button variant="secondary" icon={Icon.home} className="dh-hud-btn" aria-label="Back to home" onClick={back}>
+          Home
         </Button>
+        {/* Labelled where there's room (tablets and up); icons on phones. */}
         <div className="dh-explore-top-actions">
-          <IconButton icon={Icon.photo} tone="hud" label="Take a photo" onClick={onPhoto} />
-          <IconButton icon={Icon.video} tone="hud" label="Make a video" onClick={onVideo} />
+          <Button variant="secondary" icon={Icon.photo} className="dh-hud-btn dh-hud-labelled" aria-label="Take a photo" onClick={onPhoto}>
+            <span>Photo</span>
+          </Button>
+          <Button variant="secondary" icon={Icon.video} className="dh-hud-btn dh-hud-labelled" aria-label="Make a video" onClick={onVideo}>
+            <span>Video</span>
+          </Button>
           <div className="dh-quality">
-            <IconButton
+            <Button
+              variant="secondary"
               icon={Icon.quality}
-              tone="hud"
-              label="Picture quality"
+              className="dh-hud-btn dh-hud-labelled"
+              aria-label="Picture quality"
               aria-expanded={quality}
               aria-haspopup="menu"
               onClick={() => setQuality(!quality)}
-            />
+            >
+              <span>Quality</span>
+            </Button>
             {quality && (
               <div className="dh-hud-menu" role="menu" aria-label="Picture quality">
                 {(

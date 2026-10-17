@@ -148,8 +148,8 @@ stale).
    drying on the balcony or terrace, a scooter out front, a toran over the door;
    ceiling fans turn and curtains sway. They are never saved, so editing stays
    tidy, and they can be switched off in View options.
-8. **Photo** — the camera (View options, Explore, a room's header, or Share)
-   opens the **Photo studio**: pick *This view, Room, Front* or *Aerial*, a
+8. **Photo** — the *Photo* button on Home (or View options, Explore, a room's
+   header, or Share) opens the **Photo studio**: pick *This view, Room, Front* or *Aerial*, a
    mood (*Morning, Noon, Golden hour, Night, Diwali night*) and a shape
    (*Story 9:16, Square, Post 4:5, Wide 16:9*), lived-in details on or off
    (Diwali night adds diyas, string lights and a rangoli), then *Take photo*. A few
@@ -158,15 +158,17 @@ stale).
    an optional small Dream Home mark. Devices that can't make the full render
    get a quick picture of the view instead.
 9. **Share** — *Make my link* gives a short link (`/h/…`) anyone can open on
-   any phone to see the home turning in golden light, walk inside it, and
-   **Remix this home** into their own My homes (their own home stays safe).
+   any phone to see the home turning in golden light, opened up with its rooms
+   named (tap one to walk into it), and **Remix this home** into their own My
+   homes (their own home stays safe).
    WhatsApp and other apps show a rendered golden-hour picture and the home's
    name. The
    sharer sees views and remixes, can *Update link* after changes and *Stop
    sharing* at any time; the city and name are private unless chosen. Plan
    images per floor and a JSON backup are under *More ways to share*.
 
-10. **Video** — *Make a video* films a 15 s (or 8 s) vertical MP4 of the home:
+10. **Video** — the *Video* button on Home (or *Make a video* in Explore and
+    Share) films a 15 s (or 8 s) vertical MP4 of the home:
     a title, a tour through the rooms with their names, generated music, and
     an end card with the home's link and a QR code. It's made on the phone,
     ready for WhatsApp status or Instagram.
@@ -174,8 +176,10 @@ stale).
     main door faces, and the 3D view uses the real sun for that place and
     season. The *Sunlight* sheet slides through the day and says which rooms
     get morning or hot afternoon sun, with tips. Vastu is opt-in, as friendly
-    tips with one-tap swaps. The Home score ring adds up the essentials,
-    "make it yours" ideas, sunlight and Vastu, and badges celebrate milestones.
+    tips with one-tap swaps (a view, so Undo leaves it alone). The Home score
+    ring adds up the essentials, "make it yours" ideas, sunlight and Vastu; its
+    chip names the next thing to do ("Next: Paint a wall"), and badges
+    celebrate milestones.
 12. **Start from your builder's plan** — take a photo or screenshot of the
     plan, pick the plot size and which side the road is on, and the AI reads
     the rooms (one free reading per device). Check them on the 2D plan over the

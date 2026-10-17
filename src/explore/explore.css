@@ -35,6 +35,19 @@
   .dh-explore .dh-hud-btn:hover {
     background: var(--dh-hud-bg-strong);
   }
+  /* Photo, Video and Quality: words on tablets and up, round icons on phones. */
+  @media (max-width: 599px) {
+    .dh-explore .dh-hud-labelled {
+      justify-content: center;
+      width: var(--dh-target-secondary, 44px);
+      min-width: 0;
+      padding: 0;
+      border-radius: 50%;
+    }
+    .dh-explore .dh-hud-labelled span {
+      display: none;
+    }
+  }
   .dh-quality {
     position: relative;
   }

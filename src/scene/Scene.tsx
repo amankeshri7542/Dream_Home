@@ -184,6 +184,7 @@ function SceneCanvas(props: SceneProps & { gpu: string | null }) {
         ghost={props.ghost}
         registry={registry}
         onSelect={props.onSelect}
+        labelVerb={props.labelVerb}
         invalidate={store.invalidate}
       />
     </div>

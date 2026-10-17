@@ -70,6 +70,8 @@ export type EditorApi = {
   commit: (project: Project, label: string, opts?: RunOptions) => void;
   /** Replaces the document and starts a fresh undo history (first-run homes). */
   startFresh: (project: Project) => void;
+  /** A home setting that isn't an edit (Vastu tips): saved, but never undone. */
+  setHomeSetting: (patch: Pick<Partial<Project>, "vastu">) => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -410,6 +412,10 @@ export function EditorProvider({
     startFresh: (next: Project) => {
       doc.resetHistory(next);
       dispatch({ type: "select", target: null });
+    },
+    setHomeSetting: (patch) => {
+      feedback.click();
+      doc.setSetting(patch);
     },
     undo,
     redo,

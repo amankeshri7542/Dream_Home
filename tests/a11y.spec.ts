@@ -51,7 +51,7 @@ for (const [name, size] of [
     await goHome(page);
     await homeAction(page, "Explore").click();
     await audit(page, "explore");
-    await page.getByRole("button", { name: "Back to building" }).click();
+    await page.getByRole("button", { name: "Back to home" }).click();
   });
 }
 

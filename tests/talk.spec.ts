@@ -89,7 +89,7 @@ test("on a phone: type a change, it happens as one undo step, and Undo brings it
   expect(JSON.stringify(sent[0].context)).not.toContain("floor-0-kitchen");
   await expect(sheet(page).getByRole("list", { name: "Conversation" })).toContainText("Making the kitchen 2 ft wider.");
   await expect(sheet(page)).toContainText("14 left today.");
-  await expect(page.getByRole("button", { name: "Undo last change" })).toHaveAttribute("title", "Undo: Voice: Make the kitchen bigger");
+  await expect(page.getByRole("button", { name: "Undo last change" })).toHaveAttribute("data-tip", "Undo: Voice: Make the kitchen bigger");
   await page.getByRole("button", { name: "Undo last change" }).click();
   await expect.poll(() => kitchenWidth(page)).toBe(before);
 
@@ -143,7 +143,7 @@ test("removing a room asks first; No changes nothing, Yes removes it", async ({ 
   await say(page, "remove bedroom 2");
   await sheet(page).getByRole("button", { name: "Yes, do it" }).click();
   await expect.poll(count).toBe(rooms - 1);
-  await expect(page.getByRole("button", { name: "Undo last change" })).toHaveAttribute("title", "Undo: Voice: remove bedroom 2");
+  await expect(page.getByRole("button", { name: "Undo last change" })).toHaveAttribute("data-tip", "Undo: Voice: remove bedroom 2");
 });
 
 test("the phone answers navigation itself, in English and Hindi, without the AI", async ({ page }) => {

@@ -50,11 +50,16 @@
   transition: background 120ms ease, box-shadow 120ms ease;
   user-select: none;
 }
-/* A finger-sized (44 px) tap area around the small label (already absolute). */
+/* A finger-sized tap area, at least 44 × 44 px, around the small label
+   (already absolute); markers get the same. */
 .scene-room-label::after {
   content: "";
   position: absolute;
-  inset: -9px -4px;
+  left: 50%;
+  top: 50%;
+  width: max(calc(100% + 8px), 44px);
+  height: max(calc(100% + 18px), 44px);
+  transform: translate(-50%, -50%);
 }
 .scene-room-label:focus-visible {
   outline: 3px solid #b5562f;
@@ -73,6 +78,36 @@
 }
 .scene-room-label.is-compact .scene-room-label-area {
   display: none;
+}
+/* Too crowded for words: a small marker that still opens the room and shows
+   its name on hover or keyboard focus. */
+.scene-room-label.is-marker {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  justify-content: center;
+}
+.scene-room-label.is-marker::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b5562f;
+}
+.scene-room-label.is-marker > span {
+  display: none;
+}
+.scene-room-label.is-marker:is(:hover, :focus-visible) {
+  width: auto;
+  height: auto;
+  padding: 3px 9px 4px;
+  z-index: 1;
+}
+.scene-room-label.is-marker:is(:hover, :focus-visible)::before {
+  display: none;
+}
+.scene-room-label.is-marker:is(:hover, :focus-visible) .scene-room-label-name {
+  display: block;
 }
 .scene-room-label:hover {
   background: #fffaf0;

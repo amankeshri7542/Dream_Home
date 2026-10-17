@@ -15,7 +15,7 @@ const MODE_HINTS: Partial<Record<string, string>> = {
 
 /** A friendly next-step hint for the current mode. */
 export function ModeHint() {
-  const { state, selected } = useEditor();
+  const { state, selected, dispatch } = useEditor();
   if (state.mode === "build" && state.tool === "move" && !state.lens)
     return (
       <p className="dh-mode-hint is-tool" role="note">
@@ -31,6 +31,13 @@ export function ModeHint() {
     <p className="dh-mode-hint" role="note">
       <Icon.info size={16} aria-hidden />
       {hint}
+      {/* Crowded rooms show as small markers, and lower floors aren't labelled
+          under "All": every room is also one tap away in a list. */}
+      {state.mode === "build" && (
+        <button type="button" className="dh-mode-hint-action" onClick={() => dispatch({ type: "open-panel", panel: "rooms" })}>
+          All rooms
+        </button>
+      )}
     </p>
   );
 }

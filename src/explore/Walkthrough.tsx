@@ -23,6 +23,8 @@ import { walkInput } from "./walkInput";
 type Props = {
   project: Project;
   startFloorId: string;
+  /** Start in this room (the viewer's room labels), not the floor's biggest. */
+  startRoomId?: string;
   start?: { x: number; z: number };
   reducedMotion: boolean;
   /** After dark the rooms light up around the visitor. */
@@ -40,22 +42,22 @@ const TURN = 1.8; // radians per second
  * A sensible entry point: one end of the largest room, looking along its
  * length, so the first view shows the room rather than a wall up close.
  */
-export function walkSpawn(project: Project, floorId: string) {
+export function walkSpawn(project: Project, floorId: string, roomId?: string) {
   const floor = project.floors.find((f) => f.id === floorId) ?? project.floors[0];
   const rooms = [...floor.rooms].sort((a, b) => b.bounds.w * b.bounds.d - a.bounds.w * a.bounds.d);
-  const r = rooms[0]?.bounds ?? floor.footprint;
+  const r = (floor.rooms.find((room) => room.id === roomId) ?? rooms[0])?.bounds ?? floor.footprint;
   // yaw 0 looks north (−z); −π/2 looks east (+x).
   if (r.w >= r.d) return { x: r.x + Math.min(70, r.w * 0.2), z: r.z + r.d / 2, yaw: -Math.PI / 2 };
   return { x: r.x + r.w / 2, z: r.z + r.d - Math.min(70, r.d * 0.2), yaw: 0 };
 }
 
-export default function Walkthrough({ project, startFloorId, start, reducedMotion, night = false, onStatus }: Props) {
+export default function Walkthrough({ project, startFloorId, startRoomId, start, reducedMotion, night = false, onStatus }: Props) {
   const { camera, gl, invalidate } = useThree();
   const controls = useThree((state) => state.controls) as unknown as {
     enabled: boolean;
   } | null;
   const floorIndex = useRef(Math.max(0, project.floors.findIndex((f) => f.id === startFloorId)));
-  const spawn = walkSpawn(project, startFloorId);
+  const spawn = walkSpawn(project, startFloorId, startRoomId);
   const pos = useRef(start ?? { x: spawn.x, z: spawn.z });
   const eye = useRef(0);
   const yaw = useRef(start ? 0 : spawn.yaw); // yaw 0 looks north (−z)

@@ -145,7 +145,7 @@ test("the home checklist reports progress and offers fixes", async ({ page }) =>
   await expect(party).toBeVisible();
   await expect(party.getByRole("button", { name: "Explore my home" })).toBeFocused();
   await party.getByRole("button", { name: "Explore my home" }).click();
-  await expect(page.getByRole("button", { name: "Back to building" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to home" })).toBeVisible();
   await expect(party).toHaveCount(0);
 });
 

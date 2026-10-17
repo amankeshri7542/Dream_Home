@@ -2,7 +2,7 @@
 // which way the home faces) a score and every rule with its tip. A miss may
 // offer a swap with the room that sits where tradition puts it; it's only
 // ever applied on a tap, and Undo takes it back.
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Switch } from "../components/Controls";
 import { COMPASS_LABEL } from "../domain/compass";
 import { swapRoomUses } from "../domain/model";
@@ -19,30 +19,48 @@ const MARK: Record<Exclude<VastuStatus, "na">, { text: string; word: string }> =
 };
 
 export function VastuCard() {
-  const { project, commit, run } = useEditor();
+  const { project, run, setHomeSetting } = useEditor();
   const report = useMemo(() => (project.vastu ? vastuReport(project, { withSwaps: true }) : null), [project]);
+  const section = useRef<HTMLElement>(null);
+  // Just switched on: bring what it added (the facing question, or the tips)
+  // into view, as the switch sits low in the Home score.
+  const turnedOn = useRef(false);
+  useEffect(() => {
+    if (!project.vastu || !turnedOn.current) return;
+    turnedOn.current = false;
+    // Scroll only the Home score itself (scrollIntoView could shift the app).
+    const el = section.current;
+    const box = el?.closest<HTMLElement>(".dh-checklist-pop");
+    if (el && box) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top - 12;
+  }, [project.vastu]);
+  // A way of looking at the home, not a change to it: kept out of Undo.
   const toggle = (
     <Switch
       label="Show Vastu tips"
       description="Traditional guidance, not rules."
       checked={!!project.vastu}
-      onChange={() => commit({ ...project, vastu: !project.vastu }, project.vastu ? "Hide Vastu tips" : "Show Vastu tips")}
+      onChange={() => {
+        turnedOn.current = !project.vastu;
+        setHomeSetting({ vastu: !project.vastu });
+      }}
     />
   );
   if (!project.vastu)
     return (
-      <section className="dh-vastu" aria-label="Vastu">
+      <section className="dh-vastu" aria-label="Vastu" ref={section}>
         <h3>Vastu</h3>
         {toggle}
       </section>
     );
   const names = (id: string) => project.floors.flatMap((f) => f.rooms).find((r) => r.id === id)?.name ?? "the room";
   return (
-    <section className="dh-vastu" aria-label="Vastu">
+    <section className="dh-vastu" aria-label="Vastu" ref={section}>
       <div className="dh-vastu-score">
         <h3>Vastu</h3>
         {report && <strong className="dh-num">{report.score}/100</strong>}
       </div>
+      {/* The switch stays where it was tapped; what it adds appears below it. */}
+      {toggle}
       {!report ? (
         <FacingPicker
           value={null}
@@ -85,7 +103,6 @@ export function VastuCard() {
           </ul>
         </>
       )}
-      {toggle}
     </section>
   );
 }

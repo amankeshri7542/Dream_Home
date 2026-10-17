@@ -88,5 +88,20 @@ export function redoHistory(h: History): { h: History; restored?: HistoryMeta } 
   };
 }
 
+/**
+ * A home setting that isn't an edit (showing Vastu tips): written into every
+ * step of the history, so undo and redo never flip it back.
+ */
+export function setEverywhere(h: History, patch: Partial<Project>): History {
+  const apply = (project: Project) => ({ ...project, ...patch });
+  return {
+    ...h,
+    past: h.past.map((e) => ({ ...e, project: apply(e.project) })),
+    present: apply(h.present),
+    future: h.future.map((e) => ({ ...e, project: apply(e.project) })),
+    revision: h.revision + 1,
+  };
+}
+
 export const undoLabel = (h: History) => h.past.at(-1)?.meta?.label;
 export const redoLabel = (h: History) => h.future[0]?.meta?.label;

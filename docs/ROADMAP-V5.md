@@ -17,7 +17,9 @@ work can resume after any interruption. Update it at the end of every phase.
 - **v5 is complete** (M8 shipped 18 Oct 2026): installable and offline, reviewed for usability and security, documented. First-load budget: 1.5 KB gzip left of the +30 KB.
 - **Next:** the owner's setup (below), the live AI checks, and real-phone checks of the reel in WhatsApp and Instagram, the share preview in WhatsApp, Hindi speech, and installing on Android and iPhone. Usability follow-ups are listed in the M8 decisions.
 - **Live checks still owed (need KV connected, below, and the owner's go-ahead):** one real plan reading with the sample plan (about ₹4–8; the sample and a one-reading script are ready), and a few real voice commands (about ₹0.1 each).
-- **Waiting for the owner's review (not merged):** three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist).
+- **Waiting for the owner's review (not merged):**
+  - three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist);
+  - the M8 usability review's ten P2 follow-ups, on `claude/objective-cerf-b2d1d0` (see the M8 follow-ups under Decisions).
 - **Owner actions pending** (sharing, the AI designer, plan reading and talking are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
@@ -270,7 +272,7 @@ work can resume after any interruption. Update it at the end of every phase.
         - My homes shows one "Open now" badge;
         - "Welcome back" has one big button.
       - **The viewer:** the report button is labelled "Report this home" and its sheet closes with Escape.
-    - **P2, left for later** (the review's screenshots are in the session scratchpad):
+    - **P2, left for later** (the review's screenshots are in the session scratchpad; all ten are now done on a branch, see "M8 follow-ups" below):
       - the tour starting under the build animation;
       - the Home score chip's wording ("75 · 1/5 ideas");
       - Photo and Video being hard to find from Home on phones;
@@ -281,6 +283,32 @@ work can resume after any interruption. Update it at the end of every phase.
       - three wordings for "back" and icon-only desktop controls;
       - the Home score panel and Sunlight sheet framing on desktop;
       - 3D room labels shorter than 44 px.
+
+- **18 Oct 2026 (M8 follow-ups: the review's ten P2s, on branch `claude/objective-cerf-b2d1d0`, not merged):**
+  1. **The tour waits for the build.** `AppShell` keeps a `revealing` flag from the first build step until the "Ta-da!" has gone, and the tour shows only after it, on every path (the sample home started it at once before).
+  2. **The Home score chip says what it is:** "Home score · Next: Paint a wall" (two short lines on phones, one on desktop), naming the first missing essential, then the first idea not yet tried, then "All done!". On phones it stops short of the Photo and Video buttons (the next step ends in "…" at 320 px with Extra large text). A tried idea gets a tick like the essentials: the sparkle is the AI's mark everywhere else, so it read as "AI".
+  3. **Photo and Video on Home:** two labelled buttons, round and opposite the score on phones and tablets, pills under the top bar on desktop. They open the same studios as before. They step aside in a room, under the floor plan, behind a sheet or Talk, and (on phones) while the Home score is open. On screens under 600 px tall (a phone on its side, or a small one with Extra large text) they'd meet the camera buttons, so they hide there; Explore and Share still offer both. Next to Share would have squeezed the home's name on phones (item 5).
+  4. **No room goes unnamed:**
+     - a label that collides even with only its name becomes a small marker, which still opens the room (name in its button) and shows the name on hover or keyboard focus;
+     - occlusion now also tests the room just under the section cut, so a room seen over its cut walls keeps its label (the 3-bedroom AI home lost two this way);
+     - the Home hint gains an "All rooms" button. It opens Rooms & spaces, which lists every floor's rooms under their floors while "All" is showing; the 3D view still labels only the top floor there, since the floors below are under it.
+  5. **The home's name fits on phones:**
+     - up to two lines at 430 px and narrower;
+     - "Saved" shrinks to a green dot ("Saved on this device" as its tooltip; "Not saved" keeps its words);
+     - Redo shows on phones only when there is something to redo;
+     - where the buttons would leave it a word or two, the name gets a row of its own under them: under 360 px, names over 18 characters up to 380 px, names over 30 up to 430 px, and phones with Large or Extra large text.
+  6. **Vastu tips are outside Undo.** A new `setEverywhere` (`src/history.ts`) writes a home setting into every step of the history, so Undo and Redo never flip it. It reaches the UI as `editor.setHomeSetting`. The switch now sits right under "Vastu", the facing question appears just below it, and the Home score scrolls it into view. Answering the question is still a normal edit.
+  7. **The viewer opens up:** cut away, with the top floor's rooms named. Tapping a name walks you into that room (`Walkthrough`'s `startRoomId`; labels read "Walk into …" there). On desktop the card is a left inset, so the home is framed big in the space beside it. "Back outside" is now "See the whole home".
+  8. **One way back:** Explore, a room and Outside all use the house icon, named "Back to home" ("Home" where there's room for words; Outside's "House" is now "Home").
+     - Icon-only buttons get a quick tooltip on desktop: the name after 350 ms of hover, or at once on keyboard focus, kept on screen and never on touch (`src/ui/tooltips.ts`; `IconButton` sets `data-tip` in place of the slow native `title`).
+     - Explore's Photo, Video and Quality are labelled from 600 px.
+  9. **Desktop stacking and framing:** the Home score is solid (paper, not 97% glass) and ends above the camera buttons. The Sunlight sheet is a right inset on desktop, so the home is framed beside it rather than squeezed into the top corner.
+  10. **Room labels have a 44 × 44 px tap area** (`::after`, centred), markers too, measured with `elementFromPoint` in the test.
+  - **For the owner's eye (taste calls, easy to change):**
+    - where Photo and Video sit (round buttons top right on phones);
+    - Redo hidden on phones until there's something to redo;
+    - the viewer's slow turntable now turns the cut-away, so its room names move with it, slowly. It pauses while you touch it, and reduced motion stops it.
+    - On phones the viewer is framed by the screen's width and its card still covers about half the screen, so the home there is opened up and named, but not much bigger than before.
 
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
@@ -457,3 +485,17 @@ work can resume after any interruption. Update it at the end of every phase.
       - `interiors.spec.ts`: the battery style.
     - `tests/preview/security.spec.ts` (7): offline after one visit with the API never cached, the manifest and icons.
   - **Gate:** typecheck, lint, 974 unit tests, build, `check:api`, 142 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.
+- **2026-10-18, M8 follow-ups (branch `claude/objective-cerf-b2d1d0`, not merged):**
+  - **New:** `src/shell/CaptureButtons.tsx` (Photo and Video on Home), `src/ui/tooltips.ts` (quick tooltips for `data-tip`), `tests/usability.spec.ts`.
+  - **Changed:**
+    - `src/history.ts` (`setEverywhere`), `src/useProject.ts` (`setSetting`), `src/editor/EditorProvider.tsx` (`setHomeSetting`), `src/insights/VastuCard.tsx`.
+    - `src/shell/AppShell.tsx` (`revealing`, the tour gate, Photo and Video, tooltips), `Checklist.tsx` (the chip, ticks), `TopBar.tsx` (`data-name`, the save dot, Redo when it can), `Palette.tsx` ("All rooms"), `inspectors/SpacesList.tsx` and `Inspector.tsx` (every floor), `HomeBar.tsx` (Outside's "Home"), `shell.css`.
+    - `src/scene/overlay/OverlayProjector.tsx` (occlusion under the cut, markers), `SceneOverlay.tsx` and `types.ts` (`labelVerb`), `scene.css` (44 px tap area, markers).
+    - `src/share/ViewerApp.tsx` (cut-away, labels that walk you in, left inset, "See the whole home"), `src/explore/Walkthrough.tsx` (`startRoomId`), `ExploreHud.tsx` and `explore.css` ("Home", labelled Photo, Video and Quality).
+    - `src/insights/SunlightSheet.tsx` (right inset on desktop), `src/ui/primitives.tsx` and `primitives.css` (`IconButton`'s `data-tip`, the tooltip's look), `README.md`.
+  - **Tests:**
+    - Unit: `src/history.test.ts`: a setting reaches every step, so undo and redo never flip it.
+    - Browser: `tests/usability.spec.ts` (14), one or more per item: the tour after the Ta-da (with motion); the chip and its ticks; Photo and Video at 390 and 1440 px; label tap areas and markers at 360 px; All rooms; the name at 390 and 360 px, the dot and Redo; 320 px in Extra large; Vastu outside Undo and in view; the viewer at 390 and 1440 px; "Back to home"; tooltips and Explore's labels; the Home score and Sunlight on desktop. `DH_SHOTS=1` writes `docs/screenshots/usability/`.
+    - Updated for the new words: `goHome` in `tests/support/dreamHome.ts`, "Back to home" in five specs, `data-tip` in `talk.spec.ts`.
+  - **Found on the way:** the app already had a `.dh-tip` class (inline hints like "Drag it in the picture"), so the tooltip is `.dh-tooltip`. `editor.spec.ts` checks hosts against `localhost` and one test is pinned to port 5173, so the suite was run on `localhost:5191` and that test on 5173. A reused dev server keeps counting share links per device (20 a day), so the new viewer test makes its link from a device of its own.
+  - **Gate:** typecheck, lint, 975 unit tests, build, `check:api`, 156 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.

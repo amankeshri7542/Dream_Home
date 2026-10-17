@@ -74,12 +74,14 @@ export const homeAction = (page: Page, name: string) =>
     // "Add room, 2 kept for later" while rooms wait to be placed back.
     .getByRole("button", name === "Add room" ? { name: /^Add room(, \d+ kept for later)?$/ } : { name, exact: true });
 
-/** Back to the Home level: out of a room, or back in from Outside. */
+/** Back to the Home level: out of a room, in from Outside or out of Explore (each "Back to home"). */
 export async function goHome(page: Page) {
-  const back = page.getByRole("button", { name: "Back to home", exact: true });
-  if (await back.isVisible().catch(() => false)) await back.click();
-  const house = page.getByRole("button", { name: "Back to the house", exact: true });
-  if (await house.isVisible().catch(() => false)) await house.click();
+  const back = page.getByRole("button", { name: "Back to home", exact: true }).first();
+  for (let i = 0; i < 2 && (await back.isVisible().catch(() => false)); i++) {
+    await back.click();
+    // Explore can return to Outside, which has its own "Back to home".
+    await expect(page.getByRole("toolbar", { name: /^(Home actions|Outside tools)$/ }).first()).toBeVisible();
+  }
   await expect(page.getByRole("toolbar", { name: "Home actions" }).first()).toBeVisible();
 }
 

@@ -56,7 +56,7 @@ async function seedHome(page: Page, project: Project, prefs: Record<string, unkn
   await expect(page.getByRole("heading", { name: project.name, exact: true })).toBeVisible({ timeout: 15000 });
   await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false), { timeout: 20000 }).toBe(true);
 }
-const backToBuilding = (page: Page) => page.getByRole("button", { name: "Back to building" });
+const backHome = (page: Page) => page.getByRole("button", { name: "Back to home" });
 async function openLooks(page: Page) {
   await homeAction(page, "Outside").click();
   const style = page.getByRole("button", { name: /House style/ });
@@ -100,7 +100,7 @@ test("lived-in details keep Build idle, and Explore at night within the draw-cal
   expect(await framesOver(page, 2000)).toBe(0);
   const build = await bridge(page, (dh) => dh.renderer().calls);
   await homeAction(page, "Explore").click();
-  await expect(backToBuilding(page)).toBeVisible();
+  await expect(backHome(page)).toBeVisible();
   await page.getByRole("button", { name: "Night", exact: true }).click();
   await expect.poll(() => named(page, "lived-in"), { timeout: 15000 }).not.toBeNull();
   await expect.poll(() => named(page, "lived-in:life"), { timeout: 15000 }).not.toBeNull();
@@ -129,7 +129,7 @@ test.describe("with motion", () => {
     await page.waitForTimeout(800);
     expect(await framesOver(page, 2000)).toBe(0);
     await homeAction(page, "Explore").click();
-    await expect(backToBuilding(page)).toBeVisible();
+    await expect(backHome(page)).toBeVisible();
     await expect.poll(() => named(page, "lived-in:life"), { timeout: 15000 }).not.toBeNull();
     await bridge(page, (dh) => dh.waitForIdle());
     await page.waitForTimeout(500);
@@ -137,7 +137,7 @@ test.describe("with motion", () => {
     const frames = await framesOver(page, 1000);
     expect(frames).toBeGreaterThan(12);
     expect(frames).toBeLessThan(40);
-    await backToBuilding(page).click();
+    await backHome(page).click();
     await expect.poll(() => named(page, "lived-in")).toBeNull();
     await bridge(page, (dh) => dh.waitForIdle());
     await page.waitForTimeout(600);
@@ -147,7 +147,7 @@ test.describe("with motion", () => {
     await page.getByRole("switch", { name: /Lived-in details/ }).click();
     await page.keyboard.press("Escape");
     await homeAction(page, "Explore").click();
-    await expect(backToBuilding(page)).toBeVisible();
+    await expect(backHome(page)).toBeVisible();
     await bridge(page, (dh) => dh.waitForIdle());
     await page.waitForTimeout(500);
     expect(await named(page, "lived-in")).toBeNull();
@@ -199,7 +199,7 @@ test.describe("screenshots", () => {
         await page.setViewportSize(vp);
         await seedHome(page, lookHome(look, "Look Home"), { quality: "beautiful" });
         await homeAction(page, "Explore").click();
-        await expect(backToBuilding(page)).toBeVisible();
+        await expect(backHome(page)).toBeVisible();
         for (const hour of ["Golden hour", "Night"] as const) {
           await page.getByRole("button", { name: hour, exact: true }).click();
           await page.waitForTimeout(1500);
@@ -243,7 +243,7 @@ test.describe("screenshots", () => {
       // Each room up close, as the Room camera frames it (the photo's size
       // doesn't depend on the window, so once is enough).
       if (vp.width < 1280) return;
-      await backToBuilding(page).click();
+      await backHome(page).click();
       for (const room of ["Living / dining", "Kitchen", "Bedroom 1"]) {
         await enterRoom(page, room);
         await page.getByRole("button", { name: `Take a photo of ${room}` }).click();

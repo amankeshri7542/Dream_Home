@@ -42,7 +42,7 @@ export const IconButton = forwardRef<
     pressed?: boolean;
   }
 >(function IconButton(
-  { icon: IconGlyph, label, tone = "glass", pressed, className, ...rest },
+  { icon: IconGlyph, label, tone = "glass", pressed, className, title, ...rest },
   ref,
 ) {
   return (
@@ -50,7 +50,8 @@ export const IconButton = forwardRef<
       ref={ref}
       type="button"
       aria-label={label}
-      title={label}
+      // A quick tooltip on desktop (src/ui/tooltips.ts), not the slow native one.
+      data-tip={title ?? label}
       aria-pressed={pressed}
       className={`dh-icon-btn dh-icon-btn-${tone} ${className ?? ""}`}
       {...rest}

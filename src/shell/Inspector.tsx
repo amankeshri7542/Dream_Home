@@ -204,7 +204,15 @@ export function Inspector({
     label = "Rooms & spaces";
     content = (
       <>
-        <Header desktop={desktop} title="Rooms & spaces" kicker={floorName(project.floors.indexOf(editor.activeFloor))} />
+        <Header
+          desktop={desktop}
+          title="Rooms & spaces"
+          kicker={
+            state.view.floor === "all" && project.floors.length > 1
+              ? "Every floor"
+              : floorName(project.floors.indexOf(editor.activeFloor))
+          }
+        />
         <SpaceTabs />
         {errorBox}
         <SpacesList />

@@ -7,6 +7,7 @@ import {
   pushHistory,
   redoHistory,
   redoLabel,
+  setEverywhere,
   undoHistory,
   undoLabel,
 } from "./history";
@@ -59,5 +60,20 @@ describe("history", () => {
     const undone = undoHistory(h).h;
     expect(undone.future).toHaveLength(1);
     expect(pushHistory(undone, named("new"), undefined, 1e9).future).toHaveLength(0);
+  });
+  it("a setting (Vastu tips) reaches every step, so undo and redo never flip it", () => {
+    let h = createHistory(base);
+    h = pushHistory(h, named("A"), { label: "Rename" }, 0);
+    h = pushHistory(h, named("B"), { label: "Rename again" }, 5000);
+    h = undoHistory(h).h;
+    const on = setEverywhere(h, { vastu: true });
+    expect(on.revision).toBe(h.revision + 1);
+    expect(on.past).toHaveLength(1);
+    expect(on.future).toHaveLength(1);
+    expect(undoLabel(on)).toBe("Rename");
+    expect(on.present).toMatchObject({ name: "A", vastu: true });
+    expect(undoHistory(on).h.present).toMatchObject({ name: base.name, vastu: true });
+    expect(redoHistory(on).h.present).toMatchObject({ name: "B", vastu: true });
+    expect(setEverywhere(on, { vastu: false }).past[0].project.vastu).toBe(false);
   });
 });

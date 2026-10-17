@@ -8,6 +8,7 @@ import { addFurniture } from "../domain/furnitureCommands";
 import { setStyleDetails } from "../domain/materials";
 import { setFacing, setLocation } from "../domain/place";
 import { useEditor } from "../editor/EditorProvider";
+import { useDesktop } from "../editor/hooks";
 import { Chips } from "../photo/PhotoStudio";
 import { Icon } from "../ui/icons";
 import { Button, IconButton } from "../ui/primitives";
@@ -24,6 +25,8 @@ const FIRST = 6,
 
 export default function SunlightSheet({ onClose }: { onClose: () => void }) {
   const { state, dispatch, project, run, activeFloor } = useEditor();
+  // Desktop: a panel on the right, so the home is framed in the space beside it.
+  const desktop = useDesktop();
   const location = project.plot.location;
   const place = location ?? CENTRAL_INDIA;
   const date = useMemo(() => seasonDate(state.season), [state.season]);
@@ -53,7 +56,7 @@ export default function SunlightSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="dh-sun-sheet" role="dialog" aria-modal="false" aria-label="Sunlight">
-      <section className="dh-sun-panel" data-inset="bottom">
+      <section className="dh-sun-panel" data-inset={desktop ? "right" : "bottom"}>
         <div className="dh-sun-head">
           <h2>
             <Icon.sunlight size={20} aria-hidden /> Sunlight

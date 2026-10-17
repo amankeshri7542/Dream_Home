@@ -58,6 +58,8 @@ export type SceneProps = {
   onPhoto?: (blob: Blob) => void;
   /** Units for room-label areas (default metres). */
   areaUnit?: "m" | "ft";
+  /** What tapping a room label does, for its name ("Open Kitchen", the default; the viewer walks in). */
+  labelVerb?: "Open" | "Walk into";
   /** A render-quality photo to make (see src/photo). */
   photoJob?: PhotoJobRequest | null;
   photoCancel?: { current: boolean };

@@ -26,6 +26,21 @@ const QUEST_MODE: Record<string, EditorMode> = {
   garden: "outside",
 };
 
+/** The next thing to do, short enough for the chip ("Next: Paint a wall"). */
+const NEXT_STEP: Record<string, string> = {
+  doors: "Add a door",
+  windows: "Add a window",
+  stairs: "Add stairs",
+  kitchen: "Add a kitchen",
+  bathroom: "Add a bathroom",
+  tray: "Place your rooms",
+  furnish: "Furnish a room",
+  paint: "Paint a wall",
+  roof: "Choose a roof",
+  ensuite: "Attach a bathroom",
+  garden: "Plant a tree",
+};
+
 /** The Home score as a ring with the number in it. */
 function ScoreRing({ score }: { score: number }) {
   const r = 16,
@@ -67,6 +82,9 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
   const total = checks.essentials.length;
   const complete = done === total;
   const questsDone = checks.quests.filter((c) => c.done);
+  // Essentials first, then the "make it yours" ideas.
+  const nextCheck = checks.essentials.find((c) => !c.done) ?? checks.quests.find((c) => !c.done);
+  const next = nextCheck ? `Next: ${NEXT_STEP[nextCheck.id] ?? nextCheck.label}` : "All done!";
   // A quick cheer for each "make it yours" idea the moment it's done.
   const cheered = useRef(new Set(questsDone.map((c) => c.id)));
   const undoShowing = !!editor.state.notice?.undo;
@@ -216,15 +234,16 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
         className={`dh-checklist-pill ${complete ? "is-complete" : ""}`}
         aria-label={
           complete
-            ? `Home score ${score.score}. Home checklist, ${done} of ${total} done, ${questsDone.length} of ${checks.quests.length} ideas tried`
-            : `Home score ${score.score}. Home checklist, ${done} of ${total} done`
+            ? `Home score ${score.score}. Home checklist, ${done} of ${total} done, ${questsDone.length} of ${checks.quests.length} ideas tried. ${next}`
+            : `Home score ${score.score}. Home checklist, ${done} of ${total} done. ${next}`
         }
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
         <ScoreRing score={score.score} />
         <span className="dh-checklist-pill-label">
-          {complete ? `${questsDone.length}/${checks.quests.length} ideas` : `${done}/${total} done`}
+          <b>Home score</b>
+          <span>{next}</span>
         </span>
       </button>
       {open && (
@@ -265,8 +284,9 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
           <ul>
             {checks.quests.map((c) => (
               <li key={c.id} className={c.done ? "is-done" : ""}>
+                {/* A tick like the essentials' (a sparkle here read as "AI"). */}
                 <span className="dh-check-mark is-quest" aria-hidden>
-                  {c.done ? <Icon.sparkle size={14} aria-hidden /> : null}
+                  {c.done ? <Icon.check size={15} aria-hidden /> : null}
                 </span>
                 <span>{c.label}</span>
                 {!c.done && (

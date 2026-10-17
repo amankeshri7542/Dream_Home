@@ -248,15 +248,105 @@
       font-size: calc(12px * var(--dh-text));
     }
   }
-  /* The narrowest phones: the home's name may use two short lines. */
-  @media (max-width: 380px) {
+  /* Phones: the home's name may use two lines ("Our Family Home (my
+     version)" was cut short), and "Saved" shrinks to a green dot beside it.
+     "Not saved" keeps its words, under the name. */
+  @media (max-width: 430px) {
     .dh-title h1 {
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       white-space: normal;
+      overflow-wrap: anywhere;
+      font-size: calc(16px * var(--dh-text));
+      line-height: 1.12;
+    }
+    .dh-history .is-idle {
+      display: none;
+    }
+    .dh-title.is-saved {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dh-title.is-saved .dh-title-meta {
+      order: -1;
+      flex: none;
+    }
+    .dh-save.is-saved .dh-save-word {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
+  @media (max-width: 380px) {
+    .dh-title h1 {
       font-size: calc(15px * var(--dh-text));
       line-height: 1.1;
+    }
+  }
+  /* The name gets a row of its own under the buttons where they'd leave it a
+     word or two: the narrowest phones, long names on phones (`data-name`, set
+     by length), and phones with bigger text. */
+  @media (max-width: 430px) {
+    :root:is([data-text="large"], [data-text="extra"]) .dh-topbar,
+    .dh-topbar[data-name="longer"] {
+      flex-wrap: wrap;
+      row-gap: 0;
+      padding-bottom: 6px;
+    }
+    :root:is([data-text="large"], [data-text="extra"]) .dh-topbar-brand,
+    .dh-topbar[data-name="longer"] .dh-topbar-brand {
+      display: contents;
+    }
+    :root:is([data-text="large"], [data-text="extra"]) .dh-topbar-actions,
+    .dh-topbar[data-name="longer"] .dh-topbar-actions {
+      margin-left: auto;
+    }
+    :root:is([data-text="large"], [data-text="extra"]) .dh-title,
+    .dh-topbar[data-name="longer"] .dh-title {
+      order: 3;
+      flex-basis: 100%;
+      padding-left: 4px;
+    }
+  }
+  @media (max-width: 380px) {
+    .dh-topbar[data-name="long"] {
+      flex-wrap: wrap;
+      row-gap: 0;
+      padding-bottom: 6px;
+    }
+    .dh-topbar[data-name="long"] .dh-topbar-brand {
+      display: contents;
+    }
+    .dh-topbar[data-name="long"] .dh-topbar-actions {
+      margin-left: auto;
+    }
+    .dh-topbar[data-name="long"] .dh-title {
+      order: 3;
+      flex-basis: 100%;
+      padding-left: 4px;
+    }
+  }
+  @media (max-width: 359px) {
+    .dh-topbar {
+      flex-wrap: wrap;
+      row-gap: 0;
+      padding-bottom: 6px;
+    }
+    .dh-topbar-brand {
+      display: contents;
+    }
+    .dh-topbar-actions {
+      margin-left: auto;
+    }
+    .dh-title {
+      order: 3;
+      flex-basis: 100%;
+      padding-left: 4px;
     }
   }
   @media (max-width: 359px) {
@@ -1148,6 +1238,27 @@
     font-weight: 650;
     animation: dh-pop var(--dh-dur-slow) var(--dh-ease-pop);
   }
+  .dh-mode-hint:has(.dh-mode-hint-action) {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-block: 0;
+    padding-right: 4px;
+    row-gap: 0;
+  }
+  .dh-mode-hint-action {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .dh-mode-hint-action:hover {
+    background: var(--dh-terracotta-100);
+  }
   .dh-app.is-desktop .dh-mode-hint {
     position: absolute;
     left: 50%;
@@ -1192,9 +1303,48 @@
     font-weight: 750;
     color: var(--dh-ink-soft);
   }
+  /* "Home score · Next: Paint a wall"; two short lines on phones. */
   .dh-checklist-pill-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    max-width: calc(170px * var(--dh-text));
     font-size: calc(13px * var(--dh-text));
     font-weight: 650;
+    line-height: 1.2;
+    text-align: left;
+  }
+  .dh-checklist-pill-label b {
+    font-size: calc(11px * var(--dh-text));
+    font-weight: 700;
+    color: var(--dh-ink-soft);
+  }
+  .dh-checklist-pill.is-complete .dh-checklist-pill-label b {
+    color: var(--dh-ink);
+  }
+  .dh-checklist-pill-label > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Phones: never under the Photo and Video buttons opposite. */
+  .dh-app.is-compact .dh-checklist-pill {
+    max-width: calc(100vw - 30px - var(--dh-safe-left) - var(--dh-safe-right) - var(--dh-capture-size));
+  }
+  .dh-app.is-desktop .dh-checklist-pill-label {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    max-width: none;
+  }
+  .dh-app.is-desktop .dh-checklist-pill-label b {
+    font-size: inherit;
+    color: inherit;
+  }
+  .dh-app.is-desktop .dh-checklist-pill-label b::after {
+    content: " ·";
   }
   .dh-checklist-pill.is-complete {
     background: var(--dh-sun-400);
@@ -1210,13 +1360,20 @@
     overflow-y: auto;
     padding: 12px 16px 16px;
     border-radius: var(--dh-radius-xl);
-    background: var(--dh-glass-solid);
+    /* Solid: nothing behind it shows through. */
+    background: var(--dh-paper-0);
     box-shadow: var(--dh-shadow-3);
     animation: dh-pop var(--dh-dur-base) var(--dh-ease-pop);
   }
+  /* Phones: the buttons down the right step aside while it's open. */
+  .dh-app.is-compact:has(.dh-checklist-pop) :is(.dh-capture, .dh-camera-hud) {
+    visibility: hidden;
+  }
+  /* Desktop: ending above the camera buttons along the bottom. */
   .dh-app.is-desktop .dh-checklist-pop {
     left: auto;
     right: 0;
+    max-height: calc(100dvh - var(--dh-topbar-h) - 16px - 52px - 96px);
   }
   .dh-checklist-pop h3 {
     margin: 14px 0 4px;
@@ -1272,6 +1429,10 @@
   }
 
   /* Mode panels: lists, catalogs and swatches */
+  .dh-room-list-floor {
+    margin: 4px 0 -2px;
+    font-size: var(--dh-text-label);
+  }
   .dh-opening-list,
   .dh-room-list {
     display: flex;
@@ -1551,8 +1712,81 @@
   }
 
   /* The floor plan covers the top of a phone screen; the checklist waits. */
-  .dh-app.is-compact[data-lens="open"] .dh-checklist {
+  .dh-app.is-compact[data-lens="open"] :is(.dh-checklist, .dh-capture) {
     display: none;
+  }
+
+  /* Photo and Video on the Home screen: round and labelled, opposite the
+     Home score on phones; pills under the top bar on desktop. */
+  .dh-app {
+    /* 54 px, and 60 px with Extra large text. */
+    --dh-capture-size: max(54px, calc(44px * var(--dh-text)));
+  }
+  .dh-capture {
+    position: absolute;
+    top: calc(var(--dh-inset-top) + 10px);
+    right: calc(10px + var(--dh-safe-right));
+    z-index: calc(var(--dh-z-chrome) + 1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dh-capture-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: var(--dh-capture-size);
+    height: var(--dh-capture-size);
+    padding: 0;
+    border: 1px solid var(--dh-glass-border);
+    border-radius: 50%;
+    background: var(--dh-glass-bg);
+    box-shadow: var(--dh-shadow-2);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: var(--dh-terracotta-700);
+    font: inherit;
+    font-size: calc(11.5px * var(--dh-text));
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .dh-capture-btn:hover {
+    background: var(--dh-terracotta-50);
+  }
+  .dh-capture-btn:focus-visible {
+    outline: 3px solid var(--dh-focus);
+    outline-offset: 2px;
+  }
+  .dh-app.is-desktop .dh-capture {
+    top: calc(var(--dh-topbar-h) + 16px);
+    right: auto;
+    left: calc(var(--dh-inset-left) + 16px);
+    flex-direction: row;
+  }
+  .dh-app.is-desktop .dh-capture-btn {
+    flex-direction: row;
+    gap: 6px;
+    width: auto;
+    height: auto;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: var(--dh-radius-pill);
+    font-size: calc(14px * var(--dh-text));
+  }
+  /* Phones: out of the way while a sheet or Talk fills the screen. */
+  .dh-app.is-compact:has(.dh-inspector:is([data-snap="medium"], [data-snap="expanded"])) .dh-capture,
+  .dh-app.is-compact:has(.dh-talk) .dh-capture {
+    display: none;
+  }
+  /* Short screens (a phone on its side, or a small one with Extra large
+     text) have no room beside the camera buttons: Explore and Share still
+     offer Photo and Video. */
+  @media (max-height: 600px) {
+    .dh-app.is-compact .dh-capture {
+      display: none;
+    }
   }
 
   /* Celebration: confetti and a "ready to move in" card. */

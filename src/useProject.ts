@@ -4,6 +4,7 @@ import {
   pushHistory,
   redoHistory,
   redoLabel,
+  setEverywhere,
   undoHistory,
   undoLabel,
   type History,
@@ -120,6 +121,14 @@ export function useProject() {
     },
     [write],
   );
+  /** A home setting kept out of the undo history (see `setEverywhere`). */
+  const setSetting = useCallback(
+    (patch: Partial<Project>) => {
+      write(setEverywhere(historyRef.current, patch));
+      setCanSave(true);
+    },
+    [write],
+  );
   const undo = useCallback(() => {
     const { h, restored } = undoHistory(historyRef.current);
     if (h !== historyRef.current) write(h);
@@ -231,6 +240,7 @@ export function useProject() {
     commit,
     apply,
     resetHistory,
+    setSetting,
     undo,
     redo,
     canUndo: !!history.past.length,

@@ -16,7 +16,7 @@ export function HomeBar({ onAi }: { onAi: () => void }) {
   if (state.mode === "outside")
     return (
       <div {...common} className="dh-palette dh-homebar is-outside" aria-label="Outside tools">
-        <ToolButton icon={Icon.home} label="Back to the house" caption="House" onClick={() => dispatch({ type: "set-mode", mode: "build" })} />
+        <ToolButton icon={Icon.home} label="Back to home" caption="Home" onClick={() => dispatch({ type: "set-mode", mode: "build" })} />
         <ToolButton
           icon={Icon.palette}
           label="House style"

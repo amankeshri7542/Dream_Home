@@ -16,6 +16,7 @@ import { deviceHomeStore } from "../homes/store";
 import { BrandMark } from "../ui/BrandMark";
 import { Icon } from "../ui/icons";
 import { Button, IconButton } from "../ui/primitives";
+import { useTooltips } from "../ui/tooltips";
 import { countRemix, countView, fetchShare, reportShare, type SharedMeta } from "./api";
 import { parseShared } from "./parse";
 import { REMIX_PROBLEMS, inAppBrowser, remixIntoMyHomes, remixOf, type RemixOutcome } from "./remix";
@@ -34,8 +35,11 @@ export default function ViewerApp({ id }: { id: string }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const insets = useChromeInsets(root);
+  useTooltips();
   const reduced = useReducedMotion();
   const [walking, setWalking] = useState(false);
+  /** Where the walk starts: a room tapped in the picture, or the floor's biggest room. */
+  const [walkRoom, setWalkRoom] = useState<{ floorId: string; roomId: string } | null>(null);
   const [place, setPlace] = useState("");
   const [walkFloor, setWalkFloor] = useState<string | null>(null);
   const [sheet, setSheet] = useState<null | "in-app" | "replace" | "problem" | "report" | "reported">(null);
@@ -109,7 +113,8 @@ export default function ViewerApp({ id }: { id: string }) {
         // The floor the visitor is on shows its furniture under the roof.
         walkFloorId: walkFloor ?? firstFloor,
       }
-    : { ...DEFAULT_VIEW, stage: 5, roof: true, cutaway: false, labels: false };
+    : // Opened up, rooms named: the home's insides are what a visitor came for.
+      { ...DEFAULT_VIEW, stage: 5, roof: false, cutaway: true, labels: true };
 
   return (
     <div ref={setRoot} className={`dh-app dh-viewer ${desktop ? "is-desktop" : "is-compact"}`}>
@@ -132,7 +137,13 @@ export default function ViewerApp({ id }: { id: string }) {
                 view={view}
                 mode="explore"
                 selection={null}
-                onSelect={() => undefined}
+                onSelect={(target) => {
+                  if (target?.kind !== "room") return;
+                  setWalkRoom({ floorId: target.floorId, roomId: target.id });
+                  setWalkFloor(target.floorId);
+                  setWalking(true);
+                }}
+                labelVerb="Walk into"
                 insets={insets}
                 hour={GOLDEN_HOUR}
                 sunDate={isoDate(today())}
@@ -144,7 +155,8 @@ export default function ViewerApp({ id }: { id: string }) {
                   <Suspense fallback={null}>
                     <Walkthrough
                       project={state.project}
-                      startFloorId={state.project.floors[0].id}
+                      startFloorId={walkRoom?.floorId ?? state.project.floors[0].id}
+                      startRoomId={walkRoom?.roomId}
                       reducedMotion={reduced}
                       onStatus={({ floorId, roomId }) => {
                         setWalkFloor(floorId);
@@ -182,7 +194,8 @@ export default function ViewerApp({ id }: { id: string }) {
       )}
 
       {state.kind === "ready" && !walking && (
-        <section className="dh-viewer-card" data-inset="bottom" aria-label={state.project.name}>
+        // Desktop: a card on the left, so the home is framed in the space beside it.
+        <section className="dh-viewer-card" data-inset={desktop ? "left" : "bottom"} aria-label={state.project.name}>
           <h1>{state.project.name}</h1>
           <p className="dh-viewer-meta">
             {state.project.floors.length} floor{state.project.floors.length === 1 ? "" : "s"} · designed on Dream Home
@@ -204,7 +217,16 @@ export default function ViewerApp({ id }: { id: string }) {
             <Button variant="primary" size="lg" icon={Icon.sparkle} disabled={busy} onClick={startRemix}>
               Remix this home
             </Button>
-            <Button variant="secondary" size="lg" icon={Icon.walk} onClick={() => setWalking(true)}>
+            <Button
+              variant="secondary"
+              size="lg"
+              icon={Icon.walk}
+              onClick={() => {
+                setWalkRoom(null);
+                setWalkFloor(null);
+                setWalking(true);
+              }}
+            >
               Walk inside
             </Button>
           </div>
@@ -230,8 +252,8 @@ export default function ViewerApp({ id }: { id: string }) {
               </div>
             )}
           </div>
-          <Button variant="secondary" size="lg" full icon={Icon.left} onClick={() => setWalking(false)}>
-            Back outside
+          <Button variant="secondary" size="lg" full icon={Icon.home} onClick={() => setWalking(false)}>
+            See the whole home
           </Button>
         </div>
       )}

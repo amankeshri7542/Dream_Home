@@ -22,7 +22,7 @@ test("explore: time of day, turntable and back to building keep one canvas", asy
   await seed(page, createPreset("compact"));
   await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
   await explore(page).click();
-  await expect(page.getByRole("button", { name: "Back to building" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to home" })).toBeVisible();
   // Night makes the windows glow.
   await page.getByRole("button", { name: "Night", exact: true }).click();
   await expect.poll(() => bridge(page, (dh) => dh.lighting().hour)).toBe(21.5);
@@ -37,7 +37,7 @@ test("explore: time of day, turntable and back to building keep one canvas", asy
   // The turntable is a radio choice; reduced motion keeps it still but selectable.
   await page.getByRole("radio", { name: /Turntable/ }).click();
   await expect(page.getByRole("radio", { name: /Turntable/ })).toHaveAttribute("aria-checked", "true");
-  await page.getByRole("button", { name: "Back to building" }).click();
+  await page.getByRole("button", { name: "Back to home" }).click();
   await expect(page.getByRole("toolbar", { name: "Home actions" }).first()).toBeVisible();
   expect(await bridge(page, (dh) => dh.canvasMounts)).toBe(1);
 });
@@ -90,7 +90,7 @@ test("explore: every choice fits a phone and the camera opens the photo studio",
   // "This view" keeps the explore camera.
   await expect(studio.getByRole("radio", { name: "This view" })).toBeEnabled();
   await studio.getByRole("button", { name: "Close photo studio" }).click();
-  await expect(page.getByRole("button", { name: "Back to building" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to home" })).toBeVisible();
 });
 
 test("explore: the joystick walks from a standstill and floor buttons climb the stairs", async ({ page }) => {

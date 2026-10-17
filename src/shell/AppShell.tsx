@@ -35,6 +35,7 @@ import { Inspector } from "./Inspector";
 import { HomeBar } from "./HomeBar";
 import { ActionDock, ModeHint } from "./Palette";
 import { ChecklistPill } from "./Checklist";
+import { CaptureButtons } from "./CaptureButtons";
 import { photoRect, type PlanCheckState } from "../planread/check";
 import type { PlanStartResult } from "../planread/PlanStart";
 import { SelectionAnnouncer } from "./Announcer";
@@ -46,6 +47,7 @@ import { TalkButton } from "../voice/TalkButton";
 import "./shell.css";
 import "./studio/studio.css";
 import { feedback } from "../ui/feedback";
+import { useTooltips } from "../ui/tooltips";
 
 // The video studio loads only when opened (the filming itself loads later still).
 const ReelStudio = lazy(() => import("../reel/ReelStudio"));
@@ -64,6 +66,7 @@ export function AppShell() {
   const desktop = useDesktop();
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const insets = useChromeInsets(root);
+  useTooltips();
   const fileInput = useRef<HTMLInputElement>(null);
   const [noWebGL, setNoWebGL] = useState(false);
   const onWebGL = useCallback((value: boolean) => setNoWebGL(value), []);
@@ -114,6 +117,8 @@ export function AppShell() {
     if (!editor.prefs.tourSeen) setTour(true);
   }, [editor.prefs.tourSeen]);
   const [caption, setCaption] = useState<string | null>(null);
+  /** True from the first step of the reveal until its "Ta-da!" has gone. */
+  const [revealing, setRevealing] = useState(false);
   /** A gentle "construction" sequence: foundation, frame, walls, floors. */
   const constructionReveal = useCallback(() => {
     reveal.current.forEach((t) => window.clearTimeout(t));
@@ -121,6 +126,7 @@ export function AppShell() {
       dispatch({ type: "view", patch: { stage: 4, roof: false, cutaway: true } });
       return;
     }
+    setRevealing(true);
     const steps = [
       "Clearing the plot…",
       "Laying the foundation…",
@@ -138,7 +144,10 @@ export function AppShell() {
     });
     reveal.current.push(
       window.setTimeout(() => setCaption("Ta-da! Your home is ready."), steps.length * 520),
-      window.setTimeout(() => setCaption(null), REVEAL_MS),
+      window.setTimeout(() => {
+        setCaption(null);
+        setRevealing(false);
+      }, REVEAL_MS),
     );
   }, [dispatch, reduced]);
   const onPreview = useCallback((project: Project | null) => setPreview(project), []);
@@ -472,9 +481,7 @@ export function AppShell() {
                 text: `Ta-da! Your ${template.name.toLowerCase()} is ready. Tap any room to make it yours.`,
                 tone: "success",
               });
-            // The tour waits for the "Ta-da!" so it never covers the reveal.
-            if (reduced) startTourIfNew();
-            else reveal.current.push(window.setTimeout(startTourIfNew, REVEAL_MS));
+            startTourIfNew();
           }}
           onCustom={() => {
             enterWorkspace();
@@ -498,7 +505,8 @@ export function AppShell() {
           }}
         />
       )}
-      {tour && screen === "workspace" && (
+      {/* The tour waits for the build and its "Ta-da!", so it never covers them. */}
+      {tour && screen === "workspace" && !revealing && (
         <CoachMarks
           onDone={() => {
             setTour(false);
@@ -526,6 +534,7 @@ export function AppShell() {
           {desktop && inspector}
           {/* Hidden in a room, but still mounted so finishing the home celebrates. */}
           {!design && <ChecklistPill hidden={!!state.focus} />}
+          {!state.focus && <CaptureButtons onPhoto={openPhotoStudio} onVideo={openReelStudio} />}
           {!state.focus && <MoveBanner />}
           {!state.focus && <InstallNudge />}
           <UpdateBanner />

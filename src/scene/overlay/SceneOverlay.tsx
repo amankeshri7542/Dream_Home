@@ -53,10 +53,11 @@ type Props = {
   ghost: GhostPreview | null | undefined;
   registry: OverlayRegistry;
   onSelect: (target: SelectionTarget | null) => void;
+  labelVerb?: "Open" | "Walk into";
   invalidate: () => void;
 };
 
-export function SceneOverlay({ project, labels, selection, ghost, registry, onSelect, invalidate }: Props) {
+export function SceneOverlay({ project, labels, selection, ghost, registry, onSelect, labelVerb = "Open", invalidate }: Props) {
   // Keep registry anchor positions in sync; elements register via refs.
   const ghostPos = ghost
     ? plotToWorld(project, ghost.bounds.x + ghost.bounds.w / 2, ghost.bounds.z + ghost.bounds.d / 2, ghostY(project, ghost) + 0.75)
@@ -103,7 +104,7 @@ export function SceneOverlay({ project, labels, selection, ghost, registry, onSe
           style={{ visibility: "hidden" }}
           role="button"
           tabIndex={0}
-          aria-label={`Open ${l.name}`}
+          aria-label={`${labelVerb} ${l.name}`}
           onClick={(e) => {
             e.stopPropagation();
             onSelect({ kind: "room", floorId: l.floorId, id: l.id });

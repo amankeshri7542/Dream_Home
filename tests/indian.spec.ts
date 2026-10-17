@@ -56,7 +56,7 @@ async function seedHome(page: Page, project: Project, quality = "balanced") {
 }
 const explore = (page: Page) =>
   page.getByRole("toolbar", { name: "Home actions" }).getByRole("button", { name: "Explore", exact: true });
-const backToBuilding = (page: Page) => page.getByRole("button", { name: "Back to building" });
+const backHome = (page: Page) => page.getByRole("button", { name: "Back to home" });
 /** Rendered frames over `ms` while nothing is touched. */
 async function framesOver(page: Page, ms: number) {
   const a = await bridge(page, (dh) => dh.frame);
@@ -111,7 +111,7 @@ test("street life stays off with reduced motion, and Build stays idle", async ({
   await bridge(page, (dh) => dh.waitForIdle());
   expect(await framesOver(page, 2000)).toBe(0);
   await explore(page).click();
-  await expect(backToBuilding(page)).toBeVisible();
+  await expect(backHome(page)).toBeVisible();
   await bridge(page, (dh) => dh.waitForIdle());
   expect(await named(page, "street-life")).toBeNull();
   expect(await framesOver(page, 1000)).toBe(0);
@@ -127,7 +127,7 @@ test.describe("with motion", () => {
     expect(await framesOver(page, 2000)).toBe(0);
     const build = await bridge(page, (dh) => dh.renderer().calls);
     await explore(page).click();
-    await expect(backToBuilding(page)).toBeVisible();
+    await expect(backHome(page)).toBeVisible();
     await expect.poll(() => named(page, "street-life"), { timeout: 10000 }).not.toBeNull();
     await expect.poll(() => named(page, "street-actors"), { timeout: 10000 }).not.toBeNull();
     // Let the Explore camera glide finish; then only street life draws (~24 fps).
@@ -141,7 +141,7 @@ test.describe("with motion", () => {
     expect(build).toBeLessThanOrEqual(90);
     expect(calls).toBeLessThanOrEqual(160);
     // The View options switch turns it off.
-    await backToBuilding(page).click();
+    await backHome(page).click();
     await expect.poll(() => named(page, "street-life")).toBeNull();
     await bridge(page, (dh) => dh.waitForIdle());
     await page.waitForTimeout(600);
@@ -150,7 +150,7 @@ test.describe("with motion", () => {
     await page.getByRole("switch", { name: /Street life/ }).click();
     await page.keyboard.press("Escape");
     await explore(page).click();
-    await expect(backToBuilding(page)).toBeVisible();
+    await expect(backHome(page)).toBeVisible();
     await page.waitForTimeout(500);
     expect(await named(page, "street-life")).toBeNull();
     // The choice is remembered on this device.
