@@ -14,12 +14,15 @@ export type Preferences = {
   checklist: "show" | "hide";
   /** People and traffic on the road in Explore. */
   streetLife: boolean;
+  /** Everyday objects (shoes, chai, a sleeping cat) in Explore and photos. */
+  livedIn: LivedIn;
   /** Bigger text and buttons for easier reading and tapping. */
   textSize: TextSize;
   /** Soft sounds and vibration when things change. */
   sounds: boolean;
 };
 export type TextSize = "normal" | "large" | "extra";
+export type LivedIn = "tidy" | "lived-in";
 export const TEXT_SIZES: TextSize[] = ["normal", "large", "extra"];
 const QUALITIES: QualitySetting[] = ["auto", "battery", "balanced", "beautiful"];
 
@@ -39,6 +42,7 @@ export function normalizePreferences(raw: unknown): Preferences {
     singleKeyShortcuts: p.singleKeyShortcuts !== false,
     checklist: p.checklist === "hide" ? "hide" : "show",
     streetLife: p.streetLife !== false,
+    livedIn: p.livedIn === "tidy" ? "tidy" : "lived-in",
     textSize: TEXT_SIZES.includes(p.textSize as TextSize) ? (p.textSize as TextSize) : "normal",
     sounds: p.sounds !== false,
   };

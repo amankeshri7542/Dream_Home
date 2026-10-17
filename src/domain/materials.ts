@@ -7,7 +7,6 @@ import {
   findRoom,
   furnitureCatalogItem,
   replaceRoom,
-  type AutoLayoutKind,
   type FinishSlot,
 } from "./furniture";
 import { allocateId, componentIds } from "./geometry";
@@ -18,6 +17,7 @@ import {
   nudgeLandscape,
   normalizeLandscapeItem,
 } from "./landscape";
+import { LOOK_BUNDLES, LOOK_PALETTES } from "./looks";
 import { roomFloorFinish } from "./roomDetails";
 import { RAILING_KINDS, STYLE_PRESETS } from "./persist";
 import type {
@@ -62,6 +62,17 @@ export const EXTERIOR_FINISHES = {
   rose: { label: "Rose pink", color: "#eeb1b8", legacy: "sand" },
   ochre: { label: "Ochre", color: "#d9a443", legacy: "brick" },
   "two-tone": { label: "Indian modern two-tone", color: "#f4ede0", legacy: "ivory" },
+  // Regional finishes (see looks.ts).
+  "lime-plaster": { label: "Lime plaster", color: "#f3eee2", legacy: "ivory" },
+  laterite: { label: "Laterite stone", color: "#a95c3f", legacy: "brick" },
+  "egg-plaster": { label: "Egg-white plaster", color: "#f6f1e3", legacy: "ivory" },
+  jaisalmer: { label: "Golden sandstone", color: "#d4a159", legacy: "sand" },
+  indigo: { label: "Indigo", color: "#41639e", legacy: "brick" },
+  "leaf-green": { label: "Leaf green", color: "#7da35d", legacy: "brick" },
+  "grey-white": { label: "Grey and white render", color: "#c3c0b9", legacy: "sand" },
+  "fair-faced": { label: "Fair-faced concrete", color: "#bab5ab", legacy: "sand" },
+  "brick-concrete": { label: "Brick and concrete", color: "#b2613f", legacy: "brick" },
+  "wood-slat": { label: "Wood slats", color: "#9b6b45", legacy: "brick" },
 } as const satisfies Record<string, Swatch & { legacy: LegacyFinish }>;
 export type ExteriorFinishId = keyof typeof EXTERIOR_FINISHES;
 
@@ -92,6 +103,13 @@ export const FLOOR_MATERIALS = {
   slate: { label: "Slate", color: "#6d7175", family: "stone" },
   concrete: { label: "Polished concrete", color: "#b9b5ad", family: "stone" },
   carpet: { label: "Soft carpet", color: "#cdbfae", family: "wood" },
+  "red-oxide": { label: "Red oxide", color: "#9a3b2c", family: "stone" },
+  athangudi: { label: "Athangudi tiles", color: "#b4492f", family: "tile" },
+  "athangudi-indigo": { label: "Athangudi indigo", color: "#3d5a8c", family: "tile" },
+  "athangudi-green": { label: "Athangudi green", color: "#4f7d5a", family: "tile" },
+  kota: { label: "Kota stone", color: "#7f8c87", family: "stone" },
+  vitrified: { label: "Vitrified tiles", color: "#e9e5dd", family: "tile" },
+  azulejo: { label: "Blue azulejo tiles", color: "#3a64a8", family: "tile" },
 } as const satisfies Record<
   string,
   Swatch & { family: "wood" | "tile" | "stone" }
@@ -108,6 +126,7 @@ export const ROOF_MATERIALS = {
   slate: { label: "Slate", color: "#5d6670" },
   metal: { label: "Standing seam", color: "#7f8b8f" },
   membrane: { label: "Flat membrane", color: "#b9b3a6" },
+  mangalore: { label: "Mangalore clay tiles", color: "#b4553a" },
 } as const satisfies Record<string, Swatch>;
 export type RoofMaterialId = keyof typeof ROOF_MATERIALS;
 export const ROOF_STYLES: Record<RoofStyle, { label: string }> = {
@@ -124,6 +143,8 @@ export const TRIM_COLORS = {
   sage: { label: "Sage", color: "#8fa58e" },
   maroon: { label: "Maroon", color: "#7c2f2b" },
   teal: { label: "Peacock teal", color: "#1f6b70" },
+  teak: { label: "Teak", color: "#7a4a27" },
+  indigo: { label: "Indigo", color: "#2f4a7a" },
 } as const satisfies Record<string, Swatch>;
 export type TrimColorId = keyof typeof TRIM_COLORS;
 
@@ -136,6 +157,8 @@ export const DOOR_COLORS = {
   white: { label: "White", color: "#efebe3" },
   teak: { label: "Teak", color: "#7a4a27" },
   peacock: { label: "Peacock teal", color: "#1f6b70" },
+  indigo: { label: "Indigo", color: "#2f4a7a" },
+  forest: { label: "Forest green", color: "#365e3a" },
 } as const satisfies Record<string, Swatch>;
 export type DoorColorId = keyof typeof DOOR_COLORS;
 
@@ -147,20 +170,21 @@ export const GROUND_STYLES = {
 } as const satisfies Record<string, Swatch>;
 export type GroundId = keyof typeof GROUND_STYLES;
 
+// Own keys only: "constructor" or "toString" from a shared file are not ids.
 export const isExterior = (id: unknown): id is ExteriorFinishId =>
-  typeof id === "string" && id in EXTERIOR_FINISHES;
+  typeof id === "string" && Object.hasOwn(EXTERIOR_FINISHES, id);
 export const isWallPaint = (id: unknown): id is WallPaintId =>
-  typeof id === "string" && id in WALL_PAINTS;
+  typeof id === "string" && Object.hasOwn(WALL_PAINTS, id);
 export const isFloorMaterial = (id: unknown): id is FloorMaterialId =>
-  typeof id === "string" && id in FLOOR_MATERIALS;
+  typeof id === "string" && Object.hasOwn(FLOOR_MATERIALS, id);
 export const isRoofMaterial = (id: unknown): id is RoofMaterialId =>
-  typeof id === "string" && id in ROOF_MATERIALS;
+  typeof id === "string" && Object.hasOwn(ROOF_MATERIALS, id);
 export const isTrim = (id: unknown): id is TrimColorId =>
-  typeof id === "string" && id in TRIM_COLORS;
+  typeof id === "string" && Object.hasOwn(TRIM_COLORS, id);
 export const isDoorColor = (id: unknown): id is DoorColorId =>
-  typeof id === "string" && id in DOOR_COLORS;
+  typeof id === "string" && Object.hasOwn(DOOR_COLORS, id);
 export const isGround = (id: unknown): id is GroundId =>
-  typeof id === "string" && id in GROUND_STYLES;
+  typeof id === "string" && Object.hasOwn(GROUND_STYLES, id);
 
 export function exteriorFinish(p: Project): ExteriorFinishId {
   if (isExterior(p.style?.exterior)) return p.style.exterior;
@@ -201,9 +225,9 @@ const EDGE_SIDES: readonly EdgeSide[] = ["north", "east", "south", "west"];
 
 // ---------------------------------------------------------------------------
 // Room palettes: every automatic room already looks designed. A Look picks a
-// coordinated palette per room use (bedrooms vary by room); pieces without a
-// chosen finish, walls without a paint and floors without a material use it.
-// Homes without a Look keep the original defaults.
+// coordinated palette per room use (bedrooms vary by room; the palettes are
+// in looks.ts); pieces without a chosen finish, walls without a paint and
+// floors without a material use it. Homes without a Look keep the defaults.
 // ---------------------------------------------------------------------------
 export type RoomPalette = {
   paint: WallPaintId;
@@ -223,99 +247,6 @@ export type RoomPalette = {
   /** Tiles: backsplashes. */
   tile: string;
 };
-type PaletteKind = Exclude<AutoLayoutKind, "shop">;
-type Swatches = Omit<RoomPalette, "cabinet" | "tile"> & Partial<Pick<RoomPalette, "cabinet" | "tile">>;
-const LOOK_PALETTES: Record<StylePreset, Record<PaletteKind, Swatches[]>> = {
-  "indian-modern": {
-    living: [
-      { paint: "warm-white", floor: "marble", fabric: "oat", soft: "terracotta", pop: "mustard", wood: "walnut", accent: "mustard" },
-      { paint: "linen", floor: "marble", fabric: "sage", soft: "oat", pop: "terracotta", wood: "teak", accent: "terracotta" },
-    ],
-    bedroom: [
-      { paint: "sage", floor: "oak", fabric: "oat", soft: "sage", pop: "mustard", wood: "walnut", accent: "mustard" },
-      { paint: "dusty-blue", floor: "oak", fabric: "oat", soft: "navy", pop: "mustard", wood: "oak", accent: "navy" },
-      { paint: "blush", floor: "herringbone", fabric: "oat", soft: "blush", pop: "terracotta", wood: "teak", accent: "terracotta" },
-      { paint: "linen", floor: "oak", fabric: "sage", soft: "oat", pop: "peacock", wood: "walnut", accent: "peacock" },
-    ],
-    kitchen: [
-      { paint: "linen", floor: "terrazzo", fabric: "oat", soft: "oat", pop: "mustard", wood: "oak", accent: "charcoal", cabinet: "sage", tile: "mustard" },
-      { paint: "warm-white", floor: "terrazzo", fabric: "oat", soft: "oat", pop: "terracotta", wood: "walnut", accent: "charcoal", cabinet: "white", tile: "peacock" },
-    ],
-    dining: [
-      { paint: "linen", floor: "marble", fabric: "oat", soft: "terracotta", pop: "mustard", wood: "walnut", accent: "mustard" },
-    ],
-    bathroom: [
-      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "sage", pop: "sage", wood: "oak", accent: "white", tile: "peacock" },
-    ],
-    prayer: [
-      { paint: "warm-white", floor: "marble", fabric: "maroon", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
-    ],
-    study: [
-      { paint: "sage", floor: "oak", fabric: "oat", soft: "oat", pop: "navy", wood: "oak", accent: "mustard" },
-    ],
-    utility: [
-      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "oat", pop: "sage", wood: "oak", accent: "white" },
-    ],
-  },
-  "indian-classic": {
-    living: [
-      { paint: "ochre", floor: "marble", fabric: "maroon", soft: "mustard", pop: "peacock", wood: "walnut", accent: "peacock" },
-      { paint: "clay", floor: "marble", fabric: "peacock", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
-    ],
-    bedroom: [
-      { paint: "clay", floor: "walnut", fabric: "maroon", soft: "mustard", pop: "peacock", wood: "walnut", accent: "mustard" },
-      { paint: "terracotta", floor: "walnut", fabric: "oat", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
-      { paint: "eucalyptus", floor: "walnut", fabric: "peacock", soft: "oat", pop: "mustard", wood: "walnut", accent: "mustard" },
-      { paint: "linen", floor: "herringbone", fabric: "mustard", soft: "maroon", pop: "peacock", wood: "teak", accent: "maroon" },
-    ],
-    kitchen: [
-      { paint: "linen", floor: "limestone", fabric: "oat", soft: "maroon", pop: "mustard", wood: "walnut", accent: "charcoal", cabinet: "peacock", tile: "mustard" },
-    ],
-    dining: [
-      { paint: "clay", floor: "marble", fabric: "maroon", soft: "maroon", pop: "mustard", wood: "walnut", accent: "mustard" },
-    ],
-    bathroom: [
-      { paint: "warm-white", floor: "limestone", fabric: "oat", soft: "maroon", pop: "mustard", wood: "walnut", accent: "mustard", tile: "maroon" },
-    ],
-    prayer: [
-      { paint: "ochre", floor: "marble", fabric: "maroon", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
-    ],
-    study: [
-      { paint: "eucalyptus", floor: "walnut", fabric: "oat", soft: "mustard", pop: "maroon", wood: "walnut", accent: "mustard" },
-    ],
-    utility: [
-      { paint: "linen", floor: "limestone", fabric: "oat", soft: "oat", pop: "mustard", wood: "walnut", accent: "white" },
-    ],
-  },
-  diorama: {
-    living: [
-      { paint: "warm-white", floor: "oak", fabric: "sage", soft: "oat", pop: "mustard", wood: "oak", accent: "terracotta" },
-    ],
-    bedroom: [
-      { paint: "greige", floor: "oak", fabric: "sage", soft: "oat", pop: "blush", wood: "oak", accent: "sage" },
-      { paint: "dusty-blue", floor: "oak", fabric: "navy", soft: "oat", pop: "mustard", wood: "oak", accent: "mustard" },
-      { paint: "blush", floor: "oak", fabric: "oat", soft: "blush", pop: "terracotta", wood: "white", accent: "terracotta" },
-    ],
-    kitchen: [
-      { paint: "linen", floor: "light-tile", fabric: "oat", soft: "oat", pop: "terracotta", wood: "oak", accent: "white", cabinet: "sage", tile: "white" },
-    ],
-    dining: [
-      { paint: "linen", floor: "limestone", fabric: "sage", soft: "oat", pop: "mustard", wood: "oak", accent: "terracotta" },
-    ],
-    bathroom: [
-      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "sage", pop: "sage", wood: "oak", accent: "white", tile: "sage" },
-    ],
-    prayer: [
-      { paint: "warm-white", floor: "limestone", fabric: "terracotta", soft: "terracotta", pop: "mustard", wood: "walnut", accent: "mustard" },
-    ],
-    study: [
-      { paint: "sage", floor: "oak", fabric: "oat", soft: "oat", pop: "charcoal", wood: "oak", accent: "mustard" },
-    ],
-    utility: [
-      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "oat", pop: "sage", wood: "oak", accent: "white" },
-    ],
-  },
-};
 /** Stable small hash of a room id (bedrooms pick their palette by it). */
 function hashId(id: string): number {
   let h = 2166136261;
@@ -330,7 +261,7 @@ export function roomPalette(
   look: StylePreset | null | undefined,
   room: Pick<Room, "id" | "kind" | "name">,
 ): RoomPalette | null {
-  if (!look || !(look in LOOK_PALETTES)) return null;
+  if (!look || !Object.hasOwn(LOOK_PALETTES, look)) return null;
   const kind = autoLayoutKind(room);
   if (kind === "shop") return null;
   const options = LOOK_PALETTES[look][kind];
@@ -435,6 +366,7 @@ export function styleDetails(p: Project): Required<StyleDetails> {
     waterTank: d.waterTank === true,
     carPorch: d.carPorch === true,
     railing: d.railing && RAILING_KINDS.includes(d.railing) ? d.railing : "glass",
+    arches: d.arches === true,
   };
 }
 export const stylePreset = (p: Project): StylePreset | null => p.style?.preset ?? null;
@@ -569,65 +501,12 @@ export function setSite(
   return finalizeEdit(p, next ? { ...rest, site: next } : rest);
 }
 // ---------------------------------------------------------------------------
-// Style presets ("Look"): one tap sets a coherent bundle of choices.
+// Style presets ("Look"): one tap sets a coherent bundle of choices (the
+// bundles are in looks.ts).
 // ---------------------------------------------------------------------------
-export const STYLE_PRESET_INFO: Record<
-  StylePreset,
-  { label: string; description: string; colors: [string, string, string] }
-> = {
-  "indian-modern": {
-    label: "Indian modern",
-    description: "Bright walls, flat roof with a parapet, sunshades, a water tank and a compound wall",
-    colors: [EXTERIOR_FINISHES.peach.color, "#f4f1ea", "#7a4a27"],
-  },
-  "indian-classic": {
-    label: "Indian classic",
-    description: "Warm ochre limewash, maroon trim, jaali balconies and a compound wall",
-    colors: [EXTERIOR_FINISHES.ochre.color, "#7c2f2b", "#1f6b70"],
-  },
-  diorama: {
-    label: "Diorama",
-    description: "The original toy look: ivory walls and a terracotta roof",
-    colors: [EXTERIOR_FINISHES.ivory.color, "#c2693f", "#a87a52"],
-  },
-};
-type PresetBundle = {
-  exterior: ExteriorFinishId;
-  trim: TrimColorId;
-  frontDoor: DoorColorId;
-  roof: NonNullable<ProjectStyle["roof"]>;
-  details: StyleDetails | undefined;
-  fence: string | null;
-};
-const PRESETS: Record<StylePreset, PresetBundle> = {
-  "indian-modern": {
-    exterior: "peach",
-    trim: "warm-white",
-    frontDoor: "teak",
-    roof: { style: "flat", material: "membrane", pitch: 30 },
-    details: { chhajja: true, waterTank: true, carPorch: true, railing: "grille" },
-    fence: "compound-wall",
-  },
-  "indian-classic": {
-    exterior: "ochre",
-    trim: "maroon",
-    frontDoor: "peacock",
-    roof: { style: "flat", material: "membrane", pitch: 30 },
-    details: { chhajja: true, waterTank: true, carPorch: true, railing: "jaali" },
-    fence: "compound-wall",
-  },
-  diorama: {
-    exterior: "ivory",
-    trim: "warm-white",
-    frontDoor: "oak",
-    roof: { style: "gable", material: "terracotta", pitch: 30 },
-    details: undefined,
-    fence: null,
-  },
-};
 /** The project with a preset's bundle applied (no validation). */
 export function withStylePreset(p: Project, preset: StylePreset): Project {
-  const b = PRESETS[preset];
+  const b = LOOK_BUNDLES[preset];
   const legacy = EXTERIOR_FINISHES[b.exterior].legacy;
   const style: ProjectStyle = {
     preset,
@@ -645,8 +524,8 @@ export function withStylePreset(p: Project, preset: StylePreset): Project {
   return { ...rest, finish: legacy, style, ...(Object.keys(site).length ? { site } : {}) };
 }
 /**
- * Applies a Look: exterior, trim, front door, roof (flat with a parapet for
- * the Indian looks), regional details and the boundary wall, in one edit.
+ * Applies a Look: exterior, trim, front door, roof, regional details and the
+ * boundary wall, in one edit.
  */
 export function applyStylePreset(p: Project, preset: string): EditResult {
   if (!STYLE_PRESETS.includes(preset as StylePreset))
@@ -722,7 +601,7 @@ registerValidation((p, issue) => {
       bad();
     if (
       style.roof !== undefined &&
-      (!(style.roof.style in ROOF_STYLES) ||
+      (!Object.hasOwn(ROOF_STYLES, style.roof.style) ||
         !isRoofMaterial(style.roof.material) ||
         ![20, 30, 40].includes(style.roof.pitch))
     )

@@ -3,6 +3,7 @@
 // overlapping, and hidden-face removal leaves one closed shell per floor. Long
 // faces are `facade` when their outward sample is outside the building, else
 // `paint` coloured by the room on that side.
+import { outsideBuilding } from "../../../domain/entrance";
 import { inside } from "../../../domain/geometry";
 import { roomAccentWall, roomWallPaint, WALL_PAINTS } from "../../../domain/materials";
 import { wallPieces, type WallPiece } from "../../../domain/walls";
@@ -10,7 +11,7 @@ import type { GeometryFloor, Rect, StylePreset, Wall } from "../../../domain/typ
 import { FLOOR_SURFACE, GROUND_TOP, SLAB_TOP } from "../../coords";
 import { junctionAdjustments, wallThickness } from "./junctions";
 import { visibleFaces, type FaceRect, type SoupBox, type SoupFace } from "./boxSoup";
-import { rgb, type Buckets, type RGB, type V3 } from "./QuadBuilder";
+import { rgb, scaleRgb, type Buckets, type RGB, type V3 } from "./QuadBuilder";
 
 export type BucketKey =
   | "facade"
@@ -29,11 +30,7 @@ export const CEILING_WHITE = "#f4f0e8";
 
 /** Where a plan point (cm) is: outside the building, or in which room. */
 export function classifyPoint(floor: GeometryFloor, x: number, z: number) {
-  const f = floor.footprint;
-  const inFootprint = x > f.x && x < f.x + f.w && z > f.z && z < f.z + f.d;
-  if (!inFootprint) return { outside: true, roomId: null as string | null };
-  if (floor.voids.some((v) => v.kind === "courtyard" && inside(v.bounds, x, z)))
-    return { outside: true, roomId: null };
+  if (outsideBuilding(floor, x, z)) return { outside: true, roomId: null as string | null };
   const room = floor.rooms.find((r) => inside(r.bounds, x, z));
   return { outside: false, roomId: room?.id ?? null };
 }
@@ -101,6 +98,8 @@ export type WallContext = {
   doorsClosed?: boolean;
   /** Projecting concrete sunshades over exterior windows and doors. */
   chhajja?: boolean;
+  /** Arched stone hoods over exterior windows (they replace the window sunshades). */
+  arches?: boolean;
   /** Two-tone accent band at the floor line (upper floors). */
   band?: string | null;
   /** The porch door already has a canopy: no chhajja there. */
@@ -406,11 +405,12 @@ export function emitOpenings(
           joinery.box(apron.min, apron.max, white);
         }
       }
-      if (exterior && headInWall && yt + 0.16 < top) {
+      const arched = !!ctx.arches && isWin && exterior && headInWall && emitArchHood(buckets, wall.axis, o0, o1, yt, top, faceAt(outSide), outSide, stone);
+      if (exterior && headInWall && yt + 0.16 < top && !arched) {
         const lintel = B(o0 - 0.08, o1 + 0.08, yt, yt + 0.14, faceAt(outSide), faceAt(outSide) + outSide * 0.015);
         buckets.get("stone").box(lintel.min, lintel.max, stone);
       }
-      if (ctx.chhajja && exterior && headInWall && o.id !== ctx.entranceId) emitChhajja(buckets, B, o0, o1, yt, top, faceAt(outSide), outSide);
+      if (ctx.chhajja && exterior && headInWall && o.id !== ctx.entranceId && !arched) emitChhajja(buckets, B, o0, o1, yt, top, faceAt(outSide), outSide);
       if (isWin) {
         emitWindow(buckets, wall, ctx, o, o0, o1, ys, yt, line, t, exterior ? outSide : 0, exterior ? trim : white, stone, top);
         continue;
@@ -505,6 +505,63 @@ function emitChhajja(
   stone.box(slab.min, slab.max, color);
   const lip = B(o0 - 0.22, o1 + 0.22, y - 0.04, y + 0.075, face + out * (CHHAJJA_DEPTH - 0.04), face + out * CHHAJJA_DEPTH);
   stone.box(lip.min, lip.max, shade);
+}
+
+/**
+ * Arched window head (Rajasthani, Chettinad and Goan homes): a segmental stone
+ * archivolt springing from the lintel line, with a keystone, over a shaded
+ * tympanum panel. Returns false (flat lintel instead) when the wall above the
+ * window is too short for an arch.
+ */
+function emitArchHood(
+  buckets: Buckets<string>,
+  axis: "x" | "z",
+  o0: number,
+  o1: number,
+  yt: number,
+  top: number,
+  face: number,
+  out: Side,
+  stone: RGB,
+): boolean {
+  const a0 = o0 - 0.08,
+    a1 = o1 + 0.08;
+  const half = (a1 - a0) / 2,
+    mid = (a0 + a1) / 2;
+  const band = 0.1;
+  const rise = Math.min(0.38, half * 0.62, top - yt - band - 0.05);
+  if (rise < 0.1) return false;
+  // Circle through both springing points and the crown.
+  const R = (half * half + rise * rise) / (2 * rise);
+  const cy = yt + rise - R;
+  const spring = Math.atan2(yt - cy, half);
+  const segs = 12;
+  const arc = (r: number) =>
+    Array.from({ length: segs + 1 }, (_, i) => {
+      const phi = spring + ((Math.PI - 2 * spring) * i) / segs;
+      return [mid + Math.cos(phi) * r, cy + Math.sin(phi) * r] as [number, number];
+    });
+  const inner = arc(R),
+    outer = arc(R + band);
+  const S: V3 = axis === "x" ? [1, 0, 0] : [0, 0, 1];
+  const N: V3 = axis === "x" ? [0, 0, 1] : [1, 0, 0];
+  const n = (d: number) => face + out * d;
+  const lo = (d0: number, d1: number) => [Math.min(n(d0), n(d1)), Math.max(n(d0), n(d1))] as const;
+  const b = buckets.get("stone");
+  // The tympanum: a panel under the arch, in the stone's shadowed tone.
+  const [t0, t1] = lo(0, 0.01);
+  b.extrude([0, 0, 0], S, N, [[a0, yt], [a1, yt], ...inner.slice(1, -1)], t0, t1, scaleRgb(stone, 0.74));
+  // The archivolt band, one convex block per segment, standing well proud.
+  const [v0, v1] = lo(0, 0.06);
+  for (let i = 0; i < segs; i++)
+    b.extrude([0, 0, 0], S, N, [inner[i], inner[i + 1], outer[i + 1], outer[i]], v0, v1, stone);
+  // Keystone at the crown and two small imposts at the springing.
+  const crown = yt + rise;
+  const [k0, k1] = lo(0, 0.075);
+  b.extrude([0, 0, 0], S, N, [[mid - 0.06, crown - 0.02], [mid + 0.06, crown - 0.02], [mid + 0.075, crown + band + 0.02], [mid - 0.075, crown + band + 0.02]], k0, k1, stone);
+  for (const x of [a0, a1])
+    b.extrude([0, 0, 0], S, N, [[x - 0.07, yt - 0.05], [x + 0.07, yt - 0.05], [x + 0.07, yt + 0.02], [x - 0.07, yt + 0.02]], v0, v1, stone);
+  return true;
 }
 
 function defaultSwing(

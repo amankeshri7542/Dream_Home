@@ -23,6 +23,8 @@ export type SceneView = ViewSettings & {
    * glow at the cut. `soft` keeps neighbours visible (moving or resizing).
    */
   focus?: { floorId: string; roomId: string; soft?: boolean };
+  /** Diwali: diyas, string lights and rangoli (the Diwali photo mood, the reel). */
+  festive?: boolean;
 };
 
 export type SceneProps = {

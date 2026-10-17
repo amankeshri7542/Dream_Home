@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { homeChecks } from "../domain/advice";
 import { validateProject } from "../domain/model";
 import { ensuiteHost } from "../domain/walls";
-import type { HomeBrief } from "./brief";
+import { LOOK_BUNDLES } from "../domain/looks";
+import { REGIONAL_VIBES, isRegionalVibe, parseHomeBrief, type HomeBrief } from "./brief";
+import { HOME_SYSTEM } from "./prompt";
 import { applyRoomPlan, buildHome, roomZone } from "./buildHome";
-import { plannerHomePlan, plannerRoomPlan } from "./planner";
+import { VIBE_LOOK, plannerHomePlan, plannerRoomPlan } from "./planner";
 import { sanitizeHomePlan } from "./schema";
 
 const brief = (over: Partial<HomeBrief> = {}): HomeBrief => ({
@@ -27,6 +29,9 @@ describe("AI home engine", () => {
     ["big plot, minimal", { plot: { w: 60, d: 90 }, vibe: "minimal", musts: [] }],
     ["single person, colourful, north facing", { family: "single", bedrooms: 1, facing: "north", vibe: "colourful", musts: ["office"] }],
     ["six bedrooms on a narrow plot", { plot: { w: 25, d: 60 }, bedrooms: 6, family: "big-family", floors: 3, vibe: "indian-classic" }],
+    ["a Kerala home", { vibe: "kerala" }],
+    ["a Chettinad home with a courtyard-sized plot", { plot: { w: 40, d: 60 }, vibe: "chettinad" }],
+    ["a Bengaluru home", { vibe: "bengaluru-contemporary", musts: ["garden", "parking"] }],
   ];
   for (const [label, over] of cases)
     for (const variant of [0, 1])
@@ -38,12 +43,24 @@ describe("AI home engine", () => {
         expect(validateProject(p)).toEqual([]);
         expect(homeChecks(p).essentials.filter((c) => !c.done).map((c) => c.id)).toEqual([]);
         expect(rooms(p).filter((r) => r.kind === "bedroom").length).toBeGreaterThanOrEqual(1);
-        // An Indian look outside, and rooms styled inside.
-        expect(p.style?.preset).toBe(b.vibe === "indian-classic" ? "indian-classic" : "indian-modern");
+        // The vibe's look outside (a regional one keeps its own facade), and rooms styled inside.
+        expect(p.style?.preset).toBe(VIBE_LOOK[b.vibe]);
+        if (isRegionalVibe(b.vibe)) expect(p.style?.exterior ?? p.finish).toBe(LOOK_BUNDLES[b.vibe].exterior);
         expect(p.site?.fence).toBe("compound-wall");
         // Rooms are styled, not left on defaults.
         expect(p.floors.flatMap((f) => f.rooms).some((r) => r.wallColor && r.floorMaterial && r.furniture?.length)).toBe(true);
       });
+
+  it("knows the regional looks: the brief, the prompt and the planner", () => {
+    for (const vibe of REGIONAL_VIBES) {
+      expect(parseHomeBrief(brief({ vibe })).ok).toBe(true);
+      expect(HOME_SYSTEM).toContain(`  - ${vibe} (`);
+      const plan = plannerHomePlan(brief({ vibe }));
+      expect(plan.exterior.finish).toBe(LOOK_BUNDLES[vibe].exterior);
+      expect(plannerHomePlan(brief({ vibe }), 1).name).not.toBe(plan.name);
+    }
+    expect(parseHomeBrief(brief({ vibe: "martian" as never })).ok).toBe(false);
+  });
 
   it("gives the main bedroom its attached bathroom and adds a pooja room", () => {
     const b = brief();

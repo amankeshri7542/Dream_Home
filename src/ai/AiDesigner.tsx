@@ -1,13 +1,15 @@
 // "Design my home": four one-thumb steps, then a progress screen while the
 // designer works, then the finished home. Every step has a sensible default,
 // so four taps on "Next" is enough.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { LOOK_PALETTES, STYLE_PRESET_INFO } from "../domain/looks";
+import { FLOOR_MATERIALS } from "../domain/materials";
 import type { Project } from "../domain/types";
 import { useReducedMotion } from "../editor/hooks";
 import { PLOT_SIZES } from "../onboarding/templates";
 import { Icon, roomIcon, type LucideIcon } from "../ui/icons";
 import { Button, IconButton } from "../ui/primitives";
-import { FAMILY_BEDROOMS, NOTE_MAX, type Family, type HomeBrief, type Must, type Vibe } from "./brief";
+import { FAMILY_BEDROOMS, NOTE_MAX, REGIONAL_VIBES, type Family, type HomeBrief, type Must, type Vibe } from "./brief";
 import { bedroomsThatFit, buildHome } from "./buildHome";
 import { designHome, fetchCredits, savedCredits, type Credits } from "./client";
 import { radioKeys, useRovingRadios } from "./radioKeys";
@@ -40,11 +42,17 @@ const MUST_CHIPS: { id: Must; label: string; icon: LucideIcon }[] = [
   { id: "office", label: "Home office", icon: roomIcon("utility", "office") },
   { id: "guest", label: "Guest room", icon: roomIcon("bedroom") },
 ];
-const VIBE_CARDS: { id: Vibe; label: string; hint: string; colors: string[] }[] = [
+type VibeCard = { id: Vibe; label: string; hint: string; colors: string[] };
+const VIBE_CARDS: VibeCard[] = [
   { id: "indian-modern", label: "Indian modern", hint: "Bright, clean, marble & wood", colors: ["#f3efe6", "#4b4845", "#c49a6c", "#8fa69c"] },
   { id: "indian-classic", label: "Indian classic", hint: "Warm, rich, carved wood", colors: ["#b5654a", "#cf9f45", "#7a5538", "#c0714f"] },
   { id: "minimal", label: "Calm minimal", hint: "Soft greys, light oak", colors: ["#f2ede4", "#c9c5bd", "#c49a6c", "#4b4845"] },
   { id: "colourful", label: "Colourful", hint: "Joyful colour pops", colors: ["#e2c07f", "#bfcfd9", "#dca9a1", "#a9bcab"] },
+  // Regional looks build that region's whole home: outside, floors and garden.
+  ...REGIONAL_VIBES.map((id): VibeCard => {
+    const info = STYLE_PRESET_INFO[id];
+    return { id, label: info.label, hint: info.short, colors: [...info.colors, FLOOR_MATERIALS[LOOK_PALETTES[id].living[0].floor].color] };
+  }),
 ];
 const FACINGS: HomeBrief["facing"][] = ["north", "east", "south", "west"];
 const STAGES = ["Reading your brief…", "Planning the rooms…", "Furnishing every room…", "Choosing colours…", "Building it in 3D…"];
@@ -315,15 +323,18 @@ export function AiDesigner({
             <>
               <div className="dh-ai-vibes" role="radiogroup" aria-label="Style">
                 {VIBE_CARDS.map((v) => (
-                  <button key={v.id} type="button" role="radio" aria-checked={vibe === v.id} onClick={() => setVibe(v.id)}>
-                    <span className="dh-ai-swatch" aria-hidden>
-                      {v.colors.map((c) => (
-                        <i key={c} style={{ background: c }} />
-                      ))}
-                    </span>
-                    <strong>{v.label}</strong>
-                    <small>{v.hint}</small>
-                  </button>
+                  <Fragment key={v.id}>
+                    {v.id === REGIONAL_VIBES[0] && <p className="dh-ai-vibes-more">Or a regional home</p>}
+                    <button type="button" role="radio" aria-checked={vibe === v.id} onClick={() => setVibe(v.id)}>
+                      <span className="dh-ai-swatch" aria-hidden>
+                        {v.colors.map((c) => (
+                          <i key={c} style={{ background: c }} />
+                        ))}
+                      </span>
+                      <strong>{v.label}</strong>
+                      <small>{v.hint}</small>
+                    </button>
+                  </Fragment>
                 ))}
               </div>
               <label className="dh-field dh-ai-note">

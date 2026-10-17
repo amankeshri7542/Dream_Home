@@ -143,7 +143,8 @@ export function finishColor(
   finish: string | undefined,
 ): string | undefined {
   if (!finish || !entry.finishSlot) return undefined;
-  return FURNITURE_FINISHES[entry.finishSlot]?.[finish];
+  const palette = FURNITURE_FINISHES[entry.finishSlot];
+  return palette && Object.hasOwn(palette, finish) ? palette[finish] : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -779,7 +780,7 @@ const GENERATORS: Record<string, Gen> = {
   cushions: cushionSet,
   "vase-books": vaseBooks,
 };
-export const hasFurnitureParts = (catalogId: string) => catalogId in GENERATORS;
+export const hasFurnitureParts = (catalogId: string) => Object.hasOwn(GENERATORS, catalogId);
 
 // ---------------------------------------------------------------------------
 // Tiled items (kitchen counter runs, display shelving, backsplashes)

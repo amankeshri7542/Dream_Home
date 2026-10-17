@@ -1,0 +1,33 @@
+{
+  "about": "Lived-in details: small everyday and festive objects placed by livedInDecor (src/domain/livedIn.ts) and modelled by scripts/blender/build_life.py into public/models/life.glb. Sizes are centimetres (w across the front, d front to back, h tall). Colours are per vertex; slots pick the surface: life (matte), steel (polished metal: steel and brass), flame (lit, flickers). Items with parts have moving pieces exported as separate <id>:<part> nodes whose origin is the pivot.",
+  "slots": {
+    "life": { "roughness": 0.78, "metalness": 0 },
+    "steel": { "roughness": 0.3, "metalness": 0.85 },
+    "flame": { "color": "#ffb347", "roughness": 0.6, "emissive": true }
+  },
+  "items": [
+    { "id": "shoes", "label": "Shoes on a door mat", "size": { "w": 70, "d": 45, "h": 12 }, "slots": ["life"], "triBudget": 700 },
+    { "id": "slippers", "label": "Slippers", "size": { "w": 30, "d": 28, "h": 4 }, "slots": ["life"], "triBudget": 200 },
+    { "id": "newspaper", "label": "Newspaper", "size": { "w": 36, "d": 28, "h": 3 }, "slots": ["life"], "triBudget": 120 },
+    { "id": "chai", "label": "Chai cups", "size": { "w": 30, "d": 20, "h": 10 }, "slots": ["life", "steel"], "triBudget": 400 },
+    { "id": "pressure-cooker", "label": "Pressure cooker", "size": { "w": 38, "d": 24, "h": 30 }, "slots": ["life", "steel"], "triBudget": 500 },
+    { "id": "steel-set", "label": "Steel plates and tumblers", "size": { "w": 40, "d": 30, "h": 16 }, "slots": ["steel"], "triBudget": 450 },
+    { "id": "fruit-bowl", "label": "Fruit bowl", "size": { "w": 32, "d": 32, "h": 14 }, "slots": ["life", "steel"], "triBudget": 500 },
+    { "id": "school-bag", "label": "School bag", "size": { "w": 34, "d": 20, "h": 42 }, "slots": ["life"], "triBudget": 400 },
+    { "id": "toys", "label": "Toys", "size": { "w": 50, "d": 40, "h": 18 }, "slots": ["life"], "triBudget": 450 },
+    { "id": "wall-clock", "label": "Wall clock", "size": { "w": 34, "d": 5, "h": 34 }, "slots": ["life", "steel"], "triBudget": 260 },
+    { "id": "photo-frames", "label": "Family photos", "size": { "w": 50, "d": 14, "h": 26 }, "slots": ["life"], "triBudget": 240 },
+    { "id": "wall-photos", "label": "Photos on the wall", "size": { "w": 90, "d": 3, "h": 60 }, "slots": ["life"], "triBudget": 240 },
+    { "id": "calendar", "label": "Calendar", "size": { "w": 30, "d": 2, "h": 45 }, "slots": ["life"], "triBudget": 80 },
+    { "id": "money-plant", "label": "Money plant", "size": { "w": 30, "d": 30, "h": 60 }, "slots": ["life"], "triBudget": 700 },
+    { "id": "urli", "label": "Brass urli with flowers", "size": { "w": 50, "d": 50, "h": 16 }, "slots": ["life", "steel"], "triBudget": 500 },
+    { "id": "cycle", "label": "Bicycle", "size": { "w": 50, "d": 170, "h": 100 }, "slots": ["life", "steel"], "triBudget": 1100 },
+    { "id": "scooter", "label": "Scooter", "size": { "w": 70, "d": 180, "h": 115 }, "slots": ["life", "steel"], "triBudget": 1100 },
+    { "id": "clothesline", "label": "Clothes drying", "size": { "w": 150, "d": 55, "h": 115 }, "slots": ["life", "steel"], "triBudget": 800 },
+    { "id": "cat", "label": "Sleeping cat", "size": { "w": 46, "d": 40, "h": 18 }, "slots": ["life"], "triBudget": 600, "parts": ["body"] },
+    { "id": "floor-cushions", "label": "Floor cushions", "size": { "w": 110, "d": 55, "h": 18 }, "slots": ["life"], "triBudget": 450 },
+    { "id": "bucket", "label": "Bucket and mug", "size": { "w": 34, "d": 30, "h": 36 }, "slots": ["life"], "triBudget": 300 },
+    { "id": "toran", "label": "Toran", "size": { "w": 120, "d": 6, "h": 40 }, "slots": ["life"], "triBudget": 900 },
+    { "id": "diwali-diya", "label": "Diya", "size": { "w": 10, "d": 8, "h": 8 }, "slots": ["life", "flame"], "triBudget": 140, "parts": ["flame"] }
+  ]
+}

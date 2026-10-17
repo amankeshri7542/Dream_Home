@@ -9,7 +9,8 @@ work can resume after any interruption. Update it at the end of every phase.
   - M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
   - M1: share links, the viewer, Remix, WhatsApp previews, reports, admin.
   - M2: Photo mode (render-quality stills), also used for share-link pictures.
-- **Next phase: M3.** Regional looks + lived-in details (the Diwali mood gets its diyas and string lights there).
+  - M3: six regional looks with new materials and rendered look cards; lived-in details (everyday and Diwali) with idle motion.
+- **Next phase: M4.** The "My dream home" reel. Its recorder can drive the scene's shared clock (`store.setClock`), which street life and the M3 idle motion already read.
 - **Owner actions pending** (sharing and the AI designer are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
@@ -90,12 +91,47 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Share-link pictures** are now a 1200 × 630 aerial golden-hour render (10 samples, no mark), still falling back to the live capture.
   - **Bug found on the way:** a shader uniform called `sample` is a reserved word in WebGL2 shaders, so that shader didn't compile and photos came out flat peach. Renamed `current`.
 
+- **17 Oct 2026 (M3):**
+  - **Looks live in one place,** `src/domain/looks.ts`: each look's outside bundle, room palettes (every room use), garden and card text. `materials.ts` keeps the material ids and the commands.
+  - **The six regional looks:**
+
+    | Look | Outside | Inside | Garden |
+    |---|---|---|---|
+    | Kerala | lime plaster on a laterite plinth, Mangalore-tile hip roof, teak doors, trim and lattice | red-oxide floors, teak, brass and cane colours | coconut palms, tulsi, lush planting |
+    | Chettinad | glossy egg-white plaster with ochre bands, maroon trim, arched windows | Athangudi tiles (three colour sets), red oxide | neem, tulsi |
+    | Rajasthani | golden sandstone, arched windows, sandstone jaali, indigo door | Kota stone, marble, indigo and turmeric | neem, tulsi |
+    | Goan | indigo with white bands, white trims, arched windows, Mangalore-tile hip roof, forest-green door | red oxide, blue azulejo kitchens and baths | coconut palms, lush planting |
+    | Mumbai modern | grey render with white bands, glass railings, sunshades | vitrified tiles, greige, charcoal | blossom trees |
+    | Bengaluru contemporary | exposed brick with concrete bands, terracotta jaali | polished concrete, oak, terrazzo | lush planting |
+
+  - **New materials** with procedural textures (`textures.ts`): floors red oxide, Athangudi ×3, Kota, vitrified, azulejo; walls lime plaster, laterite, egg-white plaster, golden sandstone, indigo, leaf green, grey-and-white, fair-faced concrete, brick-and-concrete, wood slats; Mangalore clay-tile roof; teak and indigo trims; indigo and forest-green doors. Names are generic (places and crafts, no brands).
+  - **`Look.roughness` is used now:** the material's roughness factor scales the texture's roughness map to the Look's mean, so the map keeps its variation (veins, joints) and red oxide, marble and egg plaster shine.
+  - **Arched windows** are a new regional detail, `style.details.arches` (saved, whitelisted): a stone archivolt with a keystone over a shaded tympanum, replacing the flat lintel and the window's sunshade. A switch sits with the other details.
+  - **Jaali colour follows the facade:** teak lattice in Kerala, sandstone in Rajasthan, terracotta in Bengaluru, pale stone otherwise.
+  - **Left out of the plan's table** (geometry beyond this phase; each look already reads regional through its materials, roof, arches and jaali): Kerala's wooden window grilles, Chettinad's teak pillars, the Goan balcão seat-porch, and Mumbai's compact furniture.
+  - **Look cards** show a real render: `npm run looks:thumbs` photographs the same two-storey sample home in every look with the M2 renderer through the scene lab, in clear morning light (golden light turned every look the same orange), from across the road a third of the way round, without street life, and saves 480 px WebP (11–16 KB each, loaded lazily). A drawing stands in if a picture can't load.
+  - **"Try it"** is one tap: the look applies at once and the toast offers Undo (`RunOptions.undoable`).
+  - **The AI designer** has the regional looks as styles (same ids as the looks). The built-in planner builds their homes from the look data, so the designer and the cards always agree. A regional home keeps its own outside; for the everyday styles the designer still picks the facade colours. The prompt describes each region's interiors. The output schema is unchanged (its id lists grow with the materials). "Make it nice" offers the home's own regional look next to the four everyday styles.
+  - **Lived-in details are derived, never saved:** `livedInDecor(project, floorId, seed)` places them deterministically per floor. Floor pieces keep inside their room, out of every door approach and clear of furniture; table-top pieces stand on free furniture tops; wall pieces hang on clear wall. Each floor gets one sleeping cat and one place for clothes to dry (a roomy balcony, else a utility room); a flat roof's terrace dries clothes too. Outside: shoes beside the door mat, a toran over the door, a scooter and a bicycle along the front on the side away from the car.
+  - **The Diwali set** (the Diwali night mood): diyas on the porch, balconies, before the pooja shrine, in the living room and along the front compound wall; a festoon of lights under each floor's road-side ceiling line; a rangoli in front of the step and in the pooja room. It shows whenever the mood is Diwali, even with lived-in details off.
+  - **`life.glb`** (23 models, 107 KB, 10,226 triangles; built by `scripts/blender/build_life.py`): per-vertex colour on three materials (matte, steel and brass, flame). The cat's body and each diya flame are separate `<id>:<part>` nodes at their pivots.
+  - **Idle motion** costs no extra draw calls for furniture: ceiling fans turn about their hub and curtains lean from the rod by rewriting instance matrices in the existing batches. Curtains shear rather than wave, because their fabric material is shared with sofas and beds, and this keeps the tie-backs on. The cat breathes and flames flicker in their own small batches. The gate is street life's: Explore or Photo (not the title showcase), not the battery tier, not reduced motion, page visible, at 24 fps. Everything reads the scene store's shared clock.
+  - **Photos wait for the kit:** the store counts loading assets (`hold()`), and the photo settles until `life.glb` has arrived (up to about ten seconds).
+  - **Preference:** `livedIn: "tidy" | "lived-in"`, default lived-in, switched in View options. The Photo studio has its own switch, which starts from it. Share-link viewers see lived-in details too.
+  - **Bug found on the way:** three's GLTFLoader strips `:` from node names (the original is in `userData.name`), so street life's legs, arms and wheels had never actually moved. Kits now read names with `gltfName()`, and a test pins it.
+  - **Shared homes from a newer app** now also drop finishes this copy doesn't know (not just looks), instead of failing to open.
+  - **Single sources of truth moved into the domain:** wall thickness (`WALL_THICKNESS`), the porch's size (`PORCH`) and the main door (`mainDoor`; the 3D porch uses it).
+  - **Ids are own keys only:** the material, fence, finish and furniture checks used `id in TABLE`, so names like `constructor` passed validation (also on the server) and could crash the viewer of a shared link. They use `Object.hasOwn` now.
+  - **One idle ticker:** street life and lived-in motion share one 24 fps timer in `SceneRoot` (two out-of-step timers nearly doubled the frame rate).
+  - **Size:** the editor's first-load chunks grew about 3.4 KB gzip (`shell` +2.8, `App` +0.6, `index` unchanged); the lazy 3D chunk grew 11.5 KB; `life.glb` (107 KB) and the look cards (9 × 11–16 KB) load only when needed.
+  - **Found, not fixed (before M3, outside its scope):** an AI design that asks for a balcony can leave one room without a window (the home check then shows "windows"). It happens with the old looks too.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
 - [x] **M1** Live link + Remix + WhatsApp preview
 - [x] **M2** Photo mode
-- [ ] **M3** Regional looks + lived-in details
+- [x] **M3** Regional looks + lived-in details
 - [ ] **M4** "My dream home" reel
 - [ ] **M5** Location, real sun, sunlight, Vastu, Home score
 - [ ] **M6** Builder's plan → 3D
@@ -166,3 +202,12 @@ work can resume after any interruption. Update it at the end of every phase.
     - `tests/explore.spec.ts`: the Explore camera opens the studio.
     - `tests/preview/security.spec.ts`: a full photo renders under the production CSP.
   - **Gate:** typecheck, lint, 753 unit tests, build, `check:api`, 109 browser tests (14 screenshot-only skipped), 4 preview tests, `diff --check`: all green.
+- **2026-10-17, M3:**
+  - **New domain modules:** `looks.ts` (look bundles, room palettes, gardens, card text), `livedIn.ts` (`livedInDecor`, `frontVehicles`), `entrance.ts` (`mainDoor`, `PORCH`, `outsideBuilding`) and `catalog/life.json`.
+  - **New scene modules:** `life/LivedIn.tsx` and `life/festive.ts` (rangoli texture, festoons, wall diyas), `motion.ts` (`usePageVisible`, `useIdleTicker`), `props/idleMotion.ts` (fans and curtains).
+  - **Changed:** materials and palette (new ids, nine texture generators, `Look.roughness`), walls (arched hoods), balcony (jaali colour), porch, garden and site (look gardens, front planting, keep-clear zones), fence and site extras (compound-wall heights), kit loading (pivots, `gltfName`, life materials), batches (model per instance), Furniture (fan and curtain motion), StreetLife (shared clock and parts), the store (clock, loading holds), the photo renderer (waits for loading), the photo studio (Lived-in switch), View options (Lived-in switch), the look cards (rendered pictures, Undo), the AI designer, planner, builder and prompt (regional looks), and the lenient share reader.
+  - **Assets and scripts:** `public/models/life.glb` with `scripts/blender/build_life.py`, `items/life.py` and `npm run assets -- --step life`; `public/looks/*.webp` with `npm run looks:thumbs` (`scripts/looks/thumbs.mjs`, the lab's `lookThumb`).
+  - **Tests:**
+    - Unit: `livedIn.test.ts` (10: deterministic, never edits the project, inside rooms, out of door approaches, on the plot, clothes drying, vehicles), `looks.test.ts` (13: ids, palettes for every room use, gardens, round-trips, regional materials, built-in names, arches), `scene/life/life.test.ts` (9), `scene/materials/looks.test.ts` (12), the kit contract for `life.glb` (its 23 models, budget, pivots, and which kits are cut with the section) and for street-life part names, AI regional looks, preferences, and the lenient share reader.
+    - Browser: `tests/looks.spec.ts` (4): look cards with real pictures apply and undo; Build idle and within budget while Explore at night with lived-in details stays at 115 draw calls; motion only in Explore and the Tidy switch remembered; the Photo studio's switch and the Diwali set. `DH_SHOTS=1` writes 8 looks × day and night × (390, 1440) to `docs/screenshots/looks/` and lived-in photos to `docs/screenshots/lived-in/`; the M2 photo set was re-shot with the Diwali decorations.
+  - **Gate:** typecheck, lint, 837 unit tests, build, `check:api`, 113 browser tests (32 screenshot-only skipped), 4 preview tests, `diff --check`: all green.

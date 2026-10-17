@@ -12,8 +12,9 @@ export const STAND_HEIGHT = 0.45;
 export const MUMTY_HEIGHT = 2.3;
 const WALL = 0.15;
 
-/** Roof top surface (above the membrane) for a wall top. */
-const deck = (wallTop: number) => wallTop + 0.1;
+/** Roof top surface (above the membrane) for a wall top: the terrace people walk on. */
+export const roofDeck = (wallTop: number) => wallTop + 0.1;
+const deck = roofDeck;
 
 /** Where the tank goes: the corner farthest from the road that is solid roof, clear of the mumty. */
 export function tankSpot(floor: GeometryFloor, road: EdgeSide, avoid: Rect[]): [number, number] | null {

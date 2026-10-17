@@ -1,0 +1,258 @@
+{
+  "items": [
+    {
+      "id": "shoes",
+      "kit": "life",
+      "tris": 676,
+      "bounds": {
+        "w": 70,
+        "d": 45,
+        "h": 12
+      }
+    },
+    {
+      "id": "slippers",
+      "kit": "life",
+      "tris": 192,
+      "bounds": {
+        "w": 30,
+        "d": 28,
+        "h": 4
+      }
+    },
+    {
+      "id": "newspaper",
+      "kit": "life",
+      "tris": 88,
+      "bounds": {
+        "w": 36,
+        "d": 28,
+        "h": 3
+      }
+    },
+    {
+      "id": "chai",
+      "kit": "life",
+      "tris": 310,
+      "bounds": {
+        "w": 30,
+        "d": 20,
+        "h": 10
+      }
+    },
+    {
+      "id": "pressure-cooker",
+      "kit": "life",
+      "tris": 396,
+      "bounds": {
+        "w": 38,
+        "d": 24,
+        "h": 30
+      }
+    },
+    {
+      "id": "steel-set",
+      "kit": "life",
+      "tris": 448,
+      "bounds": {
+        "w": 40,
+        "d": 30,
+        "h": 16
+      }
+    },
+    {
+      "id": "fruit-bowl",
+      "kit": "life",
+      "tris": 492,
+      "bounds": {
+        "w": 32,
+        "d": 32,
+        "h": 14
+      }
+    },
+    {
+      "id": "school-bag",
+      "kit": "life",
+      "tris": 386,
+      "bounds": {
+        "w": 34,
+        "d": 20,
+        "h": 42
+      }
+    },
+    {
+      "id": "toys",
+      "kit": "life",
+      "tris": 434,
+      "bounds": {
+        "w": 50,
+        "d": 40,
+        "h": 18
+      }
+    },
+    {
+      "id": "wall-clock",
+      "kit": "life",
+      "tris": 178,
+      "bounds": {
+        "w": 34,
+        "d": 5,
+        "h": 34
+      }
+    },
+    {
+      "id": "photo-frames",
+      "kit": "life",
+      "tris": 201,
+      "bounds": {
+        "w": 50,
+        "d": 14,
+        "h": 26
+      }
+    },
+    {
+      "id": "wall-photos",
+      "kit": "life",
+      "tris": 214,
+      "bounds": {
+        "w": 90,
+        "d": 3,
+        "h": 60
+      }
+    },
+    {
+      "id": "calendar",
+      "kit": "life",
+      "tris": 76,
+      "bounds": {
+        "w": 30,
+        "d": 2,
+        "h": 45
+      }
+    },
+    {
+      "id": "money-plant",
+      "kit": "life",
+      "tris": 660,
+      "bounds": {
+        "w": 30,
+        "d": 30,
+        "h": 60
+      }
+    },
+    {
+      "id": "urli",
+      "kit": "life",
+      "tris": 412,
+      "bounds": {
+        "w": 50,
+        "d": 50,
+        "h": 16
+      }
+    },
+    {
+      "id": "cycle",
+      "kit": "life",
+      "tris": 1086,
+      "bounds": {
+        "w": 50,
+        "d": 170,
+        "h": 100
+      }
+    },
+    {
+      "id": "scooter",
+      "kit": "life",
+      "tris": 1092,
+      "bounds": {
+        "w": 70,
+        "d": 180,
+        "h": 115
+      }
+    },
+    {
+      "id": "clothesline",
+      "kit": "life",
+      "tris": 705,
+      "bounds": {
+        "w": 150,
+        "d": 55,
+        "h": 115
+      }
+    },
+    {
+      "id": "cat",
+      "kit": "life",
+      "tris": 502,
+      "bounds": {
+        "w": 46,
+        "d": 40,
+        "h": 18
+      }
+    },
+    {
+      "id": "floor-cushions",
+      "kit": "life",
+      "tris": 428,
+      "bounds": {
+        "w": 110,
+        "d": 55,
+        "h": 18
+      }
+    },
+    {
+      "id": "bucket",
+      "kit": "life",
+      "tris": 276,
+      "bounds": {
+        "w": 34,
+        "d": 30,
+        "h": 36
+      }
+    },
+    {
+      "id": "toran",
+      "kit": "life",
+      "tris": 856,
+      "bounds": {
+        "w": 120,
+        "d": 6,
+        "h": 40
+      }
+    },
+    {
+      "id": "diwali-diya",
+      "kit": "life",
+      "tris": 118,
+      "bounds": {
+        "w": 10,
+        "d": 8,
+        "h": 8
+      }
+    }
+  ],
+  "parts": [
+    {
+      "id": "cat:body",
+      "parent": "cat",
+      "pivot": [
+        0,
+        3.525,
+        0
+      ]
+    },
+    {
+      "id": "diwali-diya:flame",
+      "parent": "diwali-diya",
+      "pivot": [
+        4.249,
+        0,
+        4.3
+      ]
+    }
+  ],
+  "errors": [],
+  "tris": 10226,
+  "bytes": 107016,
+  "rawBytes": 474200
+}

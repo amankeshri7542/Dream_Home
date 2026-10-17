@@ -1,13 +1,15 @@
 // GLB asset kits (public/models/*.glb, meshopt-compressed, no Draco/CDN).
 // Each root node is a model id; children `<id>__<slot>` hold one mesh per
-// material slot. Geometry is normalised (float position/normal, RGB AO colour)
-// so every part can share BatchedMesh buffers.
+// material slot. Moving parts are their own roots, `<id>:<part>`, placed at
+// their pivot. Geometry is normalised (float position/normal, RGB colour) so
+// every part can share BatchedMesh buffers.
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
   DoubleSide,
   MeshStandardMaterial,
+  Vector3,
   type Mesh,
   type Object3D,
 } from "three";
@@ -22,6 +24,8 @@ export type Kit = {
   materials: Map<string, MeshStandardMaterial>;
   /** Tintable slots → default colour. */
   tintDefaults: Map<string, Color>;
+  /** Moving parts (`<id>:<part>`) → pivot in their model's space (metres). */
+  pivots: Map<string, Vector3>;
 };
 
 const cache = new Map<AssetKit, Promise<Kit>>();
@@ -49,6 +53,13 @@ export function loadKit(name: AssetKit): Promise<Kit> {
   }
   return p;
 }
+
+/**
+ * A node's name as written in the GLB. GLTFLoader strips characters that
+ * animation bindings reserve (`:` among them) from `name` and keeps the
+ * original in `userData.name`, so `cat:body` would otherwise read `catbody`.
+ */
+export const gltfName = (o: Object3D): string => (typeof o.userData?.name === "string" ? o.userData.name : o.name);
 
 export function normalise(src: BufferGeometry): BufferGeometry {
   const g = new BufferGeometry();
@@ -85,19 +96,24 @@ export function normalise(src: BufferGeometry): BufferGeometry {
   return g;
 }
 
-function parseKit(name: AssetKit, root: Object3D): Kit {
+/** A loaded kit's scene → per-model parts and one material per slot (exported for tests). */
+export function parseKit(name: AssetKit, root: Object3D): Kit {
   root.updateMatrixWorld(true);
   const models = new Map<string, KitPart[]>();
   const materials = new Map<string, MeshStandardMaterial>();
   const tintDefaults = new Map<string, Color>();
+  const pivots = new Map<string, Vector3>();
   for (const node of root.children) {
+    const id = gltfName(node);
+    if (id.includes(":")) pivots.set(id, node.position.clone());
     const parts: KitPart[] = [];
     node.updateMatrixWorld(true);
     const inv = node.matrixWorld.clone().invert();
     node.traverse((o) => {
       const mesh = o as Mesh;
       if (!mesh.isMesh) return;
-      const slot = mesh.name.includes("__") ? mesh.name.split("__")[1] : (mesh.material as MeshStandardMaterial).name;
+      const meshName = gltfName(mesh);
+      const slot = meshName.includes("__") ? meshName.split("__")[1] : (mesh.material as MeshStandardMaterial).name;
       const geometry = normalise(mesh.geometry);
       geometry.applyMatrix4(inv.clone().multiply(mesh.matrixWorld));
       parts.push({ slot, geometry });
@@ -117,12 +133,18 @@ function parseKit(name: AssetKit, root: Object3D): Kit {
           m.emissiveIntensity = 0.3;
           glowMaterials.add(m);
         }
-        // Interior furniture is cut with the section; garden models never are.
-        if (name === "interior") patchMaterial(m, { clip: true, poche: true, focus: "fade" });
+        // Lived-in flames: their owner drives the flicker and the night glow.
+        if (slot === "flame") {
+          m.emissive = new Color(src.color);
+          m.emissiveIntensity = 1;
+        }
+        // Interior furniture and lived-in details are cut with the section;
+        // garden models never are.
+        if (name !== "exterior") patchMaterial(m, { clip: true, poche: true, focus: "fade" });
         materials.set(slot, m);
       }
     });
-    models.set(node.name, parts);
+    models.set(id, parts);
   }
-  return { name, models, materials, tintDefaults };
+  return { name, models, materials, tintDefaults, pivots };
 }

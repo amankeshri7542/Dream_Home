@@ -72,6 +72,11 @@ git diff --check
   - What each framing shows lives in `photoView` (`src/shell/SceneHost.tsx`); where the camera stands is in `src/photo/framing.ts`. Moods and sizes are in `src/photo/settings.ts`.
   - Tests make tiny photos with `window.__dreamHomePhotoTest = { longEdge, samples, fail }` (see `tests/photo.spec.ts`).
   - Shader uniforms must not use GLSL reserved words (`sample` silently broke a shader once).
+- **Looks and lived-in details:**
+  - A look's outside bundle, room palettes, garden and card text live in `src/domain/looks.ts`; card pictures are `public/looks/<id>.webp` (`npm run looks:thumbs`).
+  - Lived-in details are derived, never saved: `livedInDecor` (`src/domain/livedIn.ts`) places them, `src/scene/life/LivedIn.tsx` draws them in Explore and Photo only. Their models come from `public/models/life.glb` (sizes in `src/domain/catalog/life.json`).
+  - Idle animation goes through the gate in `SceneRoot` and `useIdleTicker` (`src/scene/motion.ts`) and reads the store's shared clock (`store.time()`).
+  - GLTFLoader strips `:` from node names; read kit names with `gltfName()` (`src/scene/props/kit.ts`).
 - **Feedback:** `feedback.pop() / click() / error() / success()` from `src/ui/feedback.ts` play soft generated sounds and vibration. `run()` already calls them for edits.
 - **Server (`server/`):**
   - Every `/api/*` request goes through `server/router.ts`. Handlers take `(request, env, deps)` so tests inject a fake Claude and store.
@@ -94,7 +99,7 @@ git diff --check
 | `src/domain/` | the home model, validation, rooms/doors/furniture commands, materials and looks, advice/checklist |
 | `src/editor/` | the reducer, provider (undo/redo, `run`), preferences, selection actions |
 | `src/shell/` | app chrome: Home bar, Room Studio (`studio/`), inspectors, dialogs, checklist |
-| `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge |
+| `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge; `life/` draws lived-in details |
 | `src/photo/` | Photo mode: the studio, the offline renderer, framing, moods |
 | `src/share/` | share sheet, the `/h/:id` viewer, Remix |
 | `src/homes/` | My homes shelf (IndexedDB) and move links |

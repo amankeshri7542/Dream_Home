@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dimension, Switch } from "../../components/Controls";
 import {
   FENCE_STYLES,
@@ -16,8 +17,8 @@ import {
   rotateLandscape,
   updateLandscape,
 } from "../../domain/landscapeCommands";
+import { LOOK_BUNDLES, LOOK_ORDER, STYLE_PRESET_INFO } from "../../domain/looks";
 import {
-  STYLE_PRESET_INFO,
   applyStylePreset,
   setStyleDetails,
   styleDetails,
@@ -66,14 +67,14 @@ function RoofIcon({ style }: { style: RoofStyle }) {
   );
 }
 
-/** A tiny house in the look's colours: flat roof + tank, or a gable. */
+/** A tiny house in the look's colours (shown until the rendered card loads, or if it can't). */
 function LookIcon({ preset }: { preset: StylePreset }) {
   const [wall, trim, accent] = STYLE_PRESET_INFO[preset].colors;
-  const indian = preset !== "diorama";
+  const flat = LOOK_BUNDLES[preset].roof.style === "flat";
   return (
-    <svg viewBox="0 0 96 64" width="96" height="64" aria-hidden>
+    <svg viewBox="0 0 96 64" aria-hidden>
       <rect x="0" y="54" width="96" height="10" rx="3" fill="#9fb07a" />
-      {indian ? (
+      {flat ? (
         <>
           <rect x="62" y="10" width="14" height="12" rx="3" fill="#2d2b29" />
           <rect x="64" y="22" width="2" height="5" fill="#2d2b29" />
@@ -90,7 +91,7 @@ function LookIcon({ preset }: { preset: StylePreset }) {
         </>
       ) : (
         <>
-          <path d="M14 30 L48 8 L82 30 Z" fill={trim} />
+          <path d="M14 30 L30 10 L66 10 L82 30 Z" fill={trim} />
           <rect x="20" y="30" width="56" height="26" fill={wall} />
           <rect x="27" y="36" width="12" height="9" fill="#6d8794" />
           <rect x="57" y="36" width="12" height="9" fill="#6d8794" />
@@ -101,13 +102,21 @@ function LookIcon({ preset }: { preset: StylePreset }) {
   );
 }
 
+/** A look's card picture: a render of a sample home in that look (npm run looks:thumbs). */
+function LookPicture({ preset }: { preset: StylePreset }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <LookIcon preset={preset} />;
+  return <img src={`/looks/${preset}.webp`} alt="" width={480} height={320} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
+}
+
+/** One tap tries a look; the toast offers Undo. */
 function LookRow() {
   const { project, run } = useEditor();
   const current = project.style?.preset;
   return (
     <fieldset className="dh-looks">
       <legend>Look</legend>
-      {(Object.keys(STYLE_PRESET_INFO) as StylePreset[]).map((preset) => {
+      {LOOK_ORDER.map((preset) => {
         const info = STYLE_PRESET_INFO[preset];
         return (
           <button
@@ -115,9 +124,14 @@ function LookRow() {
             type="button"
             aria-pressed={current === preset}
             aria-describedby={`dh-look-${preset}`}
-            onClick={() => run(applyStylePreset(project, preset), `Use the ${info.label} look`, { notice: `${info.label} look` })}
+            onClick={() =>
+              run(applyStylePreset(project, preset), `Use the ${info.label} look`, {
+                notice: `${info.label} look. Not quite right? Undo brings back the old one.`,
+                undoable: true,
+              })
+            }
           >
-            <LookIcon preset={preset} />
+            <LookPicture preset={preset} />
             <strong>{info.label}</strong>
             <small id={`dh-look-${preset}`}>{info.description}</small>
           </button>
@@ -131,7 +145,7 @@ function DetailsSection() {
   const { project, run } = useEditor();
   const details = styleDetails(project);
   const flat = effectiveRoof(project).style === "flat";
-  const toggle = (key: "chhajja" | "waterTank" | "carPorch", label: string) =>
+  const toggle = (key: "chhajja" | "waterTank" | "carPorch" | "arches", label: string) =>
     run(setStyleDetails(project, { [key]: !details[key] }), label);
   return (
     <div className="dh-style-details">
@@ -140,6 +154,12 @@ function DetailsSection() {
         description="A concrete ledge over every outside window and door"
         checked={details.chhajja}
         onChange={() => toggle("chhajja", "Toggle sunshades")}
+      />
+      <Switch
+        label="Arched windows"
+        description="Stone arches over the outside windows, in place of their sunshades"
+        checked={details.arches}
+        onChange={() => toggle("arches", "Toggle arched windows")}
       />
       <Switch
         label="Water tank on the roof"

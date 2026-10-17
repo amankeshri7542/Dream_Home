@@ -17,6 +17,7 @@ import {
   SHAPE_ORDER,
   type Framing,
   type MoodId,
+  type PhotoScene,
   type ShapeId,
 } from "./settings";
 import "./photo.css";
@@ -81,8 +82,8 @@ export function PhotoStudio({
   snapshot,
 }: {
   onClose: () => void;
-  /** Show the framing and mood live while choosing. */
-  onScene: (scene: { framing: Framing; hour: number } | null) => void;
+  /** Show the framing, mood and details live while choosing. */
+  onScene: (scene: PhotoScene | null) => void;
   render: (settings: PhotoSettings) => Promise<PhotoOutcome>;
   progress: number;
   onCancel: () => void;
@@ -95,6 +96,8 @@ export function PhotoStudio({
   const [mood, setMood] = useState<MoodId>("golden");
   const [shape, setShape] = useState<ShapeId>("post");
   const [mark, setMark] = useState(true);
+  // Starts from the View options choice; the Diwali mood always brings its diyas and lights.
+  const [livedIn, setLivedIn] = useState(state.view.livedIn !== false);
   const [phase, setPhase] = useState<Phase>({ kind: "setup" });
   const url = useMemo(() => (phase.kind === "done" ? URL.createObjectURL(phase.blob) : ""), [phase]);
   useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url]);
@@ -102,7 +105,10 @@ export function PhotoStudio({
   onSceneRef.current = onScene;
 
   // The live view follows the choices; it goes back to normal when the studio closes.
-  useEffect(() => onSceneRef.current({ framing, hour: MOODS[mood].hour }), [framing, mood]);
+  useEffect(
+    () => onSceneRef.current({ framing, hour: MOODS[mood].hour, livedIn, festive: mood === "diwali" }),
+    [framing, mood, livedIn],
+  );
   useEffect(() => () => onSceneRef.current(null), []);
   // Frame the live view roughly like the photo.
   useEffect(() => {
@@ -168,6 +174,12 @@ export function PhotoStudio({
             />
             <Chips label="Mood" value={mood} options={MOOD_ORDER.map((m) => ({ value: m, label: MOODS[m].label }))} onChange={setMood} />
             <Chips label="Shape" value={shape} options={SHAPE_ORDER.map((s) => ({ value: s, label: SHAPES[s].label }))} onChange={setShape} />
+            <Switch
+              label="Lived-in details"
+              description={mood === "diwali" ? "Chai, shoes and the cat, with diyas and lights" : "Shoes at the door, chai, a sleeping cat"}
+              checked={livedIn}
+              onChange={() => setLivedIn(!livedIn)}
+            />
             <Switch label="Dream Home mark" checked={mark} onChange={() => setMark(!mark)} />
             <Button variant="primary" size="lg" full icon={Icon.photo} onClick={() => void take()}>
               Take photo

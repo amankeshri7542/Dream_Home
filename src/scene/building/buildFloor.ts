@@ -34,6 +34,7 @@ export function buildFloor(model: FloorModel): FloorBuild {
       aoStrips: model.aoStrips,
       doorsClosed: !model.interior,
       chhajja: model.style.chhajja,
+      arches: model.style.arches,
       band: model.style.band,
       entranceId: model.entrance?.openingId ?? null,
       look: model.style.look,
@@ -58,7 +59,7 @@ export function buildFloor(model: FloorModel): FloorBuild {
           emitStairGuards(stairLayout(a.void.bounds, a.height, model.road), base + FLOOR_SURFACE, buckets.get("joinery"), hasWall);
       }
     }
-    for (const b of floor.balconies) emitBalcony(floor, b, base, model.style.trim, buckets, model.style.railing);
+    for (const b of floor.balconies) emitBalcony(floor, b, base, model.style.trim, buckets, model.style.railing, model.style.jaali);
     if (model.entrance) emitPorch(model.entrance, model.style.trim, buckets);
   }
   return { buckets, leaves };

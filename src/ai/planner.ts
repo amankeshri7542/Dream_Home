@@ -1,8 +1,10 @@
 // The built-in planner: a careful, rule-based designer used when the AI is
 // unavailable (offline, out of free designs, or not set up). It follows the
 // same brief and returns the same plan shape, so the engine treats both alike.
+import { LOOK_BUNDLES, LOOK_GARDENS, LOOK_PALETTES } from "../domain/looks";
 import { ACCENT_FOR_PAINT, isWallPaint } from "../domain/materials";
-import type { HomeBrief, HomePlan, PlannedRoom, RoomBrief, RoomPlan, RoomUse, Vibe, Zone } from "./brief";
+import type { StylePreset } from "../domain/types";
+import { REGIONAL_VIBES, type HomeBrief, type HomePlan, type PlannedRoom, type RegionalVibe, type RoomBrief, type RoomPlan, type RoomUse, type Vibe, type Zone } from "./brief";
 import { defaultRoomName } from "./schema";
 
 type Look = {
@@ -14,8 +16,61 @@ type Look = {
   palette: { fabric: string[]; wood: string; accent: string[] };
   garden: string[];
 };
+/** The home Look each vibe builds: the everyday vibes share the Indian modern outside. */
+export const VIBE_LOOK: Record<Vibe, StylePreset> = {
+  "indian-modern": "indian-modern",
+  "indian-classic": "indian-classic",
+  minimal: "indian-modern",
+  colourful: "indian-modern",
+  kerala: "kerala",
+  chettinad: "chettinad",
+  rajasthani: "rajasthani",
+  goan: "goan",
+  "mumbai-modern": "mumbai-modern",
+  "bengaluru-contemporary": "bengaluru-contemporary",
+};
+
+const REGIONAL_NAMES: Record<RegionalVibe, [string, string]> = {
+  kerala: ["Kerala tharavad home", "Kerala garden house"],
+  chettinad: ["Chettinad mansion", "Chettinad courtyard home"],
+  rajasthani: ["Rajasthani haveli", "Desert sandstone home"],
+  goan: ["Goan villa", "Goan cottage"],
+  "mumbai-modern": ["Mumbai modern home", "City-smart home"],
+  "bengaluru-contemporary": ["Bengaluru garden home", "Brick and green home"],
+};
+const unique = <T,>(list: T[]) => [...new Set(list)];
+const rotate = <T,>(list: T[], by: number) => list.map((_, i) => list[(i + by) % list.length]);
+/**
+ * A regional vibe's planner looks come straight from the home Look (its
+ * outside, room palettes and garden), so the offline designer and the Look
+ * card always agree. The second take starts from the second palettes.
+ */
+function regionalLooks(vibe: RegionalVibe): Look[] {
+  const bundle = LOOK_BUNDLES[vibe],
+    palettes = LOOK_PALETTES[vibe],
+    garden = LOOK_GARDENS[vibe];
+  return REGIONAL_NAMES[vibe].map((name, take) => {
+    const living = palettes.living[take % palettes.living.length];
+    const bedrooms = rotate(palettes.bedroom, take);
+    return {
+      name,
+      exterior: { finish: bundle.exterior, trim: bundle.trim, door: bundle.frontDoor, roof: bundle.roof.style, roofMaterial: bundle.roof.material },
+      ground: "lawn",
+      paints: { living: living.paint, bedroom: bedrooms.map((p) => p.paint), kitchen: palettes.kitchen[0].paint, other: palettes.utility[0].paint },
+      floors: { living: living.floor, bedroom: bedrooms[0].floor, wet: palettes.bathroom[0].floor },
+      palette: {
+        fabric: unique(bedrooms.map((p) => p.fabric)),
+        wood: living.wood,
+        accent: unique([living.accent, ...bedrooms.map((p) => p.accent)]),
+      },
+      garden: [garden.tree ?? "tree-blossom", garden.tulsi ? "tulsi-planter" : "planter", "flowerbed"],
+    };
+  });
+}
+
 /** Two looks per vibe, so "Try another" gives a different take. */
 const LOOKS: Record<Vibe, Look[]> = {
+  ...(Object.fromEntries(REGIONAL_VIBES.map((v) => [v, regionalLooks(v)])) as Record<RegionalVibe, Look[]>),
   "indian-modern": [
     {
       name: "Sunlit modern home",

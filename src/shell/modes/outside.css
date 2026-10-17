@@ -1,8 +1,9 @@
-/* Outside → House style: the "Look" cards (mobile first, big tap targets). */
+/* Outside → House style: the "Look" cards (mobile first, big tap targets),
+   each with a rendered picture of a sample home in that look. */
 @layer components {
   .dh-looks {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
     gap: 8px;
     margin: 0;
     padding: 0;
@@ -16,10 +17,10 @@
   .dh-looks button {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 4px;
     min-height: 148px;
-    padding: 8px 6px 10px;
+    padding: 6px 6px 10px;
     border: 2px solid transparent;
     border-radius: var(--dh-radius-lg, 16px);
     background: var(--dh-paper-0, #fffdf8);
@@ -27,10 +28,15 @@
     text-align: center;
     color: inherit;
   }
+  .dh-looks button img,
   .dh-looks button svg {
+    display: block;
     width: 100%;
-    max-width: 104px;
     height: auto;
+    aspect-ratio: 3 / 2;
+    border-radius: calc(var(--dh-radius-lg, 16px) - 6px);
+    background: var(--dh-paper-2, #f1ebdf);
+    object-fit: cover;
   }
   .dh-looks button strong {
     font-size: calc(14px * var(--dh-text));
@@ -38,7 +44,7 @@
   }
   .dh-looks button small {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     font-size: calc(11px * var(--dh-text));

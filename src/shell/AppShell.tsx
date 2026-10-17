@@ -9,7 +9,7 @@ import { DesignNotes } from "../ai/DesignNotes";
 import { ExploreHud } from "../explore/ExploreHud";
 import { PhotoStudio, type PhotoSettings } from "../photo/PhotoStudio";
 import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
-import { photoQuality, type Framing } from "../photo/settings";
+import { photoQuality, type PhotoScene } from "../photo/settings";
 import { GOLDEN_HOUR } from "../editor/state";
 import type { TrayPointer } from "../components/RoomTray";
 import { useEditor } from "../editor/EditorProvider";
@@ -161,7 +161,7 @@ export function AppShell() {
   const onPhoto = useCallback((blob: Blob) => snapshotFor.current?.(blob), []);
 
   // Render-quality photos (src/photo): the studio, and share-link pictures.
-  const [photoScene, setPhotoScene] = useState<{ framing: Framing; hour: number } | null>(null);
+  const [photoScene, setPhotoScene] = useState<PhotoScene | null>(null);
   const [photoJob, setPhotoJob] = useState<PhotoJobRequest | null>(null);
   const [photoProgress, setPhotoProgress] = useState(0);
   const photoCancel = useMemo(() => ({ current: false }), []);
@@ -186,11 +186,11 @@ export function AppShell() {
   const openPhotoStudio = useCallback(() => dispatch({ type: "overlay", overlay: "photo" }), [dispatch]);
   /** The share link's picture: the whole home, opened up, in golden light. */
   const sharePicture = useCallback(async () => {
-    setPhotoScene({ framing: "aerial", hour: GOLDEN_HOUR });
+    setPhotoScene({ framing: "aerial", hour: GOLDEN_HOUR, livedIn: state.view.livedIn !== false, festive: false });
     const outcome = await makePhoto({ framing: "aerial", mood: "golden", aspect: 1200 / 630, watermark: false, longEdge: 1200, samples: 10 });
     setPhotoScene(null);
     return "blob" in outcome ? outcome.blob : capture();
-  }, [makePhoto, capture]);
+  }, [makePhoto, capture, state.view.livedIn]);
   const explore = state.mode === "explore";
   const studioOpen = state.overlay === "photo" && screen === "workspace";
   const chromeHidden = state.chromeHidden || screen !== "workspace" || studioOpen;

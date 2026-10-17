@@ -106,6 +106,33 @@ describe("reading shared homes", () => {
     const read = parseShared(future);
     expect(read.simplified).toBe(true);
     expect(read.project.name).toBe(home.name);
+    // Finishes from a newer app fall back to the defaults too.
+    const room = home.floors[0].rooms[0];
+    const newer = {
+      ...home,
+      style: { preset: "kerala", exterior: "moon-dust", roof: { style: "hip", material: "glass-tiles", pitch: 30 } },
+      floors: [{ ...home.floors[0], rooms: [{ ...room, floorMaterial: "lava", wallColor: "ultraviolet" }, ...home.floors[0].rooms.slice(1)] }, ...home.floors.slice(1)],
+    };
+    const simpler = parseShared(newer);
+    expect(simpler.simplified).toBe(true);
+    expect(simpler.project.style).toEqual({ preset: "kerala" });
+    expect(simpler.project.floors[0].rooms[0].floorMaterial).toBeUndefined();
+    expect(simpler.project.floors[0].rooms[0].wallColor).toBeUndefined();
+    // Newer roofs, railings, furniture and garden pieces too.
+    const pieces = {
+      ...home,
+      style: { roof: { style: "dome", material: "terracotta", pitch: 30 }, details: { railing: "rope", chhajja: true } },
+      floors: [{ ...home.floors[0], rooms: [{ ...room, furniture: [{ id: "f1", catalogId: "hoverboard", x: 100, z: 100, rotation: 0 }, { id: "f2", catalogId: "sofa-2", x: 120, z: 120, rotation: 0, finish: "gold-leaf" }] }, ...home.floors[0].rooms.slice(1)] }, ...home.floors.slice(1)],
+      landscape: [{ id: "l1", kind: "baobab", x: 100, z: 100, rotation: 0 }],
+    };
+    const read2 = parseShared(pieces);
+    expect(read2.simplified).toBe(true);
+    expect(read2.project.style).toEqual({ details: { chhajja: true } });
+    expect(read2.project.floors[0].rooms[0].furniture).toEqual([{ id: "f2", catalogId: "sofa-2", x: 120, z: 120, rotation: 0 }]);
+    expect(read2.project.landscape).toEqual([]);
+    // Prototype names are never ids.
+    expect(() => parseShared({ ...home, style: { exterior: "constructor" } })).not.toThrow();
+    expect(parseShared({ ...home, style: { exterior: "constructor" } }).project.style?.exterior).toBeUndefined();
     expect(() => parseShared({ name: "not a home" })).toThrow();
   });
 });

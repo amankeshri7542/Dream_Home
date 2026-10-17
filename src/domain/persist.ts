@@ -37,7 +37,17 @@ export const OPENING_KINDS: readonly OpeningKind[] = [
 ];
 const OPENING_STYLES = ["panel", "flush", "glazed", "plain", "divided"];
 const ROOF_STYLES = ["flat", "gable", "hip", "shed"];
-export const STYLE_PRESETS: readonly StylePreset[] = ["indian-modern", "indian-classic", "diorama"];
+export const STYLE_PRESETS: readonly StylePreset[] = [
+  "indian-modern",
+  "indian-classic",
+  "diorama",
+  "kerala",
+  "chettinad",
+  "rajasthani",
+  "goan",
+  "mumbai-modern",
+  "bengaluru-contemporary",
+];
 export const RAILING_KINDS: readonly RailingKind[] = ["glass", "grille", "jaali"];
 const optBool = (v: unknown) => v === undefined || typeof v === "boolean";
 const EDGES: readonly EdgeSide[] = ["north", "south", "east", "west"];
@@ -125,6 +135,7 @@ function checkDetails(v: unknown): v is StyleDetails {
     optBool(v.chhajja) &&
     optBool(v.waterTank) &&
     optBool(v.carPorch) &&
+    optBool(v.arches) &&
     (v.railing === undefined || RAILING_KINDS.includes(v.railing as RailingKind))
   );
 }
@@ -134,6 +145,7 @@ function copyDetails(d: StyleDetails): StyleDetails {
     ...(d.waterTank !== undefined ? { waterTank: d.waterTank } : {}),
     ...(d.carPorch !== undefined ? { carPorch: d.carPorch } : {}),
     ...(d.railing !== undefined ? { railing: d.railing } : {}),
+    ...(d.arches !== undefined ? { arches: d.arches } : {}),
   };
 }
 function checkStyle(v: unknown): v is ProjectStyle {

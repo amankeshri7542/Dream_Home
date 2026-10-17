@@ -4,7 +4,8 @@
 import furnitureJson from "../domain/catalog/furniture.json" with { type: "json" };
 import landscapeJson from "../domain/catalog/landscape.json" with { type: "json" };
 import { EXTERIOR_FINISHES, FLOOR_MATERIALS, WALL_PAINTS } from "../domain/materials";
-import type { HomeBrief, RoomBrief } from "./brief";
+import { LOOK_BUNDLES, STYLE_PRESET_INFO } from "../domain/looks";
+import { REGIONAL_VIBES, type HomeBrief, type RegionalVibe, type RoomBrief } from "./brief";
 import { EXTRA_IDS, GARDEN_IDS } from "./schema";
 
 const labels = (o: Record<string, { label: string }>) =>
@@ -20,6 +21,20 @@ const garden = landscapeJson.items
   .map((i) => `${i.id}: ${i.label}`)
   .join(", ");
 const finishes = (slot: keyof typeof furnitureJson.finishes) => Object.keys(furnitureJson.finishes[slot]).join(", ");
+
+/** What each regional home's rooms are made of (floors and colours by id). */
+const REGIONAL_INTERIORS: Record<RegionalVibe, string> = {
+  kerala: "red-oxide floors, teak wood, white or linen walls, brass-like mustard and cane-coloured oat fabrics",
+  chettinad: "Athangudi tile floors (athangudi, athangudi-green, athangudi-indigo) with red-oxide, deep walnut and teak, maroon and peacock fabrics with mustard (brass) accents, warm ochre or white walls",
+  rajasthani: "Kota stone (kota) and marble floors, clay, ochre or linen walls, indigo (navy) and turmeric (mustard) fabrics and accents",
+  goan: "red-oxide floors and blue azulejo tiles in kitchens and bathrooms, white woodwork, navy and mustard cottons, ochre, blush or dusty-blue walls",
+  "mumbai-modern": "glossy vitrified floors (oak in bedrooms), greige and white walls, charcoal and oat fabrics with one pop colour, compact pieces",
+  "bengaluru-contemporary": "polished concrete, oak and terrazzo floors, sage, terracotta and linen walls, earthy terracotta and leaf-green fabrics, plenty of plants",
+};
+const REGIONAL_GUIDE = REGIONAL_VIBES.map((v) => {
+  const b = LOOK_BUNDLES[v];
+  return `  - ${v} (${STYLE_PRESET_INFO[v].description.toLowerCase()}): exterior finish ${b.exterior}, trim ${b.trim}, door ${b.frontDoor}, roof ${b.roof.style} in ${b.roof.material}. Inside: ${REGIONAL_INTERIORS[v]}.`;
+}).join("\n");
 
 const SHARED = `You are the in-house architect and interior designer of Dream Home, a 3D home-design app used mostly by families in India, many of them on phones.
 Your designs must feel warm, practical and believably Indian: good cross-ventilation, daylight in every bedroom, a proper kitchen, storage, and colours that look good in strong sunlight.
@@ -44,7 +59,10 @@ Taste rules:
 - One accent colour per room: the "accent" finish repeats in cushions, lamps and art; keep fabrics and wood calm around it.
 - Wet rooms (kitchen, bathrooms) get tile, terrazzo, stone or concrete floors, never carpet or wood.
 - Bedrooms for children can be brighter; grandparents' rooms calm, near the entrance and on the ground floor.
-- Every home gets an Indian flat roof with a parapet, chhajja sunshades, a rooftop water tank and a compound wall with a gate. You choose the facade, trim and door colours: bright or warm plaster (peach, saffron, ochre, mint, sky, two-tone) with teak or peacock doors suits most Indian homes; keep "roof" flat.
+- The brief's "look" is either an everyday style (indian-modern, indian-classic, minimal, colourful) or a regional home (${REGIONAL_VIBES.join(", ")}).
+- Everyday styles: every home gets an Indian flat roof with a parapet, chhajja sunshades, a rooftop water tank and a compound wall with a gate. You choose the facade, trim and door colours: bright or warm plaster (peach, saffron, ochre, mint, sky, two-tone) with teak or peacock doors suits most Indian homes; keep "roof" flat.
+- Regional homes: the app builds that region's outside itself (its facade, roof, details and garden), so return its own exterior ids below. Make the inside belong to the region too:
+${REGIONAL_GUIDE}
 - A tulsi planter and a neem tree make an Indian garden feel at home.
 - Keep names short (at most 18 characters), friendly and in English, like "Main bedroom", "Dadi’s room", "Kids’ room", "Pooja room". Never use real people's full names.
 - Design notes: 3–5 short sentences (at most 120 characters each) a homeowner will enjoy reading, explaining your main choices. Mention Vastu only when the brief asks for it. No prices, no promises about building codes.

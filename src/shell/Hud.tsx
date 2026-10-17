@@ -188,6 +188,16 @@ export function ViewOptions() {
             setPrefs({ streetLife: on });
           }}
         />
+        <Switch
+          label="Lived-in details"
+          description="Shoes at the door, chai on the table, a sleeping cat while you explore"
+          checked={view.livedIn !== false}
+          onChange={() => {
+            const on = view.livedIn === false;
+            setView({ livedIn: on });
+            setPrefs({ livedIn: on ? "lived-in" : "tidy" });
+          }}
+        />
       </div>
       <fieldset className="dh-finish-choices">
         <legend>Exterior finish</legend>

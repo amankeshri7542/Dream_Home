@@ -1,6 +1,8 @@
 // A tiny per-Canvas store (useSyncExternalStore) plus a tween runner.
 // `animating` > 0 keeps the demand frameloop invalidating; when it reaches 0
-// the scene goes fully idle (zero frames).
+// the scene goes fully idle (zero frames). It also holds the shared clock idle
+// animations read (real time; a recorder can drive it frame by frame) and
+// counts assets still loading, so a photo waits for them.
 import { createContext, useContext, useSyncExternalStore } from "react";
 
 export type SceneState = {
@@ -31,6 +33,9 @@ export function createSceneStore() {
   };
   const listeners = new Set<() => void>();
   const tweens = new Set<Tween>();
+  const realTime = () => performance.now() / 1000;
+  let clock = realTime;
+  let loading = 0;
   let invalidate: () => void = () => {};
   const emit = () => listeners.forEach((l) => l());
   const set = (patch: Partial<SceneState>) => {
@@ -92,6 +97,22 @@ export function createSceneStore() {
       return true;
     },
     isAnimating: () => tweens.size > 0,
+    /** Seconds on the shared animation clock. */
+    time: () => clock(),
+    /** Drive the clock (null: back to real time). */
+    setClock(source: (() => number) | null) {
+      clock = source ?? realTime;
+    },
+    /** Marks an asset as loading; call the returned function once it has (or failed). */
+    hold() {
+      loading++;
+      let held = true;
+      return () => {
+        if (held) loading--;
+        held = false;
+      };
+    },
+    isLoading: () => loading > 0,
   };
 }
 

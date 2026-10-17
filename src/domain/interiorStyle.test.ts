@@ -19,13 +19,14 @@ import {
   withStylePreset,
 } from "./materials";
 import { createPreset, parseProject, validateProjectIssues } from "./model";
+import { STYLE_PRESETS } from "./persist";
 import type { EditResult, GeometryFloor, Project, Room, RoomKind, StylePreset } from "./types";
 
 const ok = (result: EditResult): Project => {
   if (!result.ok) throw new Error(result.error);
   return result.project;
 };
-const LOOKS: StylePreset[] = ["indian-modern", "indian-classic", "diorama"];
+const LOOKS: readonly StylePreset[] = STYLE_PRESETS;
 const ROOMS: Array<[RoomKind, string]> = [
   ["bedroom", "Bedroom"],
   ["living", "Living room"],

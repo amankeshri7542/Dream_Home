@@ -79,7 +79,16 @@ export type LandscapeItem = {
 
 export type RoofStyle = "flat" | "gable" | "hip" | "shed";
 /** A coherent look applied by `applyStylePreset` (absent = the original diorama look). */
-export type StylePreset = "indian-modern" | "indian-classic" | "diorama";
+export type StylePreset =
+  | "indian-modern"
+  | "indian-classic"
+  | "diorama"
+  | "kerala"
+  | "chettinad"
+  | "rajasthani"
+  | "goan"
+  | "mumbai-modern"
+  | "bengaluru-contemporary";
 export type RailingKind = "glass" | "grille" | "jaali";
 /** Regional facade details; each absent flag means "off" (glass railings). */
 export type StyleDetails = {
@@ -90,6 +99,8 @@ export type StyleDetails = {
   /** A slim canopy on two columns over the parking pad. */
   carPorch?: boolean;
   railing?: RailingKind;
+  /** Arched stone hoods over exterior windows (Rajasthani, Chettinad, Goan). */
+  arches?: boolean;
 };
 export type ProjectStyle = {
   preset?: StylePreset;
@@ -238,6 +249,8 @@ export type ViewSettings = {
   resetKey: number;
   /** Animated street (people, animals, traffic) in Explore; absent = on. */
   streetLife?: boolean;
+  /** Everyday objects (shoes, chai, a sleeping cat) in Explore; absent = on. */
+  livedIn?: boolean;
 };
 export const ROOM_META: Record<RoomKind, { label: string; color: string }> = {
   shop: { label: "Shop", color: "#d2b6c9" },

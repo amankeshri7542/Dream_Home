@@ -8,7 +8,7 @@ import { deriveWalls } from "../../domain/walls";
 import type { EdgeSide, GeometryFloor, Project, RailingKind, StylePreset, Void, Wall } from "../../domain/types";
 import type { SceneView } from "../types";
 import { floorBase } from "../coords";
-import { FACADE_LOOKS } from "../materials/palette";
+import { DEFAULT_JAALI, FACADE_LOOKS } from "../materials/palette";
 import { findEntrance, type Entrance } from "./geometry/porch";
 import { visibility, type Visibility } from "./visibility";
 
@@ -20,7 +20,11 @@ export type FloorStyle = {
   /** Two-tone accent band (floor lines, parapet coping), or null. */
   band: string | null;
   chhajja: boolean;
+  /** Arched stone hoods over exterior windows. */
+  arches: boolean;
   railing: RailingKind;
+  /** Colour of jaali balcony screens. */
+  jaali: string;
   /** The Look: default room paints and floors follow its palettes. */
   look: StylePreset | null;
 };
@@ -57,7 +61,9 @@ export function projectStyle(project: Project): FloorStyle {
     stone: FACADE_LOOKS[exterior].stone,
     band: FACADE_LOOKS[exterior].band ?? null,
     chhajja: details.chhajja,
+    arches: details.arches,
     railing: details.railing,
+    jaali: FACADE_LOOKS[exterior].jaali ?? DEFAULT_JAALI,
     look: stylePreset(project),
   };
 }

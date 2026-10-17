@@ -218,6 +218,13 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  .dh-ai-vibes-more {
+    grid-column: 1 / -1;
+    margin: 6px 0 0;
+    font-weight: 700;
+    font-size: calc(14px * var(--dh-text));
+    color: var(--dh-ink-2, #6b6158);
+  }
   .dh-ai-vibes button {
     display: flex;
     flex-direction: column;

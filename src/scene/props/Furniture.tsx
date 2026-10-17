@@ -5,8 +5,9 @@
 // the room's coordinated palette. Decor rests on the surface below it and
 // wall-hung pieces sit flush on the wall face. While the kit loads — or if it
 // fails — the procedural furniture renders instead; catalog items without a
-// model always fall back to their procedural parts.
-import { Component, Suspense, use, useEffect, useMemo, type ReactNode } from "react";
+// model always fall back to their procedural parts. In Explore and Photo,
+// ceiling fans turn and curtains sway (idleMotion.ts).
+import { Component, Suspense, use, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Color, Matrix4, Vector3, type Material } from "three";
 import {
@@ -26,7 +27,10 @@ import { ASSET_ITEMS } from "../assets/assetManifest";
 import { FLOOR_SURFACE } from "../coords";
 import type { MaterialLibrary } from "../materials/library";
 import { popUniforms } from "../materials/patches";
-import { buildBatches, disposeBatches, type Placement } from "./batched";
+import { hash2 } from "../materials/noise";
+import { useSceneStore } from "../store";
+import { buildBatches, disposeBatches, type Batch, type Placement } from "./batched";
+import { fanMatrix, spinAxis, swayMatrix } from "./idleMotion";
 import { loadKit, type Kit } from "./kit";
 import { ProceduralFurniture } from "./ProceduralFurniture";
 import { useInterior } from "./interior";
@@ -146,9 +150,23 @@ export function itemPlacements(
   return [{ model: item.catalogId, matrix: itemMatrix.clone().multiply(scale) }];
 }
 
+/** Fans and curtains in the batches, with what their motion needs. */
+type Mover = { mesh: Batch["mesh"]; id: number; base: Matrix4; kind: "fan" | "sway"; phase: number };
+function movers(batches: readonly Batch[]): Mover[] {
+  const out: Mover[] = [];
+  for (const b of batches)
+    b.models.forEach((model, id) => {
+      if (model === "ceiling-fan" || model === "curtains")
+        out.push({ mesh: b.mesh, id, base: b.base[id], kind: model === "ceiling-fan" ? "fan" : "sway", phase: hash2(id, b.base[id].elements[12] * 100, 7) * 6.28 });
+    });
+  return out;
+}
+
 function GlbFurniture({ floor, walls, base, library, onPick, onHover }: Props) {
   const kit: Kit = use(loadKit("interior"));
-  const style = useInterior().project?.style;
+  const interior = useInterior();
+  const style = interior.project?.style;
+  const store = useSceneStore();
   const { batches, procedural } = useMemo(() => {
     const placements: Placement[] = [];
     const procedural = new Set<string>();
@@ -174,10 +192,24 @@ function GlbFurniture({ floor, walls, base, library, onPick, onHover }: Props) {
     return { batches: buildBatches(kit, placements, materialFor), procedural };
   }, [kit, floor.rooms, walls, base, library, style]);
   useEffect(() => () => disposeBatches(batches), [batches]);
+  const moving = useMemo(() => movers(batches), [batches]);
+  const hub = useMemo(() => spinAxis(kit.models.get("ceiling-fan") ?? []), [kit]);
+  const drapeHeight = (ASSET_ITEMS.curtains?.bounds.h ?? 250) / 100;
+  const animated = useRef(false);
 
   // Pop animation: scale instances inside the active pop rect on the CPU.
   const tmp = useMemo(() => ({ m: new Matrix4(), s: new Matrix4(), p: new Vector3() }), []);
   useFrame(() => {
+    // Idle motion; back to rest once it stops.
+    if (interior.motion) {
+      const t = store.time();
+      for (const m of moving)
+        m.mesh.setMatrixAt(m.id, m.kind === "fan" ? fanMatrix(m.base, hub, t + m.phase, tmp.m) : swayMatrix(m.base, drapeHeight, t, m.phase, tmp.m));
+      animated.current = true;
+    } else if (animated.current) {
+      for (const m of moving) m.mesh.setMatrixAt(m.id, m.base);
+      animated.current = false;
+    }
     const active = popUniforms.uPopY.value.w > 0.5;
     const rect = popUniforms.uPop.value;
     const [, scale, drop] = popUniforms.uPopY.value.toArray();

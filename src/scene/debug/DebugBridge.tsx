@@ -144,7 +144,7 @@ export function DebugBridge({ project, quality, light, building, moving }: Props
         cz = ((t.rect.z0 + t.rect.z1) / 2) * 100;
       return toScreen(new Vector3(...plotToWorld(p, cx, cz, floorBase(t.floor) + FLOOR_SURFACE + 0.02)));
     };
-    b.isAnimating = () => store.isAnimating() || moving();
+    b.isAnimating = () => store.isAnimating() || store.isLoading() || moving();
     b.waitForIdle = () =>
       new Promise<void>((resolve) => {
         let calm = 0;

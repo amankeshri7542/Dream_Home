@@ -17,6 +17,8 @@ export type Batch = {
   mesh: BatchedMesh;
   /** instanceId → owner key */
   owners: string[];
+  /** instanceId → model id (idle motion finds fans and curtains by it) */
+  models: string[];
   /** instanceId → base matrix (for pop animations) */
   base: Matrix4[];
 };
@@ -48,19 +50,21 @@ export function buildBatches(kit: Kit, placements: Placement[], materialFor: (sl
     const ids = new Map<string, number>();
     for (const [key, g] of unique) ids.set(key, mesh.addGeometry(g));
     const owners: string[] = [];
+    const models: string[] = [];
     const base: Matrix4[] = [];
     for (const e of entries) {
       const id = mesh.addInstance(ids.get(e.key)!);
       mesh.setMatrixAt(id, e.placement.matrix);
       mesh.setColorAt(id, e.placement.tints?.[slot] ?? kit.tintDefaults.get(slot) ?? WHITE);
       owners[id] = e.placement.owner;
+      models[id] = e.placement.model;
       base[id] = e.placement.matrix.clone();
     }
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.computeBoundingBox();
     mesh.computeBoundingSphere();
-    batches.push({ slot, mesh, owners, base });
+    batches.push({ slot, mesh, owners, models, base });
   }
   return batches;
 }

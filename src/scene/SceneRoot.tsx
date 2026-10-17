@@ -30,6 +30,8 @@ import { Landscape } from "./props/Landscape";
 import { Plot } from "./props/Plot";
 import { SiteExtras } from "./props/SiteExtras";
 import { StreetLife } from "./street/StreetLife";
+import { LivedIn } from "./life/LivedIn";
+import { useIdleTicker, usePageVisible } from "./motion";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
 import { PhotoRenderer } from "../photo/PhotoRenderer";
@@ -71,6 +73,7 @@ export function SceneRoot(props: RootProps) {
   const scene = useThree((s) => s.scene);
   const size = useThree((s) => s.size);
   const store = useSceneStore();
+  const pageVisible = usePageVisible();
   const spec = TIERS[tier];
   const hour = explore === "showcase" ? 17.25 : props.hour;
   const light = useMemo(() => lighting(hour, project.plot.north), [hour, project.plot.north]);
@@ -102,11 +105,18 @@ export function SceneRoot(props: RootProps) {
   });
 
   const vis = visibility(project, view);
+  // Lived-in details: Explore and Photo only (not the title showcase). Their
+  // idle motion (fans, curtains, the cat, diya flames) runs while they show,
+  // gated like street life (not battery, not reduced motion, page visible).
+  const exploring = mode === "explore" && explore !== "showcase";
+  const everyday = exploring && view.livedIn !== false;
+  const diwali = exploring && !!view.festive;
+  const motion = (everyday || diwali) && tier !== "battery" && !reducedMotion && pageVisible;
   // Room palettes, night lamps: what interior props need beyond their floor.
   const interiorExplore = mode === "explore" || explore === "showcase";
   const interior = useMemo(
-    () => ({ project, tier, explore: interiorExplore, furnishedFloorId: vis.furnishedFloorId }),
-    [project, tier, interiorExplore, vis.furnishedFloorId],
+    () => ({ project, tier, explore: interiorExplore, furnishedFloorId: vis.furnishedFloorId, motion }),
+    [project, tier, interiorExplore, vis.furnishedFloorId, motion],
   );
   const offset = plotOffset(project);
   const entrance = useMemo(() => (vis.stage >= 4 ? findEntrance(project) : null), [project, vis.stage]);
@@ -178,6 +188,8 @@ export function SceneRoot(props: RootProps) {
   // Street life: Explore / showcase only, never on battery or reduced motion.
   const streetLife =
     (mode === "explore" || explore === "showcase") && tier !== "battery" && !reducedMotion && view.streetLife !== false;
+  // One ticker for all idle animation: two out-of-step timers would double the frame rate.
+  useIdleTicker((streetLife || motion) && pageVisible);
   const pickLandscape = (id: string) => props.onSelect({ kind: "landscape", id });
   return (
     <>
@@ -215,6 +227,20 @@ export function SceneRoot(props: RootProps) {
         />
         {props.ghost && <Ghost project={project} ghost={props.ghost} offset={offset} />}
         <Night light={light} library={library} floors={nightFloors} />
+        {(everyday || diwali) && vis.stage >= 4 && (
+          <LivedIn
+            project={project}
+            floors={vis.floors}
+            furnishedFloorId={vis.furnishedFloorId}
+            roofVisible={vis.roofVisible}
+            everyday={everyday}
+            diwali={diwali}
+            motion={motion}
+            glow={light.palette.windowGlow}
+            library={library}
+            layout={layout}
+          />
+        )}
       </group>
       </InteriorContext.Provider>
       <CameraRig

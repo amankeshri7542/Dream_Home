@@ -3,6 +3,7 @@
 // World: metres. The plot is centred by a group offset of [-w/200, 0, -d/200];
 // everything inside the building/plot group is in plot-local metres.
 import type { Floor, Project, Rect } from "../domain/types";
+import { WALL_THICKNESS } from "../domain/walls";
 
 export const cm = (v: number) => v / 100;
 
@@ -20,8 +21,8 @@ export const SLAB_DEPTH = 0.17;
 /** Storey height in metres (domain floors are 300 cm). */
 export const STOREY = 3;
 /** Wall thicknesses, metres. */
-export const EXTERIOR_WALL = 0.2;
-export const INTERIOR_WALL = 0.12;
+export const EXTERIOR_WALL = WALL_THICKNESS.exterior / 100;
+export const INTERIOR_WALL = WALL_THICKNESS.interior / 100;
 /** Depth of the diorama plinth below the ground. */
 export const PLINTH_BOTTOM = -0.75;
 

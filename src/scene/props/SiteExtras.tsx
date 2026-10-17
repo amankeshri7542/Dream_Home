@@ -12,7 +12,7 @@ import { Buckets, mixRgb, rgb, type QuadBuilder, type RGB } from "../building/ge
 import { useBuckets } from "../building/useBuckets";
 import type { MaterialLibrary } from "../materials/library";
 import type { Placement } from "./batched";
-import { fencePlan, parkingSpots, type FencePlan, type ParkingSpot } from "./fence";
+import { COMPOUND_WALL, fencePlan, parkingSpots, type FencePlan, type ParkingSpot } from "./fence";
 import { modelSize } from "./garden";
 import { KitPlacements } from "./KitPlacements";
 import { modelMatrix } from "./Landscape";
@@ -50,16 +50,17 @@ export function emitBoundary(plan: FencePlan, trimHex: string, plaster: QuadBuil
   const coping = rgb("#e6e0d5"),
     plinth = mixRgb(trim, rgb("#8f877b"), 0.55);
   if (plan.kind === "compound-wall") {
+    const { body: top, coping: copingTop, pillar, pillarCap } = COMPOUND_WALL;
     for (const r of plan.runs) {
-      runBox(plaster, r, WALL_T, g, 1.1, body);
+      runBox(plaster, r, WALL_T, g, top, body);
       runBox(stone, r, WALL_T + 0.02, g, GROUND_TOP + 0.16, plinth);
-      runBox(stone, r, WALL_T + 0.08, 1.1, 1.16, coping, 0.04);
+      runBox(stone, r, WALL_T + 0.08, top, copingTop, coping, 0.04);
     }
     for (const [x, z] of plan.pillars) {
-      square(plaster, x, z, 0.18, g, 1.34, trim);
+      square(plaster, x, z, 0.18, g, pillar, trim);
       square(stone, x, z, 0.19, g, GROUND_TOP + 0.16, plinth);
-      square(stone, x, z, 0.23, 1.34, 1.41, coping);
-      square(stone, x, z, 0.15, 1.41, 1.46, coping);
+      square(stone, x, z, 0.23, pillar, pillarCap - 0.05, coping);
+      square(stone, x, z, 0.15, pillarCap - 0.05, pillarCap, coping);
     }
   } else if (plan.kind === "low-wall") {
     const wall = rgb(FENCE_STYLES["low-wall"]?.color ?? "#cbbfa8");

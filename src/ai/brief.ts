@@ -1,6 +1,6 @@
 // The AI Designer's inputs and outputs, shared by the browser and the server.
 // Pure data and validation only: no React, no DOM, no network.
-import type { EdgeSide } from "../domain/types";
+import type { EdgeSide, StylePreset } from "../domain/types";
 
 export const FAMILIES = ["single", "couple", "young-family", "big-family", "joint-family"] as const;
 export type Family = (typeof FAMILIES)[number];
@@ -15,8 +15,19 @@ export const MUSTS = [
   "guest",
 ] as const;
 export type Must = (typeof MUSTS)[number];
-export const VIBES = ["indian-modern", "indian-classic", "minimal", "colourful"] as const;
+/** Regional looks the designer builds whole (their ids are the home's Look ids). */
+export const REGIONAL_VIBES = [
+  "kerala",
+  "chettinad",
+  "rajasthani",
+  "goan",
+  "mumbai-modern",
+  "bengaluru-contemporary",
+] as const satisfies readonly StylePreset[];
+export const VIBES = ["indian-modern", "indian-classic", "minimal", "colourful", ...REGIONAL_VIBES] as const;
 export type Vibe = (typeof VIBES)[number];
+export type RegionalVibe = (typeof REGIONAL_VIBES)[number];
+export const isRegionalVibe = (vibe: Vibe): vibe is RegionalVibe => (REGIONAL_VIBES as readonly string[]).includes(vibe);
 const SIDES: EdgeSide[] = ["north", "east", "south", "west"];
 
 /** What the homeowner tells us in four taps (plus an optional note). */

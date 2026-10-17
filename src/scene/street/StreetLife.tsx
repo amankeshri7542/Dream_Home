@@ -2,10 +2,11 @@
 // lazy cow, an auto-rickshaw, a scooter and circling birds from street.glb,
 // plus grass tufts and roadside plants. Every actor part is one instance of a
 // single BatchedMesh (one draw call); blob shadows and greenery are instanced.
-// Animation runs at ~24 fps by invalidating on an interval, so the editor
-// keeps a fully idle (zero-frame) demand loop whenever this is unmounted.
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+// SceneRoot's idle ticker asks for ~24 frames a second while this is enabled,
+// so the editor keeps a fully idle (zero-frame) demand loop otherwise. Poses
+// follow the scene's shared clock.
+import { useEffect, useMemo, useState } from "react";
+import { useFrame } from "@react-three/fiber";
 import {
   BatchedMesh,
   BufferAttribute,
@@ -25,17 +26,25 @@ import {
   type Mesh,
 } from "three";
 import { STREET_ASSET } from "../assets/assetManifest";
+import { IDLE_FPS, usePageVisible } from "../motion";
+import { useSceneStore } from "../store";
 import type { Project } from "../../domain/types";
 import { gradientTexture } from "../materials/textures";
 import { hash2 } from "../materials/noise";
-import { normalise } from "../props/kit";
+import { gltfName, normalise } from "../props/kit";
 import type { SiteLayout } from "../props/site";
 import { BIRDS, STREET_CAST, actorPose, birdPose, greenery, streetFrame, type Pose } from "./sim";
 
-export const STREET_FPS = 24;
+export const STREET_FPS = IDLE_FPS;
 
 type StreetPart = { suffix: string; geometry: BufferGeometry; rest: Matrix4 };
 type StreetKit = Map<string, StreetPart[]>;
+
+/** A street actor part's name after `<actor>:` (leg-l, wheel-f…): the key its pose animates. */
+export const streetPart = (mesh: Object3D) => {
+  const name = gltfName(mesh);
+  return name.split(":")[1] ?? name;
+};
 
 let kitPromise: Promise<StreetKit> | null = null;
 function loadStreetKit(): Promise<StreetKit> {
@@ -56,9 +65,9 @@ function loadStreetKit(): Promise<StreetKit> {
           const mesh = child as Mesh;
           if (!mesh.isMesh) continue;
           mesh.updateMatrix();
-          parts.push({ suffix: mesh.name.split(":")[1] ?? mesh.name, geometry: normalise(mesh.geometry), rest: mesh.matrix.clone() });
+          parts.push({ suffix: streetPart(mesh), geometry: normalise(mesh.geometry), rest: mesh.matrix.clone() });
         }
-        kit.set(root.name, parts);
+        kit.set(gltfName(root), parts);
       }
       return kit;
     })();
@@ -69,24 +78,12 @@ function loadStreetKit(): Promise<StreetKit> {
   return kitPromise;
 }
 
-/** document.visibilityState as state. */
-function usePageVisible() {
-  const [visible, setVisible] = useState(() => typeof document === "undefined" || document.visibilityState === "visible");
-  useEffect(() => {
-    const on = () => setVisible(document.visibilityState === "visible");
-    document.addEventListener("visibilitychange", on);
-    return () => document.removeEventListener("visibilitychange", on);
-  }, []);
-  return visible;
-}
-
 type Props = { project: Project; layout: SiteLayout; enabled: boolean };
 
 /** Mounted inside the plot-offset group. `enabled` = mode/tier/motion gate. */
 export function StreetLife({ project, layout, enabled }: Props) {
   const visible = usePageVisible();
   const active = enabled && visible;
-  const invalidate = useThree((s) => s.invalidate);
   const [kit, setKit] = useState<StreetKit | null>(null);
   useEffect(() => {
     if (!active || kit) return;
@@ -98,11 +95,6 @@ export function StreetLife({ project, layout, enabled }: Props) {
       live = false;
     };
   }, [active, kit]);
-  useEffect(() => {
-    if (!active) return;
-    const id = window.setInterval(() => invalidate(), 1000 / STREET_FPS);
-    return () => window.clearInterval(id);
-  }, [active, invalidate]);
   if (!active) return null;
   return (
     <group name="street-life" userData={{ active: true }}>
@@ -183,9 +175,9 @@ function Actors({ project, kit }: { project: Project; kit: StreetKit }) {
     [built],
   );
   const frame = useMemo(() => streetFrame(project), [project]);
-  const t0 = useRef(performance.now());
+  const store = useSceneStore();
   useFrame(() => {
-    const t = (performance.now() - t0.current) / 1000;
+    const t = store.time();
     const place = (pose: Pose, slots: { id: number; part: StreetPart }[]) => {
       tmp.q.setFromAxisAngle(tmp.up, pose.yaw);
       const k = Math.max(0.0001, pose.scale);

@@ -62,7 +62,7 @@ export const LANDSCAPE_MODULES = landscapeJson.modules as ReadonlyArray<{
 }>;
 export const FENCE_STYLES = landscapeJson.fences as Record<string, FenceStyle>;
 export const isFence = (id: unknown): id is string =>
-  typeof id === "string" && id in FENCE_STYLES;
+  typeof id === "string" && Object.hasOwn(FENCE_STYLES, id);
 const CATALOG = new Map(LANDSCAPE_CATALOG.map((item) => [item.id, item]));
 export const landscapeCatalogItem = (kind: string) => CATALOG.get(kind);
 export const landscapeLabel = (kind: string) =>

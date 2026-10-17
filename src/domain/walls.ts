@@ -24,6 +24,11 @@ import type {
   WallOpening,
 } from "./types";
 
+/** Built wall thickness (cm): the 3D walls, and what sits against their faces. */
+export const WALL_THICKNESS = { exterior: 20, interior: 12 } as const;
+export const wallThicknessCm = (w: Pick<Wall, "exterior">) =>
+  w.exterior ? WALL_THICKNESS.exterior : WALL_THICKNESS.interior;
+
 export type Edge = {
   axis: "x" | "z";
   fixed: number;

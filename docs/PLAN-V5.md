@@ -418,6 +418,13 @@ M0 ships in two phases:
 **Done when:** the photos are visibly a step above the live view (soft shadows, clean edges, rich ambient occlusion, glowing lamps); no WebGL context loss on a 4 GB phone profile (test at 2048 px); there is a cancel button; if the render target fails it falls back to the live canvas capture.
 
 ### M3: Regional looks + Lived-in details
+✅ Done on 17 Oct 2026 (see the roadmap log). Differences from the text below:
+- the look data lives in `src/domain/looks.ts`, and arched window heads became a saved regional detail (`details.arches`);
+- Kerala's wooden window grilles, Chettinad's teak pillars, the Goan balcão and Mumbai's compact furniture were left out;
+- look cards are rendered in morning light (golden light made every look the same orange) from a three-quarter street view;
+- curtains sway by an instance-matrix shear, not a material wave (their fabric material is shared);
+- the AI designer gained the six regional looks as styles; the plan schema is unchanged.
+
 **Goal:** homes feel specifically, warmly Indian and lived in.
 
 **Regional looks:** each `StylePreset` sets the exterior bundle (`PRESETS`), the interior palettes (`LOOK_PALETTES` per room kind), landscape suggestions and the look card art.
@@ -758,4 +765,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b, M1 and M2 shipped on 17 Oct 2026. The next phase is **M3** (Regional looks + lived-in details).
+- M0a, M0b, M1, M2 and M3 shipped on 17 Oct 2026. The next phase is **M4** (the "My dream home" reel).

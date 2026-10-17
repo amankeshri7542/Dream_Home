@@ -101,21 +101,34 @@ fails if it's stale).
    Colours are coordinated with the home's look, and lamps really light the
    rooms at night.
 6. **Outside** — choose the outside walls (plaster, brick, sandstone, stucco,
-   render, timber, stone, concrete, charcoal), a flat, gable, hip or shed roof
-   with material and steepness, trim and front-door colours. One-tap **Looks**
-   (Indian modern, Indian classic, Diorama) add chhajja sunshades, a rooftop
-   water tank, grille or jaali balconies, a compound wall with a gate and a car
-   porch. Explore shows a lively Indian street (people, a cow, a dog, a scooter,
+   render, timber, stone, concrete, charcoal, lime plaster, laterite, egg-white
+   plaster, golden sandstone, fair-faced concrete, wood slats and more), a flat,
+   gable, hip or shed roof with material (including Mangalore clay tiles) and
+   steepness, trim and front-door colours. One-tap **Looks**, each shown as a
+   rendered card: Indian modern and Indian classic, six **regional homes**
+   (Kerala, Chettinad, Rajasthani, Goan, Mumbai modern, Bengaluru contemporary)
+   and the original Diorama. A look sets the outside (with chhajja sunshades or
+   arched windows, a rooftop water tank, grille or jaali balconies, a compound
+   wall with a gate and a car porch), coordinated rooms (red-oxide, Athangudi,
+   Kota stone, vitrified or azulejo floors) and the garden (coconut palms, neem,
+   a tulsi planter, lush front planting). Tapping a look tries it; the toast
+   offers Undo. Explore shows a lively Indian street (people, a cow, a dog, a scooter,
    an auto-rickshaw and street lights), switchable in View options. Plant trees,
    shrubs, flower beds, hedges, a pool, paths, patios, lamps and benches; pick
    the ground and a fence.
 7. **Explore** — admire the home on a turntable, slide the time of day from
    morning to a glowing night, and walk inside with the keyboard, a thumb
-   joystick or tap-to-walk; stairs take you between floors.
+   joystick or tap-to-walk; stairs take you between floors. **Lived-in
+   details** make it feel like home: shoes by the door, chai and the newspaper
+   on the coffee table, a pressure cooker on the hob, a sleeping cat, clothes
+   drying on the balcony or terrace, a scooter out front, a toran over the door;
+   ceiling fans turn and curtains sway. They are never saved, so editing stays
+   tidy, and they can be switched off in View options.
 8. **Photo** — the camera (View options, Explore, a room's header, or Share)
    opens the **Photo studio**: pick *This view, Room, Front* or *Aerial*, a
    mood (*Morning, Noon, Golden hour, Night, Diwali night*) and a shape
-   (*Story 9:16, Square, Post 4:5, Wide 16:9*), then *Take photo*. A few
+   (*Story 9:16, Square, Post 4:5, Wide 16:9*), lived-in details on or off
+   (Diwali night adds diyas, string lights and a rangoli), then *Take photo*. A few
    seconds later you get a render-quality picture with soft shadows, ambient
    occlusion, clean edges and glowing lamps, ready to *Share* or *Save*, with
    an optional small Dream Home mark. Devices that can't make the full render
@@ -172,9 +185,11 @@ and vibration** confirm each change (switchable in More).
   geometry (junctions, openings, cutaway section fill, stairs, roofs, porch),
   GLB furniture and garden props, quality tiers with lazy post-processing, and a
   debug bridge (`window.__dreamHome`) for tests.
-- `scripts/blender/` — headless Blender scripts that model the furniture and
-  garden kit; `npm run assets` rebuilds `public/models` and `public/thumbs`
-  (requires Blender 5.1; the web build never needs Blender).
+- `scripts/blender/` — headless Blender scripts that model the furniture,
+  garden, street and lived-in kits; `npm run assets` rebuilds `public/models`
+  and `public/thumbs` (`-- --step life` just the lived-in kit; requires Blender
+  5.1; the web build never needs Blender). `npm run looks:thumbs` renders the
+  look cards in `public/looks` with the scene lab.
 
 See [the diorama sandbox design](docs/DIORAMA-SANDBOX.md) and
 [verification](docs/VERIFICATION.md). Earlier design notes stay in `docs/` as

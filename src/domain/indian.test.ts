@@ -1,9 +1,9 @@
 // M3 "Indian homes by default": style presets, regional details, schema.
 import { describe, expect, it } from "vitest";
 import baseline from "../../tests/fixtures/v2-baseline.json" with { type: "json" };
+import { STYLE_PRESET_INFO } from "./looks";
 import {
   EXTERIOR_FINISHES,
-  STYLE_PRESET_INFO,
   applyStylePreset,
   effectiveRoof,
   exteriorFinish,
@@ -44,7 +44,7 @@ describe("style presets", () => {
     expect(exteriorFinish(p)).toBe("ivory");
     expect(p.site?.fence).toBeUndefined();
     expect(p.style?.details).toBeUndefined();
-    expect(styleDetails(p)).toEqual({ chhajja: false, waterTank: false, carPorch: false, railing: "glass" });
+    expect(styleDetails(p)).toEqual({ chhajja: false, waterTank: false, carPorch: false, railing: "glass", arches: false });
   });
   it("keeps the ground choice when applying a look", () => {
     const p0 = { ...createPreset("compact"), site: { ground: "gravel" } };

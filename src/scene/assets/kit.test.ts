@@ -7,7 +7,9 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { beforeAll, describe, expect, it } from "vitest";
 import furniture from "../../domain/catalog/furniture.json";
 import landscape from "../../domain/catalog/landscape.json";
-import { ASSET_ITEMS, ASSET_MANIFEST, THUMBS } from "./assetManifest";
+import life from "../../domain/catalog/life.json";
+import { gltfName, parseKit } from "../props/kit";
+import { ASSET_ITEMS, ASSET_MANIFEST, STREET_ASSET, THUMBS } from "./assetManifest";
 
 type Kit = keyof typeof ASSET_MANIFEST;
 type Size = { w: number; d: number; h: number };
@@ -34,7 +36,8 @@ function glbJson(bytes: Uint8Array): { extensionsUsed?: string[] } {
   return JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + len)));
 }
 
-const BYTE_BUDGET: Record<Kit, number> = { interior: 420_000, exterior: 150_000 };
+const BYTE_BUDGET: Record<Kit, number> = { interior: 420_000, exterior: 150_000, life: 160_000 };
+const KITS: Kit[] = ["interior", "exterior", "life"];
 const TOL_CM = 1.5;
 
 // Every buildable model id: non-tile furniture items, non-procedural garden
@@ -66,8 +69,8 @@ function glbPath(kit: Kit) {
   return fromRoot(`public/models/${kit}.glb`);
 }
 
-async function loadKit(kit: Kit): Promise<GLTF> {
-  const buf = fs.readFileSync(glbPath(kit));
+async function loadKit(kit: Kit | "street"): Promise<GLTF> {
+  const buf = fs.readFileSync(kit === "street" ? fromRoot("public/models/street.glb") : glbPath(kit));
   const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
@@ -92,12 +95,11 @@ const kits: Partial<Record<Kit, GLTF>> = {};
 
 beforeAll(async () => {
   await MeshoptDecoder.ready;
-  kits.interior = await loadKit("interior");
-  kits.exterior = await loadKit("exterior");
+  for (const kit of KITS) kits[kit] = await loadKit(kit);
 });
 
 describe("asset kit files", () => {
-  for (const kit of ["interior", "exterior"] as Kit[]) {
+  for (const kit of KITS) {
     it(`${kit}.glb exists, fits its byte budget and matches the manifest`, async () => {
       const path = glbPath(kit);
       expect(fs.existsSync(path)).toBe(true);
@@ -110,7 +112,7 @@ describe("asset kit files", () => {
   }
 
   it("uses EXT_meshopt_compression (not KHR meshopt / Draco)", () => {
-    for (const kit of ["interior", "exterior"] as Kit[]) {
+    for (const kit of KITS) {
       const json = glbJson(fs.readFileSync(glbPath(kit)));
       expect(json.extensionsUsed).toContain("EXT_meshopt_compression");
       expect(json.extensionsUsed).not.toContain("KHR_meshopt_compression");
@@ -179,6 +181,82 @@ describe("catalog models", () => {
         }
       }
     }
+  });
+});
+
+/** A node by the name written in the GLB (three strips `:` from `name`). */
+const byName = (root: Object3D, name: string) => {
+  let found: Object3D | undefined;
+  root.traverse((o) => {
+    if (!found && gltfName(o) === name) found = o;
+  });
+  return found;
+};
+
+// Lived-in details (life.glb): per-vertex colours on three slots; moving
+// parts are their own `<id>:<part>` roots placed at their pivot.
+describe("lived-in models", () => {
+  const sizeOf = (objects: Object3D[]) => {
+    const box = new Box3();
+    for (const o of objects) {
+      o.updateWorldMatrix(true, true);
+      box.expandByObject(o);
+    }
+    return { size: box.getSize(new Vector3()).multiplyScalar(100), centre: box.getCenter(new Vector3()).multiplyScalar(100), min: box.min.y * 100 };
+  };
+  for (const item of life.items as Array<{ id: string; size: Size; slots: string[]; triBudget: number; parts?: string[] }>)
+    it(`${item.id} matches the lived-in catalog`, () => {
+      const scene = kits.life!.scene;
+      const root = byName(scene, item.id);
+      expect(root, `root node ${item.id}`).toBeTruthy();
+      const parts = (item.parts ?? []).map((part) => byName(scene, `${item.id}:${part}`));
+      for (const [i, part] of parts.entries()) expect(part, `${item.id}:${item.parts![i]}`).toBeTruthy();
+      let tris = 0;
+      for (const node of [root!, ...parts.map((p) => p!)])
+        for (const mesh of meshesOf(node)) {
+          const m = /^(.+)__([a-z]+)$/.exec(gltfName(mesh));
+          expect(m, `mesh name ${gltfName(mesh)}`).toBeTruthy();
+          expect(m![1]).toBe(gltfName(node));
+          expect(item.slots, `${mesh.name} slot`).toContain(m![2]);
+          expect((mesh.material as Material).name).toBe(m![2]);
+          expect(mesh.geometry.attributes.color, `${mesh.name} colours`).toBeTruthy();
+          tris += triCount(mesh);
+        }
+      expect(tris).toBeLessThanOrEqual(item.triBudget);
+      const { size, centre, min } = sizeOf([root!, ...parts.map((p) => p!)]);
+      expect(Math.abs(size.x - item.size.w), `w ${size.x}`).toBeLessThanOrEqual(TOL_CM);
+      expect(Math.abs(size.z - item.size.d), `d ${size.z}`).toBeLessThanOrEqual(TOL_CM);
+      expect(Math.abs(size.y - item.size.h), `h ${size.y}`).toBeLessThanOrEqual(TOL_CM);
+      expect(Math.abs(centre.x)).toBeLessThanOrEqual(TOL_CM);
+      expect(Math.abs(centre.z)).toBeLessThanOrEqual(TOL_CM);
+      expect(Math.abs(min)).toBeLessThanOrEqual(TOL_CM);
+      expect(ASSET_ITEMS[item.id]?.kit).toBe("life");
+    });
+});
+
+describe("parsed kits", () => {
+  it("cut furniture and lived-in details with the section, never the garden", () => {
+    const clipped = (kit: Kit) => [...parseKit(kit, kits[kit]!.scene.clone()).materials.values()].map((m) => !!m.clippingPlanes?.length);
+    expect(clipped("interior").every(Boolean)).toBe(true);
+    expect(clipped("life").every(Boolean)).toBe(true);
+    expect(clipped("exterior").some(Boolean)).toBe(false);
+  });
+  it("record each moving part's pivot", () => {
+    const life = parseKit("life", kits.life!.scene.clone());
+    expect([...life.pivots.keys()].sort()).toEqual(["cat:body", "diwali-diya:flame"]);
+    expect(life.models.has("cat:body")).toBe(true);
+  });
+});
+
+describe("street life parts", () => {
+  it("keep their `<actor>:<part>` names through the loader, so poses can find them", async () => {
+    expect(STREET_ASSET).toBeTruthy();
+    const street = await loadKit("street");
+    const parts = new Set<string>();
+    street.scene.traverse((o) => {
+      if ((o as Mesh).isMesh) parts.add(gltfName(o).split(":")[1]);
+    });
+    for (const part of ["leg-l", "leg-r", "arm-l", "arm-r", "head", "wheel-f", "tail"]) expect(parts, part).toContain(part);
   });
 });
 

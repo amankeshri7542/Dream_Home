@@ -49,6 +49,8 @@ export type RunOptions = {
   /** Select the result's `focusId` when the command reports one. */
   selectFocus?: boolean;
   notice?: string;
+  /** Show the notice with an Undo button (a quick "try it" change). */
+  undoable?: boolean;
   coalesceKey?: string;
   /** Announce failures as a notification instead of an inline error. */
   quietError?: boolean;
@@ -182,7 +184,11 @@ export function EditorProvider({
   const [state, dispatch] = useReducer(editorReducer, undefined, () =>
     initialEditorState({
       quality: prefs.quality,
-      ...(prefs.streetLife ? {} : { view: { ...DEFAULT_VIEW, streetLife: false } }),
+      view: {
+        ...DEFAULT_VIEW,
+        ...(prefs.streetLife ? {} : { streetLife: false }),
+        ...(prefs.livedIn === "lived-in" ? {} : { livedIn: false }),
+      },
       ...initial,
     }),
   );
@@ -281,7 +287,7 @@ export function EditorProvider({
             undo: true,
           });
         else if (opts.notice)
-          dispatch({ type: "notify", text: opts.notice, tone: "success" });
+          dispatch({ type: "notify", text: opts.notice, tone: "success", ...(opts.undoable ? { undo: true } : {}) });
       }
       return true;
     },

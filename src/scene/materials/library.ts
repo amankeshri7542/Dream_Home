@@ -21,9 +21,16 @@ import { generateTextures, gradientTexture, jaaliTexture } from "./textures";
 
 export type LibraryOptions = { textureSize: number; anisotropy: number };
 
+/**
+ * The material roughness factor that gives a texture's roughness map the
+ * Look's mean roughness (three multiplies the map by this factor).
+ */
+export const lookRoughness = (look: Pick<Look, "roughness">, meanRoughness: number) =>
+  meanRoughness > 0.01 ? look.roughness / meanRoughness : look.roughness;
+
 export class MaterialLibrary {
   private cache = new Map<string, MeshStandardMaterial | MeshBasicMaterial>();
-  private textures = new Map<string, { map: Texture; detail: Texture }>();
+  private textures = new Map<string, { map: Texture; detail: Texture; meanRoughness: number }>();
   constructor(readonly opts: LibraryOptions) {}
 
   private tex(look: Look) {
@@ -55,7 +62,9 @@ export class MaterialLibrary {
         bumpMap: t.detail,
         bumpScale: look.bumpScale,
         roughnessMap: t.detail,
-        roughness: 1,
+        // The map keeps its variation (joints rougher, veins glossier); the
+        // Look sets the overall sheen, so marble and red oxide can shine.
+        roughness: lookRoughness(look, t.meanRoughness),
         metalness: look.metalness ?? 0,
         vertexColors,
       }),

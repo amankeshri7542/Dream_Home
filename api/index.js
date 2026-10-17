@@ -12,7 +12,15 @@ var MUSTS = [
   "vastu",
   "guest"
 ];
-var VIBES = ["indian-modern", "indian-classic", "minimal", "colourful"];
+var REGIONAL_VIBES = [
+  "kerala",
+  "chettinad",
+  "rajasthani",
+  "goan",
+  "mumbai-modern",
+  "bengaluru-contemporary"
+];
+var VIBES = ["indian-modern", "indian-classic", "minimal", "colourful", ...REGIONAL_VIBES];
 var SIDES = ["north", "east", "south", "west"];
 var NOTE_MAX = 200;
 var clean = (s, max) => typeof s === "string" ? s.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -2927,7 +2935,7 @@ registerReconciler(reconcileFurniture);
 var LANDSCAPE_CATALOG = landscape_default.items;
 var LANDSCAPE_MODULES = landscape_default.modules;
 var FENCE_STYLES = landscape_default.fences;
-var isFence = (id) => typeof id === "string" && id in FENCE_STYLES;
+var isFence = (id) => typeof id === "string" && Object.hasOwn(FENCE_STYLES, id);
 var CATALOG2 = new Map(LANDSCAPE_CATALOG.map((item) => [item.id, item]));
 var landscapeLabel = (kind) => CATALOG2.get(kind)?.label ?? "Garden item";
 var LANDSCAPE_GRID = 10;
@@ -3056,6 +3064,149 @@ function reconcileLandscape(before, after, notices) {
 }
 registerReconciler(reconcileLandscape);
 
+// src/domain/looks.ts
+var STYLE_PRESET_INFO = {
+  "indian-modern": {
+    label: "Indian modern",
+    description: "Bright walls, flat roof with a parapet, sunshades, a water tank and a compound wall",
+    short: "Bright walls, flat roof, sunshades",
+    colors: ["#f7d3b4", "#f4f1ea", "#7a4a27"],
+    region: null
+  },
+  "indian-classic": {
+    label: "Indian classic",
+    description: "Warm ochre limewash, maroon trim, jaali balconies and a compound wall",
+    short: "Ochre limewash, maroon, jaali",
+    colors: ["#d9a443", "#7c2f2b", "#1f6b70"],
+    region: null
+  },
+  kerala: {
+    label: "Kerala",
+    description: "Sloping clay-tile roof, white lime walls on a laterite plinth, teak doors and red-oxide floors",
+    short: "Clay-tile roof, red-oxide floors",
+    colors: ["#f3eee2", "#b4553a", "#7a4a27"],
+    region: "Kerala"
+  },
+  chettinad: {
+    label: "Chettinad",
+    description: "Glossy egg-white plaster with ochre bands, arched windows and patterned Athangudi floors",
+    short: "Athangudi tiles, arches, teak",
+    colors: ["#f6f1e3", "#c58a2e", "#7c2f2b"],
+    region: "Tamil Nadu"
+  },
+  rajasthani: {
+    label: "Rajasthani",
+    description: "Golden sandstone, arched windows, jaali balconies, an indigo door and Kota stone floors",
+    short: "Sandstone, jaali, Kota stone",
+    colors: ["#d4a159", "#e8c98f", "#2f4a7a"],
+    region: "Rajasthan"
+  },
+  goan: {
+    label: "Goan",
+    description: "Indigo walls with white trims, arched windows, a clay-tile roof and blue azulejo tiles",
+    short: "Indigo walls, azulejo tiles",
+    colors: ["#41639e", "#f4f1ea", "#b4553a"],
+    region: "Goa"
+  },
+  "mumbai-modern": {
+    label: "Mumbai modern",
+    description: "Grey and white render, glass railings, sunshades and glossy vitrified floors",
+    short: "Grey and white, glossy floors",
+    colors: ["#c3c0b9", "#f2efe8", "#3c3a36"],
+    region: "Mumbai"
+  },
+  "bengaluru-contemporary": {
+    label: "Bengaluru contemporary",
+    description: "Exposed brick and concrete, terracotta jaali, polished concrete floors and a lush garden",
+    short: "Brick, concrete, lots of green",
+    colors: ["#b2613f", "#bab5ab", "#a87a52"],
+    region: "Bengaluru"
+  },
+  diorama: {
+    label: "Diorama",
+    description: "The original toy look: ivory walls and a terracotta roof",
+    short: "Ivory walls, terracotta roof",
+    colors: ["#ede5d3", "#c2693f", "#a87a52"],
+    region: null
+  }
+};
+var FLAT = { style: "flat", material: "membrane", pitch: 30 };
+var LOOK_BUNDLES = {
+  "indian-modern": {
+    exterior: "peach",
+    trim: "warm-white",
+    frontDoor: "teak",
+    roof: FLAT,
+    details: { chhajja: true, waterTank: true, carPorch: true, railing: "grille" },
+    fence: "compound-wall"
+  },
+  "indian-classic": {
+    exterior: "ochre",
+    trim: "maroon",
+    frontDoor: "peacock",
+    roof: FLAT,
+    details: { chhajja: true, waterTank: true, carPorch: true, railing: "jaali" },
+    fence: "compound-wall"
+  },
+  // Deep eaves do the sunshades' job, and a sloping roof has no terrace tank.
+  kerala: {
+    exterior: "lime-plaster",
+    trim: "teak",
+    frontDoor: "teak",
+    roof: { style: "hip", material: "mangalore", pitch: 30 },
+    details: { chhajja: false, waterTank: false, carPorch: true, railing: "jaali" },
+    fence: "compound-wall"
+  },
+  chettinad: {
+    exterior: "egg-plaster",
+    trim: "maroon",
+    frontDoor: "teak",
+    roof: FLAT,
+    details: { chhajja: true, waterTank: false, carPorch: true, railing: "grille", arches: true },
+    fence: "compound-wall"
+  },
+  rajasthani: {
+    exterior: "jaisalmer",
+    trim: "maroon",
+    frontDoor: "indigo",
+    roof: FLAT,
+    details: { chhajja: true, waterTank: true, carPorch: true, railing: "jaali", arches: true },
+    fence: "compound-wall"
+  },
+  goan: {
+    exterior: "indigo",
+    trim: "warm-white",
+    frontDoor: "forest",
+    roof: { style: "hip", material: "mangalore", pitch: 30 },
+    details: { chhajja: false, waterTank: false, carPorch: true, railing: "grille", arches: true },
+    fence: "compound-wall"
+  },
+  "mumbai-modern": {
+    exterior: "grey-white",
+    trim: "charcoal",
+    frontDoor: "oak",
+    roof: FLAT,
+    details: { chhajja: true, waterTank: true, carPorch: false, railing: "glass" },
+    fence: "compound-wall"
+  },
+  "bengaluru-contemporary": {
+    exterior: "brick-concrete",
+    trim: "charcoal",
+    frontDoor: "teak",
+    roof: FLAT,
+    details: { chhajja: true, waterTank: true, carPorch: true, railing: "jaali" },
+    fence: "compound-wall"
+  },
+  diorama: {
+    exterior: "ivory",
+    trim: "warm-white",
+    frontDoor: "oak",
+    roof: { style: "gable", material: "terracotta", pitch: 30 },
+    details: void 0,
+    fence: null
+  }
+};
+
 // src/domain/persist.ts
 var obj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 var str = (v) => typeof v === "string" && v.length > 0 && v.length <= 80;
@@ -3073,7 +3224,17 @@ var OPENING_KINDS = [
 ];
 var OPENING_STYLES = ["panel", "flush", "glazed", "plain", "divided"];
 var ROOF_STYLES = ["flat", "gable", "hip", "shed"];
-var STYLE_PRESETS = ["indian-modern", "indian-classic", "diorama"];
+var STYLE_PRESETS = [
+  "indian-modern",
+  "indian-classic",
+  "diorama",
+  "kerala",
+  "chettinad",
+  "rajasthani",
+  "goan",
+  "mumbai-modern",
+  "bengaluru-contemporary"
+];
 var RAILING_KINDS = ["glass", "grille", "jaali"];
 var optBool = (v) => v === void 0 || typeof v === "boolean";
 var EDGES = ["north", "south", "east", "west"];
@@ -3126,14 +3287,15 @@ function copyLandscape(l) {
   };
 }
 function checkDetails(v) {
-  return obj(v) && optBool(v.chhajja) && optBool(v.waterTank) && optBool(v.carPorch) && (v.railing === void 0 || RAILING_KINDS.includes(v.railing));
+  return obj(v) && optBool(v.chhajja) && optBool(v.waterTank) && optBool(v.carPorch) && optBool(v.arches) && (v.railing === void 0 || RAILING_KINDS.includes(v.railing));
 }
 function copyDetails(d) {
   return {
     ...d.chhajja !== void 0 ? { chhajja: d.chhajja } : {},
     ...d.waterTank !== void 0 ? { waterTank: d.waterTank } : {},
     ...d.carPorch !== void 0 ? { carPorch: d.carPorch } : {},
-    ...d.railing !== void 0 ? { railing: d.railing } : {}
+    ...d.railing !== void 0 ? { railing: d.railing } : {},
+    ...d.arches !== void 0 ? { arches: d.arches } : {}
   };
 }
 function checkStyle(v) {
@@ -3242,7 +3404,18 @@ var EXTERIOR_FINISHES = {
   lime: { label: "Lime", color: "#d2e07c", legacy: "sand" },
   rose: { label: "Rose pink", color: "#eeb1b8", legacy: "sand" },
   ochre: { label: "Ochre", color: "#d9a443", legacy: "brick" },
-  "two-tone": { label: "Indian modern two-tone", color: "#f4ede0", legacy: "ivory" }
+  "two-tone": { label: "Indian modern two-tone", color: "#f4ede0", legacy: "ivory" },
+  // Regional finishes (see looks.ts).
+  "lime-plaster": { label: "Lime plaster", color: "#f3eee2", legacy: "ivory" },
+  laterite: { label: "Laterite stone", color: "#a95c3f", legacy: "brick" },
+  "egg-plaster": { label: "Egg-white plaster", color: "#f6f1e3", legacy: "ivory" },
+  jaisalmer: { label: "Golden sandstone", color: "#d4a159", legacy: "sand" },
+  indigo: { label: "Indigo", color: "#41639e", legacy: "brick" },
+  "leaf-green": { label: "Leaf green", color: "#7da35d", legacy: "brick" },
+  "grey-white": { label: "Grey and white render", color: "#c3c0b9", legacy: "sand" },
+  "fair-faced": { label: "Fair-faced concrete", color: "#bab5ab", legacy: "sand" },
+  "brick-concrete": { label: "Brick and concrete", color: "#b2613f", legacy: "brick" },
+  "wood-slat": { label: "Wood slats", color: "#9b6b45", legacy: "brick" }
 };
 var WALL_PAINTS = {
   "warm-white": { label: "Warm white", color: "#f2ede4" },
@@ -3268,13 +3441,21 @@ var FLOOR_MATERIALS = {
   limestone: { label: "Natural stone", color: "#cfc6b5", family: "stone" },
   slate: { label: "Slate", color: "#6d7175", family: "stone" },
   concrete: { label: "Polished concrete", color: "#b9b5ad", family: "stone" },
-  carpet: { label: "Soft carpet", color: "#cdbfae", family: "wood" }
+  carpet: { label: "Soft carpet", color: "#cdbfae", family: "wood" },
+  "red-oxide": { label: "Red oxide", color: "#9a3b2c", family: "stone" },
+  athangudi: { label: "Athangudi tiles", color: "#b4492f", family: "tile" },
+  "athangudi-indigo": { label: "Athangudi indigo", color: "#3d5a8c", family: "tile" },
+  "athangudi-green": { label: "Athangudi green", color: "#4f7d5a", family: "tile" },
+  kota: { label: "Kota stone", color: "#7f8c87", family: "stone" },
+  vitrified: { label: "Vitrified tiles", color: "#e9e5dd", family: "tile" },
+  azulejo: { label: "Blue azulejo tiles", color: "#3a64a8", family: "tile" }
 };
 var ROOF_MATERIALS = {
   terracotta: { label: "Terracotta tiles", color: "#c2693f" },
   slate: { label: "Slate", color: "#5d6670" },
   metal: { label: "Standing seam", color: "#7f8b8f" },
-  membrane: { label: "Flat membrane", color: "#b9b3a6" }
+  membrane: { label: "Flat membrane", color: "#b9b3a6" },
+  mangalore: { label: "Mangalore clay tiles", color: "#b4553a" }
 };
 var ROOF_STYLES2 = {
   flat: { label: "Flat" },
@@ -3288,7 +3469,9 @@ var TRIM_COLORS = {
   oak: { label: "Oak", color: "#b98b5e" },
   sage: { label: "Sage", color: "#8fa58e" },
   maroon: { label: "Maroon", color: "#7c2f2b" },
-  teal: { label: "Peacock teal", color: "#1f6b70" }
+  teal: { label: "Peacock teal", color: "#1f6b70" },
+  teak: { label: "Teak", color: "#7a4a27" },
+  indigo: { label: "Indigo", color: "#2f4a7a" }
 };
 var DOOR_COLORS = {
   oak: { label: "Oak", color: "#a87a52" },
@@ -3298,7 +3481,9 @@ var DOOR_COLORS = {
   charcoal: { label: "Charcoal", color: "#3b3936" },
   white: { label: "White", color: "#efebe3" },
   teak: { label: "Teak", color: "#7a4a27" },
-  peacock: { label: "Peacock teal", color: "#1f6b70" }
+  peacock: { label: "Peacock teal", color: "#1f6b70" },
+  indigo: { label: "Indigo", color: "#2f4a7a" },
+  forest: { label: "Forest green", color: "#365e3a" }
 };
 var GROUND_STYLES = {
   lawn: { label: "Lawn", color: "#8daa74" },
@@ -3306,35 +3491,18 @@ var GROUND_STYLES = {
   gravel: { label: "Gravel", color: "#cfc4ae" },
   soil: { label: "Bare soil", color: "#a88664" }
 };
-var isExterior = (id) => typeof id === "string" && id in EXTERIOR_FINISHES;
-var isWallPaint = (id) => typeof id === "string" && id in WALL_PAINTS;
-var isFloorMaterial = (id) => typeof id === "string" && id in FLOOR_MATERIALS;
-var isRoofMaterial = (id) => typeof id === "string" && id in ROOF_MATERIALS;
-var isTrim = (id) => typeof id === "string" && id in TRIM_COLORS;
-var isDoorColor = (id) => typeof id === "string" && id in DOOR_COLORS;
-var isGround = (id) => typeof id === "string" && id in GROUND_STYLES;
+var isExterior = (id) => typeof id === "string" && Object.hasOwn(EXTERIOR_FINISHES, id);
+var isWallPaint = (id) => typeof id === "string" && Object.hasOwn(WALL_PAINTS, id);
+var isFloorMaterial = (id) => typeof id === "string" && Object.hasOwn(FLOOR_MATERIALS, id);
+var isRoofMaterial = (id) => typeof id === "string" && Object.hasOwn(ROOF_MATERIALS, id);
+var isTrim = (id) => typeof id === "string" && Object.hasOwn(TRIM_COLORS, id);
+var isDoorColor = (id) => typeof id === "string" && Object.hasOwn(DOOR_COLORS, id);
+var isGround = (id) => typeof id === "string" && Object.hasOwn(GROUND_STYLES, id);
 function roomAccentWall(room) {
   const a = room.accentWall;
   return a && EDGE_SIDES.includes(a.edge) && isWallPaint(a.color) ? { edge: a.edge, color: a.color } : null;
 }
 var EDGE_SIDES = ["north", "east", "south", "west"];
-var STYLE_PRESET_INFO = {
-  "indian-modern": {
-    label: "Indian modern",
-    description: "Bright walls, flat roof with a parapet, sunshades, a water tank and a compound wall",
-    colors: [EXTERIOR_FINISHES.peach.color, "#f4f1ea", "#7a4a27"]
-  },
-  "indian-classic": {
-    label: "Indian classic",
-    description: "Warm ochre limewash, maroon trim, jaali balconies and a compound wall",
-    colors: [EXTERIOR_FINISHES.ochre.color, "#7c2f2b", "#1f6b70"]
-  },
-  diorama: {
-    label: "Diorama",
-    description: "The original toy look: ivory walls and a terracotta roof",
-    colors: [EXTERIOR_FINISHES.ivory.color, "#c2693f", "#a87a52"]
-  }
-};
 registerValidation((p, issue) => {
   const bad = (source, floorIds = []) => issue("material", "Choose a valid finish.", {
     ...source ? { source } : {},
@@ -3348,7 +3516,7 @@ registerValidation((p, issue) => {
     if (style.preset !== void 0 && !STYLE_PRESETS.includes(style.preset)) bad();
     if (style.details?.railing !== void 0 && !RAILING_KINDS.includes(style.details.railing))
       bad();
-    if (style.roof !== void 0 && (!(style.roof.style in ROOF_STYLES2) || !isRoofMaterial(style.roof.material) || ![20, 30, 40].includes(style.roof.pitch)))
+    if (style.roof !== void 0 && (!Object.hasOwn(ROOF_STYLES2, style.roof.style) || !isRoofMaterial(style.roof.material) || ![20, 30, 40].includes(style.roof.pitch)))
       bad();
   }
   if (p.site) {
@@ -3549,6 +3717,18 @@ var labels = (o) => Object.entries(o).map(([id, v]) => `${id} (${v.label})`).joi
 var furniture = furniture_default.items.filter((i) => EXTRA_IDS.includes(i.id)).map((i) => `${i.id}: ${i.label}, ${i.size.w}\xD7${i.size.d} cm, rooms: ${i.rooms.join("/")}`).join("\n");
 var garden = landscape_default.items.filter((i) => GARDEN_IDS.includes(i.id)).map((i) => `${i.id}: ${i.label}`).join(", ");
 var finishes2 = (slot) => Object.keys(furniture_default.finishes[slot]).join(", ");
+var REGIONAL_INTERIORS = {
+  kerala: "red-oxide floors, teak wood, white or linen walls, brass-like mustard and cane-coloured oat fabrics",
+  chettinad: "Athangudi tile floors (athangudi, athangudi-green, athangudi-indigo) with red-oxide, deep walnut and teak, maroon and peacock fabrics with mustard (brass) accents, warm ochre or white walls",
+  rajasthani: "Kota stone (kota) and marble floors, clay, ochre or linen walls, indigo (navy) and turmeric (mustard) fabrics and accents",
+  goan: "red-oxide floors and blue azulejo tiles in kitchens and bathrooms, white woodwork, navy and mustard cottons, ochre, blush or dusty-blue walls",
+  "mumbai-modern": "glossy vitrified floors (oak in bedrooms), greige and white walls, charcoal and oat fabrics with one pop colour, compact pieces",
+  "bengaluru-contemporary": "polished concrete, oak and terrazzo floors, sage, terracotta and linen walls, earthy terracotta and leaf-green fabrics, plenty of plants"
+};
+var REGIONAL_GUIDE = REGIONAL_VIBES.map((v) => {
+  const b = LOOK_BUNDLES[v];
+  return `  - ${v} (${STYLE_PRESET_INFO[v].description.toLowerCase()}): exterior finish ${b.exterior}, trim ${b.trim}, door ${b.frontDoor}, roof ${b.roof.style} in ${b.roof.material}. Inside: ${REGIONAL_INTERIORS[v]}.`;
+}).join("\n");
 var SHARED = `You are the in-house architect and interior designer of Dream Home, a 3D home-design app used mostly by families in India, many of them on phones.
 Your designs must feel warm, practical and believably Indian: good cross-ventilation, daylight in every bedroom, a proper kitchen, storage, and colours that look good in strong sunlight.
 
@@ -3572,7 +3752,10 @@ Taste rules:
 - One accent colour per room: the "accent" finish repeats in cushions, lamps and art; keep fabrics and wood calm around it.
 - Wet rooms (kitchen, bathrooms) get tile, terrazzo, stone or concrete floors, never carpet or wood.
 - Bedrooms for children can be brighter; grandparents' rooms calm, near the entrance and on the ground floor.
-- Every home gets an Indian flat roof with a parapet, chhajja sunshades, a rooftop water tank and a compound wall with a gate. You choose the facade, trim and door colours: bright or warm plaster (peach, saffron, ochre, mint, sky, two-tone) with teak or peacock doors suits most Indian homes; keep "roof" flat.
+- The brief's "look" is either an everyday style (indian-modern, indian-classic, minimal, colourful) or a regional home (${REGIONAL_VIBES.join(", ")}).
+- Everyday styles: every home gets an Indian flat roof with a parapet, chhajja sunshades, a rooftop water tank and a compound wall with a gate. You choose the facade, trim and door colours: bright or warm plaster (peach, saffron, ochre, mint, sky, two-tone) with teak or peacock doors suits most Indian homes; keep "roof" flat.
+- Regional homes: the app builds that region's outside itself (its facade, roof, details and garden), so return its own exterior ids below. Make the inside belong to the region too:
+${REGIONAL_GUIDE}
 - A tulsi planter and a neem tree make an Indian garden feel at home.
 - Keep names short (at most 18 characters), friendly and in English, like "Main bedroom", "Dadi\u2019s room", "Kids\u2019 room", "Pooja room". Never use real people's full names.
 - Design notes: 3\u20135 short sentences (at most 120 characters each) a homeowner will enjoy reading, explaining your main choices. Mention Vastu only when the brief asks for it. No prices, no promises about building codes.

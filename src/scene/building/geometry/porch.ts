@@ -1,11 +1,9 @@
-// Entrance detection (shared by the porch, the garden path and the night
-// light) and porch geometry: landing + step, cantilever canopy with brackets,
-// two sconces and a doormat.
-import { floorForGeometry } from "../../../domain/core";
-import { deriveWalls, isWindow } from "../../../domain/walls";
+// The entrance in plot metres (the main door comes from domain/entrance.ts;
+// the porch, the garden path and the night light use it) and porch geometry:
+// landing + step, cantilever canopy with brackets, two sconces and a doormat.
+import { PORCH, mainDoor } from "../../../domain/entrance";
 import type { Project } from "../../../domain/types";
 import { SLAB_TOP, floorBase } from "../../coords";
-import { classifyPoint } from "./walls";
 import { rgb, type Buckets, type QuadBuilder, type V3 } from "./QuadBuilder";
 
 export type Entrance = {
@@ -24,47 +22,19 @@ export type Entrance = {
 };
 
 export function findEntrance(project: Project): Entrance | null {
-  const ground = [...project.floors].sort((a, b) => a.elevation - b.elevation)[0];
-  if (!ground) return null;
-  const floor = floorForGeometry(project, ground.id);
-  const walls = deriveWalls(floor, project.plot.road);
-  const fp = floor.footprint;
-  const road = project.plot.road;
-  const onRoadSide = (w: (typeof walls)[number]) =>
-    road === "south"
-      ? w.axis === "x" && w.z === fp.z + fp.d
-      : road === "north"
-        ? w.axis === "x" && w.z === fp.z
-        : road === "east"
-          ? w.axis === "z" && w.x === fp.x + fp.w
-          : w.axis === "z" && w.x === fp.x;
-  const candidates = walls.filter((w) => w.exterior && w.openings.some((o) => !isWindow(o.kind)));
-  // Courtyard doors are exterior too; prefer footprint-perimeter doors.
-  const perimeter = (w: (typeof walls)[number]) =>
-    w.axis === "x" ? w.z === fp.z || w.z === fp.z + fp.d : w.x === fp.x || w.x === fp.x + fp.w;
-  candidates.sort((a, b) => Number(onRoadSide(b)) - Number(onRoadSide(a)) || Number(perimeter(b)) - Number(perimeter(a)));
-  const wall = candidates[0];
-  if (!wall) return null;
-  const o = wall.openings.find((op) => !isWindow(op.kind))!;
-  const line = (wall.axis === "x" ? wall.z : wall.x) / 100;
-  const along = ((wall.axis === "x" ? wall.x : wall.z) + o.offset) / 100;
-  const probe = (side: 1 | -1) => {
-    const across = line + side * 0.2;
-    const [x, z] = wall.axis === "x" ? [along, across] : [across, along];
-    return classifyPoint(floor, x * 100, z * 100).outside;
-  };
-  const out: 1 | -1 = probe(1) ? 1 : -1;
-  const y0 = floorBase(ground) + SLAB_TOP;
+  const door = mainDoor(project);
+  if (!door) return null;
+  const ground = project.floors.find((f) => f.id === door.floorId)!;
   return {
-    floorId: ground.id,
-    openingId: o.id,
-    axis: wall.axis,
-    along,
-    line,
-    out,
-    width: o.width / 100,
-    head: y0 + Math.min(o.sill + o.height, ground.height - 1) / 100,
-    roadSide: onRoadSide(wall),
+    floorId: door.floorId,
+    openingId: door.openingId,
+    axis: door.axis,
+    along: door.along / 100,
+    line: door.line / 100,
+    out: door.out,
+    width: door.width / 100,
+    head: floorBase(ground) + SLAB_TOP + door.head / 100,
+    roadSide: door.roadSide,
   };
 }
 
@@ -73,8 +43,9 @@ const toV3 = (axis: "x" | "z", along: number, y: number, across: number): V3 =>
 
 /** Porch pieces go into the ground floor buckets; sconces into `lamp`. */
 export function emitPorch(e: Entrance, trimHex: string, buckets: Buckets<string>) {
-  const face = e.line + e.out * 0.1;
+  const face = e.line + (e.out * PORCH.face) / 100;
   const half = e.width / 2;
+  const { landing, step, mat } = PORCH;
   const box = (b: QuadBuilder, a0: number, a1: number, y0: number, y1: number, n0: number, n1: number, color: [number, number, number]) => {
     const p = toV3(e.axis, a0, y0, n0),
       q = toV3(e.axis, a1, y1, n1);
@@ -89,10 +60,11 @@ export function emitPorch(e: Entrance, trimHex: string, buckets: Buckets<string>
   const paving = rgb("#d6ccba"),
     trim = rgb(trimHex);
   // Landing flush with the floor, plus one generous step.
-  box(stone, e.along - half - 0.4, e.along + half + 0.4, 0, 0.16, face, face + e.out * 1.05, paving);
-  box(stone, e.along - half - 0.25, e.along + half + 0.25, 0, 0.08, face + e.out * 1.05, face + e.out * 1.4, rgb("#cdc2ae"));
+  const out = (cm: number) => face + (e.out * cm) / 100;
+  box(stone, e.along - half - landing.reach / 100, e.along + half + landing.reach / 100, 0, landing.top / 100, face, out(landing.depth), paving);
+  box(stone, e.along - half - step.reach / 100, e.along + half + step.reach / 100, 0, step.top / 100, out(landing.depth), out(landing.depth + step.depth), rgb("#cdc2ae"));
   // Doormat.
-  box(joinery, e.along - 0.42, e.along + 0.42, 0.16, 0.172, face + e.out * 0.12, face + e.out * 0.62, rgb("#6b5444"));
+  box(joinery, e.along - mat.half / 100, e.along + mat.half / 100, landing.top / 100, mat.top / 100, out(mat.from), out(mat.to), rgb("#6b5444"));
   // Canopy with a slim fascia.
   const cy = e.head + 0.24;
   box(joinery, e.along - half - 0.5, e.along + half + 0.5, cy, cy + 0.07, face, face + e.out * 1.1, trim);

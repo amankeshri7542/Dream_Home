@@ -1,5 +1,6 @@
 // Pure garden plan: model placements (exterior kit ids) + flat beds/pads.
 // Rendered with exterior.glb, or procedurally when the kit is unavailable.
+import { lookGarden } from "../../domain/looks";
 import type { Project } from "../../domain/types";
 import { GROUND_TOP } from "../coords";
 import { ASSET_ITEMS } from "../assets/assetManifest";
@@ -52,6 +53,37 @@ function tileRun(out: GardenModel[], model: string, x0: number, z0: number, x1: 
   }
 }
 
+/**
+ * Planters and flowering shrubs along the road-side facade (lush looks),
+ * every 1.6 m, clear of the path, the porch, parking and the plot edge.
+ */
+export function frontPlanting(project: Project, layout: SiteLayout): GardenModel[] {
+  const ground = [...project.floors].sort((a, b) => a.elevation - b.elevation)[0];
+  const fp = ground.footprint;
+  const road = project.plot.road;
+  const w = project.plot.width / 100,
+    d = project.plot.depth / 100;
+  const horizontal = road === "south" || road === "north";
+  const [lo, hi] = horizontal ? [fp.x / 100, (fp.x + fp.w) / 100] : [fp.z / 100, (fp.z + fp.d) / 100];
+  const facade = road === "south" ? (fp.z + fp.d) / 100 : road === "north" ? fp.z / 100 : road === "east" ? (fp.x + fp.w) / 100 : fp.x / 100;
+  const outward = road === "south" || road === "east" ? 1 : -1;
+  const across = facade + outward * 0.62;
+  const r = 0.26;
+  const out: GardenModel[] = [];
+  const count = Math.floor((hi - lo - 0.4) / 1.6) + 1;
+  for (let i = 0; i < count; i++) {
+    const along = lo + 0.3 + i * 1.6;
+    const [x, z] = horizontal ? [along, across] : [across, along];
+    const box = { x0: x - r, x1: x + r, z0: z - r, z1: z + r };
+    if (box.x0 < 0.15 || box.x1 > w - 0.15 || box.z0 < 0.15 || box.z1 > d - 0.15) continue;
+    if (layout.keepClear.some((o) => box.x0 < o.x1 && box.x1 > o.x0 && box.z0 < o.z1 && box.z1 > o.z0)) continue;
+    const planter = i % 2 === 0 && ASSET_ITEMS.planter;
+    const k = planter ? 0.8 : (r * 2.4) / modelSize("shrub").w;
+    out.push({ model: planter ? "planter" : "shrub", x, y: GROUND_TOP, z, yaw: hash2(i, 7, 11) * Math.PI * 2, scale: [k, k, k] });
+  }
+  return out;
+}
+
 export function gardenPlan(project: Project, layout: SiteLayout): { models: GardenModel[]; pads: GardenPad[] } {
   const models: GardenModel[] = [];
   const pads: GardenPad[] = [];
@@ -91,15 +123,17 @@ export function gardenPlan(project: Project, layout: SiteLayout): { models: Gard
       models.push({ model, x, y: GROUND_TOP, z, yaw, scale: tree ? [vs * 0.75, vs * 0.75, vs * 0.75] : [vs, vs, vs], owner });
     }
   } else if (project.garden) {
-    // Indian looks plant neem for shade trees and a tulsi planter by the door.
-    const indian = project.style?.preset === "indian-modern" || project.style?.preset === "indian-classic";
+    // The look picks the shade trees (neem, coconut palms…) and whether a
+    // tulsi planter stands by the path; lush looks plant along the front too.
+    const look = lookGarden(project.style?.preset);
     for (const t of layout.trees) {
       const s = t.scale * 0.72;
-      const model = indian && t.kind === "oak" && ASSET_ITEMS["tree-neem"] ? "tree-neem" : `tree-${t.kind}`;
+      const model = look.tree && t.kind === "oak" && ASSET_ITEMS[look.tree] ? look.tree : `tree-${t.kind}`;
       models.push({ model, x: t.x, y: GROUND_TOP, z: t.z, yaw: hash2(Math.round(t.x * 10), Math.round(t.z * 10), 3) * Math.PI * 2, scale: [s, s, s] });
     }
+    if (look.lush) models.push(...frontPlanting(project, layout));
     layout.shrubs.forEach((s, i) => {
-      if (indian && i === 0 && ASSET_ITEMS["tulsi-planter"]) {
+      if (look.tulsi && i === 0 && ASSET_ITEMS["tulsi-planter"]) {
         models.push({ model: "tulsi-planter", x: s.x, y: GROUND_TOP, z: s.z, yaw: 0, scale: [1, 1, 1] });
         return;
       }

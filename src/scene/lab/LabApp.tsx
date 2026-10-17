@@ -2,7 +2,7 @@
 // URL params seed the state so screenshots are reproducible:
 //   ?project=compact&hour=10.5&quality=balanced&mode=build&cutaway=1&roof=0
 //   &roofStyle=gable&exterior=brick&select=<roomId>&camera=top&labels=1&panel=0
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 type DistOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 type Cmd = DistOmit<CameraCommand, "id">;
@@ -13,6 +13,10 @@ import { EXTERIOR_FINISHES, type ExteriorFinishId } from "../../domain/materials
 import type { Project, RoofStyle } from "../../domain/types";
 import type { CameraCommand, EditorMode, ExploreView, GhostPreview, QualitySetting, SelectionTarget } from "../../editor/types";
 import type { SceneView } from "../types";
+import type { PhotoJobRequest, PhotoOutcome } from "../../photo/PhotoRenderer";
+import { LOOK_ORDER } from "../../domain/looks";
+import type { StylePreset } from "../../domain/types";
+import { lookSample, toWebp } from "./lookThumbs";
 
 const Scene = lazy(() => import("../Scene"));
 
@@ -82,6 +86,14 @@ export function LabApp() {
   const [insets, setInsets] = useState({ top: 0, right: 0, bottom: 0, left: 0 });
   const [ghost, setGhost] = useState<GhostPreview | null>(null);
   const [highlight, setHighlight] = useState<string[]>([]);
+  // Render-quality photos for scripts (look cards).
+  const [photoJob, setPhotoJob] = useState<PhotoJobRequest | null>(null);
+  const photoDone = useRef<((outcome: PhotoOutcome) => void) | null>(null);
+  const photo = (job: Omit<PhotoJobRequest, "id">) =>
+    new Promise<PhotoOutcome>((resolve) => {
+      photoDone.current = resolve;
+      setPhotoJob({ id: Date.now(), ...job });
+    });
 
   const project = useMemo(() => {
     const base = custom ?? (PROJECTS[projectKey] ?? PROJECTS.compact)() ?? createPreset("compact");
@@ -128,6 +140,29 @@ export function LabApp() {
       setGhost,
       setHighlight,
       project: () => project,
+      photo,
+      looks: () => [...LOOK_ORDER],
+      /**
+       * A look card: the sample home seen from across the road, a third of the
+       * way round to one side, in clear morning light so its materials read
+       * true (golden light turns every look the same orange), as WebP.
+       */
+      lookThumb: async (look: StylePreset, width = 480) => {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        setCustom(lookSample(look));
+        setMode("explore");
+        setExplore("orbit");
+        setHour(9.5);
+        setView((v) => ({ ...v, floor: "all", stage: 5, roof: true, cutaway: false, labels: false, walls: true, livedIn: false, streetLife: false }));
+        await wait(1200);
+        setCommand({ id: Date.now(), type: "fit", subject: "plot", view: "front", instant: true });
+        await wait(1000);
+        setCommand({ id: Date.now() + 1, type: "orbit", azimuthDeg: -30, polarDeg: -10 });
+        await wait(1800);
+        const outcome = await photo({ framing: "view", mood: "morning", aspect: 3 / 2, longEdge: width * 2, samples: 24, shadowSize: 2048, watermark: false });
+        if (!("blob" in outcome)) throw new Error(`Look photo failed: ${outcome.error}`);
+        return toWebp(outcome.blob, width);
+      },
     };
   }, [project]);
   const cmd = (c: Cmd) => setCommand({ ...(c as CameraCommand), id: Date.now() });
@@ -149,6 +184,12 @@ export function LabApp() {
           quality={quality}
           explore={mode === "explore" ? explore : undefined}
           onQualityResolved={(t) => console.info("quality", t)}
+          photoJob={photoJob}
+          onPhotoDone={(outcome) => {
+            setPhotoJob(null);
+            photoDone.current?.(outcome);
+            photoDone.current = null;
+          }}
         />
       </Suspense>
       {panel && (

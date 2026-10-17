@@ -6,7 +6,7 @@ import { fbm, hash2, periodicNoise } from "./noise";
 import type { TextureKind } from "./palette";
 
 type C3 = [number, number, number];
-type Sample = { c: C3; h: number; r: number };
+export type Sample = { c: C3; h: number; r: number };
 type Gen = (u: number, v: number, base: C3, tile: [number, number]) => Sample;
 
 const hexToSrgb = (hex: string): C3 => {
@@ -400,6 +400,182 @@ const pavers: Gen = (u, v, _b, [w, h]) => {
   return { c: mul(jitter(W, b.row, b.col, 0.12), 0.95 + (n - 0.5) * 0.1), h: 0.6, r: 0.88 };
 };
 
+// ---------------------------------------------------------------------------
+// Regional materials (looks.ts). Periods divide the tile so every map tiles.
+// ---------------------------------------------------------------------------
+const CREAM: C3 = [0.93, 0.88, 0.76];
+/** Distance (metres) to the nearest grout line of a square grid of `s`. */
+const gridEdge = (x: number, y: number, s: number) => {
+  const fx = frac(x / s) * s,
+    fy = frac(y / s) * s;
+  return Math.min(fx, s - fx, fy, s - fy);
+};
+/**
+ * Athangudi: hand-made cement tiles (20 cm) with a glossy field colour, a
+ * cream eight-petal flower in the middle and quarter circles in the corners
+ * that join into rosettes across four tiles. Blue and green sets take a
+ * yellow or red-oxide accent, as the real tiles do.
+ */
+const athangudi: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const s = 0.2;
+  if (gridEdge(x, y, s) < 0.0022) return { c: mul(base, 0.42), h: 0.2, r: 0.7 };
+  const col = Math.floor(x / s),
+    row = Math.floor(y / s);
+  const tu = frac(x / s),
+    tv = frac(y / s);
+  const cu = tu - 0.5,
+    cv = tv - 0.5;
+  const green = base[1] > base[0] && base[1] > base[2];
+  const accent: C3 = green ? [0.62, 0.24, 0.18] : [0.86, 0.64, 0.24];
+  const outline = mul(base, 0.45);
+  const n = fbm(u, v, 24, 2, 251);
+  const field = mul(jitter(base, row, col, 0.06), 0.96 + (n - 0.5) * 0.06);
+  const r = Math.hypot(cu, cv),
+    a = Math.atan2(cv, cu);
+  const corner = Math.hypot(Math.min(tu, 1 - tu), Math.min(tv, 1 - tv));
+  let c = field;
+  if (corner < 0.3) c = corner < 0.21 ? (corner < 0.12 ? accent : CREAM) : corner < 0.235 ? outline : field;
+  const diamond = Math.abs(cu) + Math.abs(cv);
+  if (diamond > 0.34 && diamond < 0.37) c = CREAM;
+  const petal = 0.1 + 0.15 * Math.abs(Math.cos(4 * a));
+  if (r < petal + 0.012 && r > petal) c = outline;
+  else if (r < petal) c = r < 0.055 ? accent : CREAM;
+  return { c: mul(c, 0.97 + (n - 0.5) * 0.05), h: 0.55, r: 0.26 + (n - 0.5) * 0.06 };
+};
+/** Kota stone: honed blue-green slabs (60 cm) with faint wavy layering. */
+const kota: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const s = 0.6;
+  if (gridEdge(x, y, s) < 0.0025) return { c: mul(base, 0.62), h: 0.2, r: 0.8 };
+  const col = Math.floor(x / s),
+    row = Math.floor(y / s);
+  const layers = anis(u, v, 2, 14, 3, 261 + col * 7 + row);
+  const cloud = fbm(u, v, 4, 4, 262);
+  const speck = fbm(u, v, 120, 1, 263);
+  let c = jitter(base, row, col, 0.14);
+  c = mix(c, [c[0] * 0.9, c[1] * 1.05, c[2] * 0.95], sat((cloud - 0.45) * 2));
+  c = mul(c, 0.9 + (layers - 0.5) * 0.18 + (speck > 0.84 ? -0.06 : 0));
+  return { c, h: 0.5 + (layers - 0.5) * 0.1, r: 0.42 + (cloud - 0.5) * 0.1 };
+};
+/** Red oxide: smooth, waxy cement floor in 1.2 m bays with soft mottling. */
+const redOxide: Gen = (u, v, base, [w, h]) => {
+  const m = fbm(u, v, 3, 5, 241);
+  const cloud = fbm(u, v, 9, 3, 242);
+  if (gridEdge(u * w, v * h, 1.2) < 0.003) return { c: mul(base, 0.72), h: 0.3, r: 0.5 };
+  const c = mul(base, 0.9 + (m - 0.5) * 0.18 + (cloud - 0.5) * 0.08);
+  return { c, h: 0.5 + (cloud - 0.5) * 0.06, r: 0.2 + (m - 0.5) * 0.08 };
+};
+/** Laterite: porous red-brown blocks (40 × 20 cm) in a running bond. */
+const laterite: Gen = (u, v, base, [w, h]) => {
+  const b = blocks(u * w, v * h, 0.4, 0.2, 4, 6);
+  const mortarW = 0.008;
+  const n = fbm(u, v, 20, 3, 271);
+  if (b.edge < mortarW) return { c: mul([0.82, 0.76, 0.66], 0.92 + 0.1 * n), h: 0.15, r: 0.97 };
+  const pores = fbm(u, v, 96, 2, 272);
+  const pit = pores > 0.66 ? (pores - 0.66) * 2.2 : 0;
+  let c = jitter(base, b.row, b.col, 0.28);
+  c = mix(c, [c[0] * 1.08, c[1] * 0.95, c[2] * 0.82], sat((n - 0.5) * 2));
+  c = mul(c, (0.9 + (n - 0.5) * 0.2) * (1 - pit * 0.55));
+  return { c, h: 0.6 - pit * 0.5 + smooth(0, 0.02, b.edge - mortarW) * 0.2, r: 0.95 };
+};
+/**
+ * Mangalore tiles: flat interlocking clay tiles (42 × 25 cm visible) with two
+ * shallow channels each, laid in straight columns, each course shading the
+ * one below; a little weathering and lichen.
+ */
+const mangaloreTile: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const tw = 0.42,
+    th = 0.25;
+  const col = Math.floor(x / tw),
+    row = Math.floor(y / th);
+  const fx = x / tw - col,
+    fy = y / th - row;
+  const channels = 0.5 + 0.5 * Math.cos(fx * Math.PI * 4);
+  const rib = smooth(0.46, 0.5, fx) * (1 - smooth(0.5, 0.54, fx));
+  const n = fbm(u, v, 18, 3, 281);
+  const lichen = fbm(u, v, 40, 2, 282);
+  let c = jitter(base, row, col, 0.2);
+  c = mul(c, 0.78 + 0.22 * (1 - channels) + rib * 0.12 + (n - 0.5) * 0.12);
+  if (lichen > 0.74) c = mix(c, [0.36, 0.34, 0.27], 0.35);
+  const overlap = smooth(0.84, 1, fy);
+  c = mul(c, 1 - overlap * 0.5);
+  const side = Math.min(fx, 1 - fx) < 0.02 ? 0.8 : 1;
+  return { c: mul(c, side), h: 0.25 + 0.4 * (1 - channels) + rib * 0.2 + fy * 0.12 - overlap * 0.2, r: 0.72 };
+};
+/** Azulejo: glazed white tiles (15 cm) painted with a blue rosette and corner arcs. */
+const azulejo: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const s = 0.15;
+  if (gridEdge(x, y, s) < 0.0018) return { c: [0.78, 0.77, 0.73], h: 0.2, r: 0.8 };
+  const tu = frac(x / s),
+    tv = frac(y / s);
+  const cu = tu - 0.5,
+    cv = tv - 0.5;
+  const white: C3 = [0.95, 0.95, 0.92];
+  const pale = mix(white, base, 0.35);
+  const r = Math.hypot(cu, cv),
+    a = Math.atan2(cv, cu);
+  const corner = Math.hypot(Math.min(tu, 1 - tu), Math.min(tv, 1 - tv));
+  let c = white;
+  if (corner < 0.24 && corner > 0.17) c = base;
+  else if (corner < 0.1) c = pale;
+  const leaf = 0.12 + 0.2 * Math.pow(Math.abs(Math.cos(2 * a)), 3);
+  if (r < leaf) c = r < 0.07 ? white : base;
+  if (Math.abs(r - 0.38) < 0.015 && corner > 0.24) c = pale;
+  const n = fbm(u, v, 30, 2, 291);
+  return { c: mul(c, 0.97 + (n - 0.5) * 0.05), h: 0.55, r: 0.18 };
+};
+/** Vertical timber slats (7.5 cm) with shadowed gaps. */
+const woodSlat: Gen = (u, v, base, [w]) => {
+  const x = u * w;
+  const s = 0.09;
+  const slat = Math.floor(x / s);
+  const fx = frac(x / s);
+  if (fx > 0.83) return { c: mul(base, 0.22), h: 0.05, r: 0.9 };
+  const grain = anis(u, v, 48, 3, 4, 301 + (slat % 13));
+  let c = jitter(base, slat, 1, 0.22);
+  c = mul(c, 0.84 + (grain - 0.5) * 0.3);
+  const round = Math.sin((fx / 0.83) * Math.PI);
+  return { c: mul(c, 0.86 + 0.14 * round), h: 0.4 + 0.5 * round, r: 0.68 };
+};
+/** Fair-faced concrete: smooth panels (1.2 m) with tie holes on a 60 cm grid. */
+const fairFaced: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const m = fbm(u, v, 3, 5, 311);
+  const cloud = fbm(u, v, 12, 2, 312);
+  const pores = fbm(u, v, 110, 1, 313);
+  let c = mul(base, 0.93 + (m - 0.5) * 0.12 + (cloud - 0.5) * 0.05 - (pores > 0.82 ? 0.05 : 0));
+  let hh = 0.5 + (cloud - 0.5) * 0.08;
+  if (gridEdge(x, y, 1.2) < 0.004) {
+    c = mul(c, 0.82);
+    hh = 0.3;
+  }
+  const tx = frac((x - 0.3) / 0.6),
+    ty = frac((y - 0.3) / 0.6);
+  if (Math.hypot((tx > 0.5 ? tx - 1 : tx) * 0.6, (ty > 0.5 ? ty - 1 : ty) * 0.6) < 0.012) return { c: mul(base, 0.5), h: 0.1, r: 0.95 };
+  return { c, h: hh, r: 0.8 };
+};
+/** Vitrified tiles: large (80 cm) glossy porcelain with faint veining. */
+const vitrified: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const s = 0.8;
+  if (gridEdge(x, y, s) < 0.0016) return { c: mul(base, 0.8), h: 0.25, r: 0.6 };
+  const col = Math.floor(x / s),
+    row = Math.floor(y / s);
+  const warp = fbm(u, v, 2, 4, 321);
+  const vein = Math.pow(1 - Math.abs(Math.sin((u * 2 + v + warp * 1.6) * Math.PI * 2)), 14) * 0.25;
+  const c = mix(mul(jitter(base, row, col, 0.03), 0.98 + (warp - 0.5) * 0.04), mul(base, 0.82), vein);
+  return { c, h: 0.55, r: 0.14 + vein * 0.1 };
+};
+
 const GENERATORS: Record<TextureKind, Gen> = {
   plaster,
   stucco,
@@ -431,9 +607,28 @@ const GENERATORS: Record<TextureKind, Gen> = {
   concrete,
   asphalt,
   pavers,
+  athangudi,
+  kota,
+  redOxide,
+  laterite,
+  mangaloreTile,
+  azulejo,
+  woodSlat,
+  fairFaced,
+  vitrified,
 };
 
-export type TexturePair = { map: CanvasTexture; detail: CanvasTexture };
+export type TexturePair = {
+  map: CanvasTexture;
+  detail: CanvasTexture;
+  /** Mean of the roughness channel, so a Look's roughness can scale it. */
+  meanRoughness: number;
+};
+
+/** One texel of a kind at (u, v) ∈ [0, 1)²: sRGB colour, height and roughness (tests). */
+export function sampleTexture(kind: TextureKind, baseHex: string, tile: [number, number], u: number, v: number): Sample {
+  return GENERATORS[kind](u, v, hexToSrgb(baseHex), tile);
+}
 
 /** Generate (uncached) colour + detail textures for a kind. */
 export function generateTextures(
@@ -445,6 +640,7 @@ export function generateTextures(
 ): TexturePair {
   const gen = GENERATORS[kind];
   const base = hexToSrgb(baseHex);
+  let roughness = 0;
   const colorCanvas = document.createElement("canvas"),
     detailCanvas = document.createElement("canvas");
   colorCanvas.width = colorCanvas.height = detailCanvas.width = detailCanvas.height = size;
@@ -465,6 +661,7 @@ export function generateTextures(
       cimg.data[i + 3] = 255;
       dimg.data[i] = sat(s.h) * 255;
       dimg.data[i + 1] = sat(s.r) * 255;
+      roughness += sat(s.r);
       dimg.data[i + 2] = 0;
       dimg.data[i + 3] = 255;
     }
@@ -480,7 +677,7 @@ export function generateTextures(
     t.anisotropy = anisotropy;
     t.repeat.set(1 / tile[0], 1 / tile[1]);
   }
-  return { map, detail };
+  return { map, detail, meanRoughness: roughness / (size * size) };
 }
 
 /** A 1D falloff used as alphaMap for fake-AO strips and blob shadows. */

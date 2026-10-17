@@ -23,6 +23,8 @@ export type FencePlan = {
 
 /** Centre-line inset of the boundary from the plot edge. */
 export const FENCE_INSET = 0.12;
+/** Compound wall heights (metres): the wall body, its coping and the pillar caps. */
+export const COMPOUND_WALL = { body: 1.1, coping: 1.16, pillar: 1.34, pillarCap: 1.46 } as const;
 export const PILLAR_SPACING = 2.5;
 const WALLS = new Set(["compound-wall", "low-wall"]);
 export const fenceHasPillars = (kind: string) => WALLS.has(kind);

@@ -1,5 +1,6 @@
 // Pure site layout: plinth extents, road frame, parking, path and garden trees.
 import { balconyBounds } from "../../domain/core";
+import { frontVehicles, lifeFootprint } from "../../domain/livedIn";
 import type { EdgeSide, Project } from "../../domain/types";
 import type { Entrance } from "../building/geometry/porch";
 
@@ -42,6 +43,11 @@ export type SiteLayout = {
   trees: { x: number; z: number; scale: number; kind: "oak" | "pine" | "blossom" }[];
   shrubs: { x: number; z: number; r: number; flowers: boolean }[];
   obstacles: Extents[];
+  /**
+   * Open ground that planting must leave clear (not the house): the porch,
+   * path and parking, and where the lived-in scooter and bicycle park.
+   */
+  keepClear: Extents[];
 };
 
 export function siteLayout(project: Project, entrance: Entrance | null): SiteLayout {
@@ -126,5 +132,20 @@ export function siteLayout(project: Project, entrance: Entrance | null): SiteLay
       if (!obstacles.slice(footprints.length).some((o) => rectsOverlap(o, box))) shrubs.push({ x, z, r: 0.38, flowers: true });
     }
   }
-  return { parking, path, trees, shrubs, obstacles };
+  const keepClear = obstacles.slice(footprints.length);
+  if (entrance) {
+    // The porch landing and step (see emitPorch), with a little room around.
+    const half = entrance.width / 2 + 0.55;
+    const [a, b] = [entrance.line, entrance.line + entrance.out * 1.5].sort((m, n) => m - n);
+    keepClear.push(
+      entrance.axis === "x"
+        ? { x0: entrance.along - half, x1: entrance.along + half, z0: a, z1: b }
+        : { x0: a, x1: b, z0: entrance.along - half, z1: entrance.along + half },
+    );
+  }
+  for (const vehicle of frontVehicles(project)) {
+    const r = lifeFootprint(vehicle);
+    keepClear.push({ x0: r.x / 100, x1: (r.x + r.w) / 100, z0: r.z / 100, z1: (r.z + r.d) / 100 });
+  }
+  return { parking, path, trees, shrubs, obstacles, keepClear };
 }

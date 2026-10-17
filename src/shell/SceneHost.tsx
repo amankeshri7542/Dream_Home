@@ -7,21 +7,23 @@ import { BrandMark } from "./TopBar";
 import { useReducedMotion } from "../editor/hooks";
 import { setAsideRoom } from "../domain/tray";
 import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
-import type { Framing } from "../photo/settings";
+import type { PhotoScene } from "../photo/settings";
 import type { SceneView } from "../scene/types";
 
 /**
  * What a photo shows: "Front" is the finished house from the street (roof on);
  * "Aerial" the whole home opened up like a dollhouse; "This view" and "Room"
  * keep what's on screen (a room stays the cut-open hero). A room photo leaves
- * out street life: a passing bird is a big dark blot at room scale.
+ * out street life: a passing bird is a big dark blot at room scale. Lived-in
+ * details and the Diwali set follow the studio's choices in every framing.
  */
-function photoView(framing: Framing, current: SceneView, streetLife: boolean | undefined): SceneView {
-  if (framing === "front")
-    return { ...DEFAULT_VIEW, floor: "all", stage: 5, roof: true, cutaway: false, labels: false, walls: true, streetLife };
-  if (framing === "aerial") return { ...DEFAULT_VIEW, floor: "all", labels: false, streetLife };
-  if (framing === "room") return { ...current, labels: false, streetLife: false };
-  return { ...current, labels: false };
+function photoView(photo: PhotoScene, current: SceneView, streetLife: boolean | undefined): SceneView {
+  const life = { livedIn: photo.livedIn, festive: photo.festive };
+  if (photo.framing === "front")
+    return { ...DEFAULT_VIEW, floor: "all", stage: 5, roof: true, cutaway: false, labels: false, walls: true, streetLife, ...life };
+  if (photo.framing === "aerial") return { ...DEFAULT_VIEW, floor: "all", labels: false, streetLife, ...life };
+  if (photo.framing === "room") return { ...current, labels: false, streetLife: false, ...life };
+  return { ...current, labels: false, ...life };
 }
 
 // The single, always-mounted 3D canvas. It never unmounts when panels, the
@@ -50,7 +52,7 @@ export function SceneHost({
   onPhotoDone,
 }: {
   /** While the photo studio is open (or a share picture is made): the mood's hour and the framing's view. */
-  photo?: { framing: Framing; hour: number } | null;
+  photo?: PhotoScene | null;
   photoJob?: PhotoJobRequest | null;
   photoCancel?: { current: boolean };
   onPhotoProgress?: (fraction: number) => void;
@@ -131,7 +133,7 @@ export function SceneHost({
             project={preview ?? project}
             view={
               photo && !showcase && !(walking && photo.framing === "view")
-                ? photoView(photo.framing, sceneView(state), state.view.streetLife)
+                ? photoView(photo, sceneView(state), state.view.streetLife)
                 : showcase
                 ? { ...DEFAULT_VIEW, stage: 5, roof: true, cutaway: false, labels: false }
                 : walking
@@ -146,6 +148,9 @@ export function SceneHost({
                       furnishings: true,
                       walkFloorId: walkFloor ?? activeFloor.id,
                       streetLife: state.view.streetLife,
+                      // A photo "through your eyes" keeps the studio's details.
+                      livedIn: photo ? photo.livedIn : state.view.livedIn,
+                      festive: photo?.festive,
                     }
                   : sceneView(state)
             }

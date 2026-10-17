@@ -23,7 +23,8 @@ import {
 import { addBalcony, swapRoomUses, updateRoom, validateProject } from "../domain/model";
 import type { EdgeSide, EditResult, Project, Room, RoomKind } from "../domain/types";
 import { FEET, polishTemplate } from "../onboarding/templates";
-import type { HomeBrief, HomePlan, Palette, PlannedRoom, RoomPlan, RoomUse, Zone } from "./brief";
+import { isRegionalVibe, type HomeBrief, type HomePlan, type Palette, type PlannedRoom, type RoomPlan, type RoomUse, type Zone } from "./brief";
+import { VIBE_LOOK } from "./planner";
 
 const MARGIN = 60;
 const BALCONY_DEPTH = 150;
@@ -408,12 +409,15 @@ function buildOnce(brief: HomeBrief, plan: HomePlan): Attempt | null {
   const linked = (q: Project) => !mainId || q.floors.some((f) => f.rooms.some((r) => ensuiteHost(f.rooms, r)?.id === mainId));
   if (linked(polished)) p = polished;
 
-  // 6. Outside: an Indian look (flat roof with parapet, chhajjas, water tank,
-  // compound wall), then the designer's own facade, trim and door colours.
+  // 6. Outside: the vibe's look (an everyday vibe gets the Indian flat roof
+  // with parapet, chhajjas, water tank and compound wall), then the designer's
+  // own facade, trim and door colours. A regional look keeps its own outside.
   const ex = plan.exterior;
-  p = attempt(p, (q) => applyStylePreset(q, brief.vibe === "indian-classic" ? "indian-classic" : "indian-modern")).project;
-  p = attempt(p, (q) => setExterior(q, ex.finish)).project;
-  p = attempt(p, (q) => setStyle(q, { trim: ex.trim, frontDoor: ex.door })).project;
+  p = attempt(p, (q) => applyStylePreset(q, VIBE_LOOK[brief.vibe])).project;
+  if (!isRegionalVibe(brief.vibe)) {
+    p = attempt(p, (q) => setExterior(q, ex.finish)).project;
+    p = attempt(p, (q) => setStyle(q, { trim: ex.trim, frontDoor: ex.door })).project;
+  }
   p = attempt(p, (q) => setParking(q, brief.musts.includes("parking"))).project;
   p = attempt(p, (q) => setGarden(q, true)).project;
   p = attempt(p, (q) => setSite(q, { ground: plan.ground })).project;

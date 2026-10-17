@@ -68,12 +68,13 @@ export function PhotoRenderer({
     const done = (outcome: PhotoOutcome) => latest.current.onDone?.(outcome);
     void (async () => {
       try {
-        // Let walls, lights and the sky settle into the photo's mood first.
+        // Let walls, lights and the sky settle into the photo's mood first,
+        // and let lived-in details finish loading (up to about ten seconds).
         let quiet = 0;
-        for (let i = 0; i < 180 && quiet < 3; i++) {
+        for (let i = 0; quiet < 3 && (i < 180 || (store.isLoading() && i < 600)); i++) {
           invalidate();
           await frame();
-          quiet = store.isAnimating() ? 0 : quiet + 1;
+          quiet = store.isAnimating() || store.isLoading() ? 0 : quiet + 1;
         }
         const { width, height } = photoSize(job.aspect, Math.min(job.longEdge, gl.capabilities.maxTextureSize || 4096));
         const c = latest.current.controls;

@@ -42,13 +42,23 @@ export type TextureKind =
   | "stoneSmall"
   | "concrete"
   | "asphalt"
-  | "pavers";
+  | "pavers"
+  | "athangudi"
+  | "kota"
+  | "redOxide"
+  | "laterite"
+  | "mangaloreTile"
+  | "azulejo"
+  | "woodSlat"
+  | "fairFaced"
+  | "vitrified";
 
 export type Look = {
   texture: TextureKind;
   color: string;
   /** Physical size of one texture tile, metres [u, v]. */
   tile: [number, number];
+  /** Overall roughness: scales the texture's own roughness to this mean. */
   roughness: number;
   bumpScale: number;
   metalness?: number;
@@ -59,7 +69,12 @@ export type FacadeLook = Look & {
   stone: string;
   /** Optional accent band at each floor line and on the parapet (two-tone). */
   band?: string;
+  /** Colour of pierced jaali balcony screens (default: pale stone). */
+  jaali?: string;
 };
+
+/** Jaali screens are pale stone unless the facade says otherwise. */
+export const DEFAULT_JAALI = "#e9dcc2";
 
 export const FACADE_LOOKS: Record<ExteriorFinishId, FacadeLook> = {
   ivory: { texture: "plaster", color: EXTERIOR_FINISHES.ivory.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#cfc4ae" },
@@ -79,6 +94,20 @@ export const FACADE_LOOKS: Record<ExteriorFinishId, FacadeLook> = {
   rose: { texture: "plaster", color: EXTERIOR_FINISHES.rose.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#ebe2d6" },
   ochre: { texture: "stucco", color: EXTERIOR_FINISHES.ochre.color, tile: [1.5, 1.5], roughness: 0.94, bumpScale: 1.0, stone: "#e6dcc8" },
   "two-tone": { texture: "plaster", color: EXTERIOR_FINISHES["two-tone"].color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6, stone: "#d9d3c8", band: "#b9603f" },
+  // Kerala: lime-washed walls on a laterite plinth (the stone), teak lattice.
+  "lime-plaster": { texture: "plaster", color: EXTERIOR_FINISHES["lime-plaster"].color, tile: [2, 2], roughness: 0.9, bumpScale: 0.5, stone: "#a65a3e", jaali: "#7a4a27" },
+  laterite: { texture: "laterite", color: EXTERIOR_FINISHES.laterite.color, tile: [1.6, 1.2], roughness: 0.95, bumpScale: 2.4, stone: "#d9cdb8", jaali: "#7a4a27" },
+  // Chettinad: polished lime ("egg") plaster is glossy; ochre bands.
+  "egg-plaster": { texture: "plaster", color: EXTERIOR_FINISHES["egg-plaster"].color, tile: [2, 2], roughness: 0.34, bumpScale: 0.25, stone: "#e6dac3", band: "#c58a2e" },
+  jaisalmer: { texture: "sandstone", color: EXTERIOR_FINISHES.jaisalmer.color, tile: [1.6, 1.2], roughness: 0.88, bumpScale: 1.4, stone: "#e8c98f", jaali: "#d8a964" },
+  // Goan: bright limewash with white plaster bands.
+  indigo: { texture: "stucco", color: EXTERIOR_FINISHES.indigo.color, tile: [1.5, 1.5], roughness: 0.93, bumpScale: 0.9, stone: "#efe9dd", band: "#f4f1ea" },
+  "leaf-green": { texture: "stucco", color: EXTERIOR_FINISHES["leaf-green"].color, tile: [1.5, 1.5], roughness: 0.93, bumpScale: 0.9, stone: "#efe9dd", band: "#f4f1ea" },
+  "grey-white": { texture: "render", color: EXTERIOR_FINISHES["grey-white"].color, tile: [2, 2], roughness: 0.9, bumpScale: 0.5, stone: "#e6e2da", band: "#f2efe8" },
+  "fair-faced": { texture: "fairFaced", color: EXTERIOR_FINISHES["fair-faced"].color, tile: [2.4, 1.2], roughness: 0.8, bumpScale: 0.8, stone: "#cfcac0" },
+  // Bengaluru: exposed brick with concrete bands and terracotta jaali.
+  "brick-concrete": { texture: "brick", color: EXTERIOR_FINISHES["brick-concrete"].color, tile: [1, 0.6], roughness: 0.9, bumpScale: 2.2, stone: "#c8c2b6", band: "#b9b4aa", jaali: "#b8643f" },
+  "wood-slat": { texture: "woodSlat", color: EXTERIOR_FINISHES["wood-slat"].color, tile: [1.08, 2.4], roughness: 0.7, bumpScale: 1.8, stone: "#c9c2b5" },
 };
 
 export const FLOOR_LOOKS: Record<FloorMaterialId, Look> = {
@@ -92,6 +121,13 @@ export const FLOOR_LOOKS: Record<FloorMaterialId, Look> = {
   slate: { texture: "slate", color: FLOOR_MATERIALS.slate.color, tile: [0.8, 0.8], roughness: 0.7, bumpScale: 1.2 },
   concrete: { texture: "polished", color: FLOOR_MATERIALS.concrete.color, tile: [2.4, 2.4], roughness: 0.42, bumpScale: 0.3 },
   carpet: { texture: "carpet", color: FLOOR_MATERIALS.carpet.color, tile: [1, 1], roughness: 0.98, bumpScale: 0.8 },
+  "red-oxide": { texture: "redOxide", color: FLOOR_MATERIALS["red-oxide"].color, tile: [2.4, 2.4], roughness: 0.2, bumpScale: 0.2 },
+  athangudi: { texture: "athangudi", color: FLOOR_MATERIALS.athangudi.color, tile: [0.8, 0.8], roughness: 0.26, bumpScale: 0.3 },
+  "athangudi-indigo": { texture: "athangudi", color: FLOOR_MATERIALS["athangudi-indigo"].color, tile: [0.8, 0.8], roughness: 0.26, bumpScale: 0.3 },
+  "athangudi-green": { texture: "athangudi", color: FLOOR_MATERIALS["athangudi-green"].color, tile: [0.8, 0.8], roughness: 0.26, bumpScale: 0.3 },
+  kota: { texture: "kota", color: FLOOR_MATERIALS.kota.color, tile: [1.2, 1.2], roughness: 0.42, bumpScale: 0.4 },
+  vitrified: { texture: "vitrified", color: FLOOR_MATERIALS.vitrified.color, tile: [1.6, 1.6], roughness: 0.14, bumpScale: 0.2 },
+  azulejo: { texture: "azulejo", color: FLOOR_MATERIALS.azulejo.color, tile: [0.6, 0.6], roughness: 0.2, bumpScale: 0.3 },
 };
 
 export const ROOF_LOOKS: Record<RoofMaterialId, Look> = {
@@ -99,6 +135,7 @@ export const ROOF_LOOKS: Record<RoofMaterialId, Look> = {
   slate: { texture: "slateRoof", color: ROOF_MATERIALS.slate.color, tile: [1.2, 0.88], roughness: 0.7, bumpScale: 2 },
   metal: { texture: "metalRoof", color: ROOF_MATERIALS.metal.color, tile: [0.9, 2.0], roughness: 0.45, bumpScale: 2, metalness: 0.35 },
   membrane: { texture: "membrane", color: ROOF_MATERIALS.membrane.color, tile: [2, 2], roughness: 0.92, bumpScale: 0.6 },
+  mangalore: { texture: "mangaloreTile", color: ROOF_MATERIALS.mangalore.color, tile: [0.84, 1.0], roughness: 0.72, bumpScale: 3 },
 };
 
 export const GROUND_LOOKS: Record<GroundId, Look> = {

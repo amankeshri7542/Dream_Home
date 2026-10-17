@@ -3,6 +3,7 @@
 // pierced jaali screen (alpha-tested texture in the `jaali` bucket).
 import { balconyBounds } from "../../../domain/core";
 import type { Balcony, GeometryFloor, RailingKind } from "../../../domain/types";
+import { DEFAULT_JAALI } from "../../materials/palette";
 import { rgb, type Buckets, type V3 } from "./QuadBuilder";
 import { ownerKey, upQuad } from "./floors";
 
@@ -13,6 +14,7 @@ export function emitBalcony(
   trimHex: string,
   buckets: Buckets<string>,
   railing: RailingKind = "glass",
+  jaaliHex = DEFAULT_JAALI,
 ) {
   const r = balconyBounds(floor, balcony);
   const x0 = r.x / 100,
@@ -80,8 +82,8 @@ export function emitBalcony(
       continue;
     }
     if (railing === "jaali") {
-      // Solid stone-coloured jaali panels between plastered piers.
-      const panel = rgb("#e9dcc2");
+      // Jaali panels (stone, terracotta or teak, from the facade) between plastered piers.
+      const panel = rgb(jaaliHex);
       const jaali = buckets.get("jaali");
       for (let i = 0; i <= count; i++) {
         const t = Math.min(len - 0.05, Math.max(0.05, (i / count) * len));

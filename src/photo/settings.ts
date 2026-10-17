@@ -25,6 +25,16 @@ export const SHAPES: Record<ShapeId, { label: string; aspect: number }> = {
 };
 export const SHAPE_ORDER: ShapeId[] = ["story", "square", "post", "wide"];
 
+/** What the live view shows while the studio is open (or a share picture is made). */
+export type PhotoScene = {
+  framing: Framing;
+  hour: number;
+  /** Everyday lived-in details (shoes, chai, the cat…). */
+  livedIn: boolean;
+  /** The Diwali set: diyas, string lights and rangoli. */
+  festive: boolean;
+};
+
 export const FRAMINGS: Record<Framing, string> = {
   view: "This view",
   room: "Room",
