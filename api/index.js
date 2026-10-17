@@ -3059,36 +3059,162 @@ function roomUserMessage(brief, variant = 0) {
 // server/claude.ts
 import Anthropic from "@anthropic-ai/sdk";
 var MODEL = "claude-opus-5-5";
-var PRICE = { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.4 };
-var DesignRefused = class extends Error {
+var PRICES = [
+  ["claude-opus-5-5", { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 }],
+  ["claude-sonnet-5-5", { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 }],
+  ["claude-haiku-5-5", { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01 }]
+];
+var UNKNOWN = { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 };
+var priceOf = (model) => PRICES.find(([prefix]) => model.startsWith(prefix))?.[1] ?? UNKNOWN;
+var supportsFallback = (model) => model.startsWith("claude-opus-");
+var BilledError = class extends Error {
+  constructor(message, costUsd = 0) {
+    super(message);
+    this.costUsd = costUsd;
+  }
+  costUsd;
 };
-function costOf(u) {
-  return (u.input_tokens * PRICE.input + u.output_tokens * PRICE.output + (u.cache_creation_input_tokens ?? 0) * PRICE.cacheWrite + (u.cache_read_input_tokens ?? 0) * PRICE.cacheRead) / 1e6;
+var DesignRefused = class extends BilledError {
+};
+var tokenCost = (u, p) => (u.input_tokens * p.input + u.output_tokens * p.output + (u.cache_creation_input_tokens ?? 0) * p.cacheWrite + (u.cache_read_input_tokens ?? 0) * p.cacheRead) / 1e6;
+function costOf(usage, model = MODEL) {
+  if (usage.iterations?.length)
+    return usage.iterations.reduce((sum, it) => sum + tokenCost(it, priceOf(it.model ?? model)), 0);
+  return tokenCost(usage, priceOf(model));
 }
 var callClaude = async (call) => {
+  const model = call.model ?? MODEL;
   const client = new Anthropic({ apiKey: call.apiKey, timeout: 1e5, maxRetries: 1 });
   const message = await client.beta.messages.stream({
-    model: call.model ?? MODEL,
+    model,
     max_tokens: call.maxTokens,
-    // If the model declines, Anthropic retries server-side on a fallback model.
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    // If an Opus model declines, Anthropic retries server-side on a fallback model.
+    ...supportsFallback(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {},
     thinking: { type: "adaptive", display: "omitted" },
     output_config: { effort: call.effort, format: { type: "json_schema", schema: call.schema } },
     system: [{ type: "text", text: call.system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: call.user }]
   }).finalMessage();
-  const costUsd = costOf(message.usage);
+  const costUsd = costOf(message.usage, message.model ?? model);
   console.info(
     JSON.stringify({ ai: "design", model: message.model, stop: message.stop_reason, usage: message.usage, costUsd })
   );
-  if (message.stop_reason === "refusal") throw new DesignRefused("The designer declined this brief.");
-  if (message.stop_reason === "max_tokens") throw new Error("The design ran out of room.");
+  if (message.stop_reason === "refusal") throw new DesignRefused("The designer declined this brief.", costUsd);
+  if (message.stop_reason === "max_tokens") throw new BilledError("The design ran out of room.", costUsd);
   const text2 = message.content.flatMap((b) => b.type === "text" ? [b.text] : []).join("");
-  return { json: JSON.parse(text2), costUsd, model: message.model };
+  try {
+    return { json: JSON.parse(text2), costUsd, model: message.model };
+  } catch {
+    throw new BilledError("The design wasn't readable.", costUsd);
+  }
 };
 
+// server/http.ts
+var DEVICE = /^[a-z0-9-]{16,64}$/;
+var onVercel = (env) => env.VERCEL === "1";
+var API_HEADERS = {
+  "Content-Type": "application/json",
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex"
+};
+var json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { ...API_HEADERS, ...headers } });
+var fail = (reason, message, left, status = 200) => json({ ok: false, reason, message, ...left !== void 0 ? { left } : {} }, status);
+var BodyTooLarge = class extends Error {
+};
+async function readBody(request, maxBytes) {
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (declared > maxBytes) throw new BodyTooLarge();
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => void 0);
+      throw new BodyTooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+function ipv6Groups(ip) {
+  if (!/^[0-9a-f:.]+$/i.test(ip) || !ip.includes(":")) return null;
+  const [head, tail, ...rest] = ip.split("::");
+  if (rest.length) return null;
+  const part = (s) => s ? s.split(":") : [];
+  const left = part(head), right = part(tail);
+  const last = right.length ? right : left;
+  if (last.length && last[last.length - 1].includes(".")) {
+    const v4 = last.pop().split(".").map(Number);
+    if (v4.length !== 4 || v4.some((n) => !(n >= 0 && n <= 255))) return null;
+    last.push((v4[0] << 8 | v4[1]).toString(16), (v4[2] << 8 | v4[3]).toString(16));
+  }
+  const missing = 8 - left.length - right.length;
+  if (tail === void 0 ? missing !== 0 : missing < 1) return null;
+  const groups = [...left, ...Array(tail === void 0 ? 0 : missing).fill("0"), ...right].map((g) => parseInt(g, 16));
+  return groups.length === 8 && groups.every((g) => g >= 0 && g <= 65535) ? groups : null;
+}
+function clientIp(request) {
+  const raw = (request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "").trim();
+  if (!raw) return "local";
+  const groups = ipv6Groups(raw);
+  if (!groups) return raw.slice(0, 64);
+  if (groups.slice(0, 5).every((g) => g === 0) && groups[5] === 65535)
+    return [groups[6] >> 8, groups[6] & 255, groups[7] >> 8, groups[7] & 255].join(".");
+  return `${groups.slice(0, 4).map((g) => g.toString(16)).join(":")}::/64`;
+}
+var deviceOf = (request) => {
+  const device = request.headers.get("x-dream-device") ?? "";
+  return DEVICE.test(device) ? device : null;
+};
+var SAFE = /* @__PURE__ */ new Set(["GET", "HEAD", "OPTIONS"]);
+function sameSite(request, env) {
+  if (SAFE.has(request.method)) return true;
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  let host;
+  try {
+    host = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  const own = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
+  if (host === own) return true;
+  const allowed = [env.PUBLIC_ORIGIN, ...(env.ALLOWED_ORIGINS ?? "").split(",")].map((o) => o?.trim()).filter(Boolean);
+  return allowed.includes(origin);
+}
+
 // server/limiter.ts
+var KINDS = ["home", "room", "command", "plan", "share", "report", "read"];
+var DEFAULT_RULES = {
+  home: { device: FREE_HOME_DESIGNS, window: "life", ip: 8, costly: true },
+  room: { device: FREE_ROOM_MAKEOVERS, window: "life", ip: 30, costly: true },
+  command: { device: 15, window: "day", ip: 60, costly: true },
+  plan: { device: 1, window: "life", ip: 3, costly: true },
+  share: { device: 20, window: "day", ip: 60, costly: false },
+  report: { device: 10, window: "day", ip: 20, costly: false },
+  read: { device: 0, window: "day", ip: 600, costly: false }
+};
+function rulesFrom(env) {
+  const rules = structuredClone(DEFAULT_RULES);
+  for (const kind of KINDS)
+    for (const field of ["device", "ip"]) {
+      const raw = env[`LIMIT_${kind.toUpperCase()}_${field.toUpperCase()}`];
+      const n = Number(raw);
+      if (raw !== void 0 && Number.isInteger(n) && n >= 0) rules[kind][field] = n;
+    }
+  return rules;
+}
 function memoryStore() {
   const values = /* @__PURE__ */ new Map();
   const live = (key) => {
@@ -3096,18 +3222,41 @@ function memoryStore() {
     if (v && v.until < Date.now()) values.delete(key);
     return values.get(key);
   };
+  const addNow = (key, by, ttl) => {
+    const v = live(key) ?? { n: 0, until: Date.now() + ttl * 1e3 };
+    v.n += by;
+    values.set(key, v);
+    return v.n;
+  };
   return {
     async add(key, by, ttl) {
-      const v = live(key) ?? { n: 0, until: Date.now() + ttl * 1e3 };
-      v.n += by;
-      values.set(key, v);
-      return v.n;
+      return addNow(key, by, ttl);
     },
     async get(key) {
       return live(key)?.n ?? 0;
+    },
+    // No await between the checks and the writes, so this is atomic in JS.
+    async reserve(budget, counters) {
+      if (budget && (live(budget.key)?.n ?? 0) >= budget.max) return { ok: false, blocked: "budget" };
+      const full = counters.findIndex((c) => (live(c.key)?.n ?? 0) + 1 > c.max);
+      if (full >= 0) return { ok: false, blocked: full };
+      return { ok: true, values: counters.map((c) => addNow(c.key, 1, c.ttl)) };
     }
   };
 }
+var RESERVE_SCRIPT = `
+local budget = tonumber(ARGV[1])
+if budget >= 0 and tonumber(redis.call('GET', KEYS[1]) or '0') >= budget then return {1} end
+local n = #KEYS - 1
+for i = 1, n do
+  if tonumber(redis.call('GET', KEYS[i + 1]) or '0') + 1 > tonumber(ARGV[2 * i]) then return {2, i} end
+end
+local out = {0}
+for i = 1, n do
+  out[i + 1] = redis.call('INCR', KEYS[i + 1])
+  if redis.call('TTL', KEYS[i + 1]) < 0 then redis.call('EXPIRE', KEYS[i + 1], tonumber(ARGV[2 * i + 1])) end
+end
+return out`;
 function restStore(url, token, fetcher = fetch) {
   const run = async (commands) => {
     const res = await fetcher(`${url.replace(/\/$/, "")}/pipeline`, {
@@ -3116,7 +3265,10 @@ function restStore(url, token, fetcher = fetch) {
       body: JSON.stringify(commands)
     });
     if (!res.ok) throw new Error(`Limit store answered ${res.status}`);
-    return await res.json();
+    const results = await res.json();
+    const error = results.find((r) => r.error);
+    if (error) throw new Error(error.error);
+    return results;
   };
   return {
     async add(key, by, ttl) {
@@ -3124,97 +3276,112 @@ function restStore(url, token, fetcher = fetch) {
         ["INCRBY", key, by],
         ["EXPIRE", key, ttl, "NX"]
       ]);
-      if (incr.error) throw new Error(incr.error);
       return Number(incr.result);
     },
     async get(key) {
       const [got] = await run([["GET", key]]);
       return Number(got.result ?? 0) || 0;
+    },
+    async reserve(budget, counters) {
+      const keys2 = [budget?.key ?? "dh:v1:no-budget", ...counters.map((c) => c.key)];
+      const args = [budget ? budget.max : -1, ...counters.flatMap((c) => [c.max, c.ttl])];
+      const [answer] = await run([["EVAL", RESERVE_SCRIPT, keys2.length, ...keys2, ...args]]);
+      const out = answer.result.map(Number);
+      if (out[0] === 0) return { ok: true, values: out.slice(1) };
+      if (out[0] === 1) return { ok: false, blocked: "budget" };
+      return { ok: false, blocked: out[1] - 1 };
     }
   };
 }
-var LIMITS2 = {
-  device: { home: FREE_HOME_DESIGNS, room: FREE_ROOM_MAKEOVERS },
-  /** Generous enough for a household sharing one connection. */
-  ipPerDay: { home: 8, room: 30 }
-};
 var YEAR = 365 * 24 * 3600;
 var DAY = 24 * 3600;
 var today = (now) => now.toISOString().slice(0, 10);
 var UNITS_PER_USD = 1e4;
 var Limiter = class {
-  constructor(store, budgetUsd, now = () => /* @__PURE__ */ new Date()) {
+  constructor(store, budgetUsd, rules = DEFAULT_RULES, now = () => /* @__PURE__ */ new Date()) {
     this.store = store;
     this.budgetUsd = budgetUsd;
+    this.rules = rules;
     this.now = now;
   }
   store;
   budgetUsd;
+  rules;
   now;
   keys(kind, device, ip) {
     const day = today(this.now());
+    const rule = this.rules[kind];
     return {
-      device: `dh:v1:dev:${device}:${kind}`,
+      // Lifetime keys keep the v1 names so existing counters carry over.
+      device: rule.window === "life" ? `dh:v1:dev:${device}:${kind}` : `dh:v1:dev:${device}:${kind}:${day}`,
+      deviceTtl: rule.window === "life" ? YEAR : DAY,
       ip: `dh:v1:ip:${ip}:${kind}:${day}`,
       spend: `dh:v1:spend:${day}`
     };
   }
-  async left(kind, device) {
-    const used = await this.store.get(this.keys(kind, device, "-").device);
-    return Math.max(0, LIMITS2.device[kind] - used);
-  }
-  /** Takes one free use, or says why not. Call `refund` if the design then fails. */
-  async reserve(kind, device, ip) {
+  counters(kind, device, ip) {
     const k = this.keys(kind, device, ip);
-    const spent = await this.store.get(k.spend) / UNITS_PER_USD;
-    if (spent >= this.budgetUsd) return { ok: false, reason: "busy", left: await this.left(kind, device) };
-    const used = await this.store.add(k.device, 1, YEAR);
-    if (used > LIMITS2.device[kind]) {
-      await this.store.add(k.device, -1, YEAR);
-      return { ok: false, reason: "limit", left: 0 };
-    }
-    const fromIp = await this.store.add(k.ip, 1, DAY);
-    if (fromIp > LIMITS2.ipPerDay[kind]) {
-      await this.store.add(k.ip, -1, DAY);
-      await this.store.add(k.device, -1, YEAR);
-      return { ok: false, reason: "busy", left: LIMITS2.device[kind] - used + 1 };
-    }
-    return { ok: true, left: LIMITS2.device[kind] - used };
+    const rule = this.rules[kind];
+    return [
+      ...rule.device > 0 ? [{ key: k.device, max: rule.device, ttl: k.deviceTtl }] : [],
+      { key: k.ip, max: rule.ip, ttl: DAY }
+    ];
+  }
+  /** Uses left today (or ever) for this device; Infinity when only the IP is limited. */
+  async left(kind, device) {
+    const rule = this.rules[kind];
+    if (rule.device <= 0) return Infinity;
+    const used = await this.store.get(this.keys(kind, device, "-").device);
+    return Math.max(0, rule.device - used);
+  }
+  /** Takes one use, or says why not. Call `refund` if the work then fails. */
+  async reserve(kind, device, ip) {
+    const rule = this.rules[kind];
+    const k = this.keys(kind, device, ip);
+    const budget = rule.costly ? { key: k.spend, max: Math.round(this.budgetUsd * UNITS_PER_USD) } : null;
+    const counters = this.counters(kind, device, ip);
+    const result = await this.store.reserve(budget, counters);
+    if (result.ok) return { ok: true, left: rule.device > 0 ? Math.max(0, rule.device - result.values[0]) : Infinity };
+    if (result.blocked === "budget") return { ok: false, reason: "busy", left: await this.left(kind, device) };
+    const deviceFull = rule.device > 0 && result.blocked === 0;
+    return deviceFull ? { ok: false, reason: "limit", left: 0 } : { ok: false, reason: "busy", left: await this.left(kind, device) };
   }
   async refund(kind, device, ip) {
-    const k = this.keys(kind, device, ip);
-    await this.store.add(k.device, -1, YEAR);
-    await this.store.add(k.ip, -1, DAY);
+    for (const c of this.counters(kind, device, ip)) await this.store.add(c.key, -1, c.ttl);
   }
   async spend(usd) {
+    if (!(usd > 0)) return;
     await this.store.add(this.keys("home", "-", "-").spend, Math.ceil(usd * UNITS_PER_USD), 2 * DAY);
   }
 };
+function budgetFrom(env) {
+  const budget = Number(env.AI_DAILY_BUDGET_USD ?? "10");
+  return Number.isFinite(budget) && budget > 0 ? budget : 10;
+}
+
+// server/context.ts
+var sharedMemory = null;
+function storeFor(env, deps) {
+  if (deps.store) return deps.store;
+  if (env.KV_REST_API_URL && env.KV_REST_API_TOKEN) return restStore(env.KV_REST_API_URL, env.KV_REST_API_TOKEN);
+  if (onVercel(env)) return null;
+  return sharedMemory ??= memoryStore();
+}
+function limiterFor(env, deps) {
+  const store = storeFor(env, deps);
+  return store && new Limiter(store, budgetFrom(env), rulesFrom(env), deps.now);
+}
+var aiConfigured = (env) => !!env.ANTHROPIC_API_KEY && env.AI_DISABLED !== "1";
 
 // server/design.ts
 var MAX_BODY = 8e3;
-var DEVICE = /^[a-z0-9-]{16,64}$/;
-var sharedMemory = null;
-var json = (body, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-});
-var fail = (reason, message, left, status = 200) => json({ ok: false, reason, message, ...left !== void 0 ? { left } : {} }, status);
-function clientIp(request) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return (forwarded || request.headers.get("x-real-ip") || "local").slice(0, 64);
-}
-function limiterFor(env, deps) {
-  const store = deps.store ?? (env.KV_REST_API_URL && env.KV_REST_API_TOKEN ? restStore(env.KV_REST_API_URL, env.KV_REST_API_TOKEN) : sharedMemory ??= memoryStore());
-  const budget = Number(env.AI_DAILY_BUDGET_USD ?? "10");
-  return new Limiter(store, Number.isFinite(budget) && budget > 0 ? budget : 10, deps.now);
-}
 async function handleDesign(request, env, deps = {}) {
-  const device = request.headers.get("x-dream-device") ?? "";
-  if (!DEVICE.test(device)) return fail("invalid", "Missing device id.", void 0, 400);
+  const device = deviceOf(request);
+  if (!device) return fail("invalid", "Missing device id.", void 0, 400);
   const limiter = limiterFor(env, deps);
-  const live = !!env.ANTHROPIC_API_KEY;
+  const live = aiConfigured(env) && !!limiter;
   if (request.method === "GET") {
+    if (!limiter) return json({ ok: true, live, home: null, room: null });
     try {
       return json({ ok: true, live, home: await limiter.left("home", device), room: await limiter.left("room", device) });
     } catch {
@@ -3222,8 +3389,13 @@ async function handleDesign(request, env, deps = {}) {
     }
   }
   if (request.method !== "POST") return fail("invalid", "Use POST.", void 0, 405);
-  const text2 = await request.text();
-  if (text2.length > MAX_BODY) return fail("invalid", "That request is too big.", void 0, 413);
+  let text2;
+  try {
+    text2 = await readBody(request, MAX_BODY);
+  } catch (error) {
+    if (error instanceof BodyTooLarge) return fail("invalid", "That request is too big.", void 0, 413);
+    return fail("invalid", "That request isn't readable.", void 0, 400);
+  }
   let body;
   try {
     body = JSON.parse(text2);
@@ -3235,7 +3407,7 @@ async function handleDesign(request, env, deps = {}) {
   const variant = Number.isInteger(body.variant) ? Math.min(9, Math.max(0, body.variant)) : 0;
   const parsed = kind === "home" ? parseHomeBrief(body.brief) : parseRoomBrief(body.brief);
   if (!parsed.ok) return fail("invalid", parsed.error, void 0, 400);
-  if (!live) return fail("offline", "The AI designer isn\u2019t switched on yet.");
+  if (!live || !limiter) return fail("offline", "The AI designer isn\u2019t switched on yet.");
   const ip = clientIp(request);
   let verdict;
   try {
@@ -3270,15 +3442,38 @@ async function handleDesign(request, env, deps = {}) {
     return json({ ok: true, plan, source: "ai", left: verdict.left });
   } catch (error) {
     console.error("design failed", error instanceof Error ? error.message : error);
+    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => void 0);
     await limiter.refund(kind, device, ip).catch(() => void 0);
     return error instanceof DesignRefused ? fail("busy", "The AI designer couldn\u2019t work with that note. Try changing it.", verdict.left + 1) : fail("busy", "The AI designer didn\u2019t answer in time.", verdict.left + 1);
+  }
+}
+
+// server/router.ts
+var ROUTES = {
+  design: handleDesign
+};
+function routeName(url) {
+  const fromQuery = url.searchParams.get("__route");
+  const raw = fromQuery ?? url.pathname.replace(/^\/api\/?/, "");
+  return raw.replace(/^\/+|\/+$/g, "");
+}
+async function route(request, env, deps = {}) {
+  const name = routeName(new URL(request.url));
+  const handler = Object.hasOwn(ROUTES, name) ? ROUTES[name] : void 0;
+  if (!handler) return fail("missing", "There\u2019s nothing here.", void 0, 404);
+  if (!sameSite(request, env)) return fail("forbidden", "This request must come from Dream Home.", void 0, 403);
+  try {
+    return await handler(request, env, deps);
+  } catch (error) {
+    console.error("route failed", name, error instanceof Error ? error.message : error);
+    return fail("busy", "Something went wrong. Please try again.", void 0, 500);
   }
 }
 
 // server/api.ts
 var api_default = {
   fetch(request) {
-    return handleDesign(request, process.env);
+    return route(request, process.env);
   }
 };
 export {

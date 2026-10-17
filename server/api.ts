@@ -1,10 +1,12 @@
-// Vercel function entry, bundled to api/design.js by scripts/build-api.mjs.
-import { handleDesign, type Env } from "./design";
+// Vercel function entry, bundled to api/index.js by scripts/build-api.mjs.
+// vercel.json rewrites every /api/* request here.
+import type { Env } from "./http";
+import { route } from "./router";
 
 declare const process: { env: Env };
 
 export default {
   fetch(request: Request) {
-    return handleDesign(request, process.env);
+    return route(request, process.env);
   },
 };

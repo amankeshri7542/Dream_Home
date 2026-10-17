@@ -107,7 +107,8 @@ describe("design API", () => {
 
   it("prices calls and talks to Upstash over REST", async () => {
     expect(costOf({ input_tokens: 1_000_000, output_tokens: 0 })).toBe(4);
-    expect(costOf({ input_tokens: 0, output_tokens: 10_000, cache_read_input_tokens: 100_000 })).toBeCloseTo(0.24);
+    // Opus 5.5 cache reads are $0.20 per million tokens.
+    expect(costOf({ input_tokens: 0, output_tokens: 10_000, cache_read_input_tokens: 100_000 })).toBeCloseTo(0.22);
     const fetcher = vi.fn(async () => new Response(JSON.stringify([{ result: 3 }, { result: 1 }])));
     const store = restStore("https://kv.example/", "token", fetcher as unknown as typeof fetch);
     expect(await store.add("k", 1, 60)).toBe(3);

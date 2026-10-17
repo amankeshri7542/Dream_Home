@@ -26,14 +26,20 @@ deployment source.
 
 ### The AI designer (optional)
 
-Create `.env.local` (never committed) with `ANTHROPIC_API_KEY=...` and run
-`npm run dev`: the dev server also serves `/api/design` from `server/*.ts`.
-Without a key the app uses its built-in planner. On Vercel, add the same
-variable in Project → Settings → Environment Variables. For free-tier limits
-that survive restarts, add an Upstash Redis / Vercel KV integration
-(`KV_REST_API_URL`, `KV_REST_API_TOKEN`); `AI_DAILY_BUDGET_USD` (default 10)
-caps total spend per day. After changing `server/` or `src/ai/`, run
-`npm run build:api` to regenerate `api/design.js` (`npm run build` does it too).
+Copy `.env.example` to `.env.local` (never committed), set
+`ANTHROPIC_API_KEY=...` and run `npm run dev`: the dev server also serves
+`/api/*` from `server/*.ts`. Without a key the app uses its built-in planner.
+
+On Vercel, set the same variables in Project → Settings → Environment
+Variables. **A deployed site needs the Upstash Redis / Vercel KV integration**
+(`KV_REST_API_URL`, `KV_REST_API_TOKEN`): without it the server refuses AI work,
+because per-instance memory can't enforce the per-device limits or the daily
+budget (`AI_DAILY_BUDGET_USD`, default 10). `AI_DISABLED=1` switches every AI
+feature off at once. `.env.example` lists every variable and limit.
+
+After changing `server/` or `src/ai/`, run `npm run build:api` to regenerate the
+committed `api/index.js` (`npm run build` does it too; `npm run check:api`
+fails if it's stale).
 
 > The project lives in an iCloud-synced folder on the author's machine, so
 > `node_modules` is a symlink to an un-synced `node_modules.nosync`. If
@@ -136,8 +142,11 @@ settings turn off camera glides and animations; `?` lists keyboard shortcuts.
 - `src/ai/`, `server/`, `api/` — the AI designer: brief validation, strict JSON
   schemas built from the catalogs, prompts, the built-in planner, the engine that
   turns a plan into a valid home (`buildHome.ts`), the mobile-first brief UI;
-  the server handler with per-device/IP limits and a spend cap, bundled by
-  `scripts/build-api.mjs` into the Vercel function `api/design.js`.
+  the server: one router (`server/router.ts`) for every `/api/*` route, with
+  same-site checks, capped request bodies, atomic per-device/IP limits and a
+  daily spend cap (`server/limiter.ts`), and the site's security headers
+  (`server/headers.ts`, mirrored in `vercel.json`). `scripts/build-api.mjs`
+  bundles it into the one Vercel function `api/index.js`.
 - `src/scene/` — renderer v2: perspective camera rig with inset-aware framing,
   procedural sky with time of day, image lighting, shadows, materials, building
   geometry (junctions, openings, cutaway section fill, stairs, roofs, porch),
@@ -157,9 +166,15 @@ history.
 npm run typecheck
 npm run lint
 npm test
-npm run test:e2e
 npm run build
+npm run check:api
+npm run test:e2e
+npm run test:preview
 ```
+
+`test:preview` builds the app and serves it with the production headers, then
+checks the Content-Security-Policy has no violations and the bundled API holds
+its guards.
 
 Browser tests use installed Google Chrome, run with reduced motion for stable
 layouts, and cover mouse, keyboard and native touch.

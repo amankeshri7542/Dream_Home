@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && node scripts/build-api.mjs && vite build",
     "build:api": "node scripts/build-api.mjs",
+    "check:api": "node scripts/build-api.mjs && git diff --exit-code -- api/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint .",
@@ -14,7 +15,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "assets": "node scripts/assets/build.mjs",
     "assets:blender": "node scripts/assets/build.mjs --step blender",
-    "assets:pack": "node scripts/assets/build.mjs --step pack"
+    "assets:pack": "node scripts/assets/build.mjs --step pack",
+    "test:preview": "playwright test -c playwright.preview.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

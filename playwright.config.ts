@@ -1,6 +1,8 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
+  // Security checks run against the production build: playwright.preview.config.ts.
+  testIgnore: ["**/preview/**"],
   fullyParallel: false,
   workers: 1,
   timeout: 30000,

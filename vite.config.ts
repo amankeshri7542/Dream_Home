@@ -1,50 +1,83 @@
-import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { SECURITY_HEADERS } from "./server/headers";
+
+// Node's request and response, typed loosely: the project doesn't ship Node typings.
+type NodeRequest = AsyncIterable<Uint8Array> & {
+  headers: Record<string, string | string[] | undefined>;
+  method?: string;
+  originalUrl?: string;
+  url?: string;
+};
+type NodeResponse = { statusCode: number; setHeader(key: string, value: string): void; end(body?: string): void };
+type Middlewares = { use(path: string, fn: (req: NodeRequest, res: NodeResponse) => void): void };
+type Route = (request: Request) => Promise<Response>;
+
+/** Turns a Node request into a Web Request and the Web Response back. */
+function serveApi(middlewares: Middlewares, load: () => Promise<Route>, log: (message: string) => void) {
+  middlewares.use("/api", async (req, res) => {
+    try {
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(req.headers))
+        if (typeof value === "string") headers.set(key, value);
+      const method = req.method ?? "GET";
+      const request = new Request(`http://${headers.get("host") ?? "localhost"}${req.originalUrl ?? req.url ?? "/api"}`, {
+        method,
+        headers,
+        ...(method !== "GET" && method !== "HEAD" ? { body: new Blob(chunks as BlobPart[]) } : {}),
+      });
+      const response = await (await load())(request);
+      res.statusCode = response.status;
+      response.headers.forEach((value, key) => res.setHeader(key, value));
+      res.end(await response.text());
+    } catch (error) {
+      log(String(error));
+      res.statusCode = 500;
+      res.end(JSON.stringify({ ok: false, reason: "busy", message: "The local API server failed." }));
+    }
+  });
+}
 
 /**
- * Serves the AI designer at /api/design during `npm run dev`, from the same
- * server/*.ts code Vercel runs. Reads ANTHROPIC_API_KEY from .env.local.
+ * Serves /api/* locally from the same code Vercel runs: the server/*.ts
+ * sources during `npm run dev` (reading ANTHROPIC_API_KEY etc. from .env.local),
+ * and the built api/index.js bundle during `vite preview`.
  */
-function devApi(): Plugin {
+function localApi(): Plugin {
   return {
-    name: "dream-home-dev-api",
-    configureServer(server: ViteDevServer) {
+    name: "dream-home-local-api",
+    configureServer(server) {
       const env = loadEnv(server.config.mode, server.config.root, "");
-      server.middlewares.use("/api/design", async (incoming, res) => {
-        // Node's request, typed loosely: the project doesn't ship Node typings.
-        const req = incoming as unknown as AsyncIterable<Uint8Array> & {
-          headers: Record<string, string | string[] | undefined>;
-          method?: string;
-          originalUrl?: string;
-        };
-        try {
-          const chunks: Uint8Array[] = [];
-          for await (const chunk of req) chunks.push(chunk);
-          const headers = new Headers();
-          for (const [key, value] of Object.entries(req.headers))
-            if (typeof value === "string") headers.set(key, value);
-          const request = new Request(`http://localhost${req.originalUrl ?? "/api/design"}`, {
-            method: req.method,
-            headers,
-            ...(req.method === "POST" ? { body: new Blob(chunks as BlobPart[]) } : {}),
-          });
-          const { handleDesign } = await server.ssrLoadModule("/server/design.ts");
-          const response: Response = await handleDesign(request, env);
-          res.statusCode = response.status;
-          response.headers.forEach((value, key) => res.setHeader(key, value));
-          res.end(await response.text());
-        } catch (error) {
-          server.config.logger.error(String(error));
-          res.statusCode = 500;
-          res.end(JSON.stringify({ ok: false, reason: "busy", message: "The local AI server failed." }));
-        }
-      });
+      serveApi(
+        server.middlewares as unknown as Middlewares,
+        async () => {
+          const { route } = await server.ssrLoadModule("/server/router.ts");
+          return (request) => route(request, env);
+        },
+        (m) => server.config.logger.error(m),
+      );
+    },
+    configurePreviewServer(server) {
+      serveApi(
+        server.middlewares as unknown as Middlewares,
+        async () => {
+          const bundle = (await import(/* @vite-ignore */ new URL("./api/index.js", import.meta.url).href)) as {
+            default: { fetch: Route };
+          };
+          return (request) => bundle.default.fetch(request);
+        },
+        (m) => server.config.logger.error(m),
+      );
     },
   };
 }
 
 export default defineConfig({
-  plugins: [react(), devApi()],
+  plugins: [react(), localApi()],
   build: { chunkSizeWarningLimit: 1200 },
   server: { port: 5173 },
+  // The production headers (CSP and friends), so the built app can be tested locally.
+  preview: { port: 4173, headers: SECURITY_HEADERS },
 });
