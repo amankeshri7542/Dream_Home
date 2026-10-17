@@ -1,3 +1,4 @@
+import { projectAdvisories } from "./advice";
 import { addBalcony, addVerticalSpace } from "./model";
 import type { EditResult, EdgeSide, Project, Rect } from "./types";
 
@@ -23,15 +24,32 @@ export function suggestBalcony(
     ...floor.balconies
       .filter((b) => b.edge === edge)
       .flatMap((b) => [b.offset + b.width, b.offset - width]),
+    span - width,
   ];
+  // The balcony's door takes the window on the wall it opens from, so keep
+  // the first clear spot that leaves every bedroom and living room a window.
+  const windowless = (p: Project) =>
+    new Set(
+      projectAdvisories(p, floorId)
+        .filter((i) => i.code === "room-no-window")
+        .flatMap((i) => (i.source ? [i.source.id] : [])),
+    );
+  let before: Set<string> | undefined;
   let error =
     "There is no clear space on this side. Try another side or a smaller balcony.";
-  for (const offset of offsets) {
+  let windowError: string | undefined;
+  for (const offset of new Set(offsets)) {
     const result = addBalcony(project, floorId, { edge, offset, width, depth });
-    if (result.ok) return result;
-    error = result.error;
+    if (!result.ok) {
+      error = result.error;
+      continue;
+    }
+    before ??= windowless(project);
+    const lost = [...windowless(result.project)].find((id) => !before!.has(id));
+    if (lost === undefined) return result;
+    windowError ??= `A balcony here would cost ${floor.rooms.find((r) => r.id === lost)?.name ?? "a room"} its only window. Try another side or a smaller balcony.`;
   }
-  return { ok: false, error };
+  return { ok: false, error: windowError ?? error };
 }
 
 export function suggestVerticalSpace(
