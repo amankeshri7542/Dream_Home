@@ -17,6 +17,11 @@ export type SceneView = ViewSettings & {
   cutHeight?: number;
   /** First-person walk: show the interior and furniture of this floor under the roof. */
   walkFloorId?: string;
+  /**
+   * The hero room (dollhouse): neighbours fade and are cut low, its own walls
+   * glow at the cut. `soft` keeps neighbours visible (moving or resizing).
+   */
+  focus?: { floorId: string; roomId: string; soft?: boolean };
 };
 
 export type SceneProps = {

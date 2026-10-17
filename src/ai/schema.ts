@@ -23,7 +23,11 @@ import {
 } from "./brief";
 
 const keys = (o: object) => Object.keys(o);
-/** Pieces the designer may add: no shop fittings, no half-built kitchen modules. */
+/**
+ * Pieces the designer may add: no shop fittings, no half-built kitchen
+ * modules, and none that only make sense placed by the standard layout
+ * (a chimney over the hob, tiles behind a counter, a panel behind the bed).
+ */
 const NOT_EXTRAS = new Set([
   "display-shelf",
   "display-shelf-module",
@@ -33,6 +37,10 @@ const NOT_EXTRAS = new Set([
   "kitchen-counter",
   "kitchen-sink",
   "kitchen-stove",
+  "kitchen-chimney",
+  "backsplash",
+  "backsplash-module",
+  "bed-panel",
   "toilet",
   "shower",
   "bathtub",
@@ -73,6 +81,8 @@ const palette = {
   fabric: oneOf(ENUMS.fabric),
   wood: oneOf(ENUMS.wood),
   accent: oneOf(ENUMS.accent),
+  /** A feature wall behind the bed or sofa, or "none". */
+  accentWall: oneOf([...ENUMS.paint, "none"]),
 };
 
 export const HOME_PLAN_SCHEMA = object({
@@ -138,20 +148,25 @@ const notes = (raw: unknown) =>
     .slice(0, 5);
 const extras = (raw: unknown) =>
   [...new Set((Array.isArray(raw) ? raw : []).filter((x) => EXTRA_IDS.includes(x)))].slice(0, 4) as string[];
+/** A feature-wall paint, or nothing ("none", unknown ids and the room's own paint). */
+const accentWall = (raw: unknown, paint: string) =>
+  typeof raw === "string" && ENUMS.paint.includes(raw) && raw !== paint ? { accentWall: raw } : {};
 
 function sanitizeRoom(raw: Partial<PlannedRoom>): PlannedRoom | null {
   if (!raw || !ROOM_USES.includes(raw.use as RoomUse)) return null;
   const use = raw.use as RoomUse;
+  const paint = pick(raw.paint, ENUMS.paint, "warm-white");
   return {
     use,
     name: text(raw.name, 24, NAMES[use]),
     zone: pick(raw.zone, ZONES, "any") as PlannedRoom["zone"],
-    paint: pick(raw.paint, ENUMS.paint, "warm-white"),
+    paint,
     floor: pick(raw.floor, ENUMS.floor, "light-tile"),
     fabric: pick(raw.fabric, ENUMS.fabric, "oat"),
     wood: pick(raw.wood, ENUMS.wood, "oak"),
     accent: pick(raw.accent, ENUMS.accent, "sage"),
     extras: extras(raw.extras),
+    ...accentWall(raw.accentWall, paint),
   };
 }
 
@@ -203,14 +218,16 @@ export function sanitizeHomePlan(raw: unknown): HomePlan {
 
 export function sanitizeRoomPlan(raw: unknown): RoomPlan {
   const p = (raw ?? {}) as Partial<RoomPlan>;
+  const paint = pick(p.paint, ENUMS.paint, "warm-white");
   return {
-    paint: pick(p.paint, ENUMS.paint, "warm-white"),
+    paint,
     floor: pick(p.floor, ENUMS.floor, "oak"),
     fabric: pick(p.fabric, ENUMS.fabric, "oat"),
     wood: pick(p.wood, ENUMS.wood, "oak"),
     accent: pick(p.accent, ENUMS.accent, "sage"),
     layout: p.layout === "keep" ? "keep" : "fresh",
     extras: extras(p.extras),
+    ...accentWall(p.accentWall, paint),
     notes: notes(p.notes).slice(0, 3),
   };
 }

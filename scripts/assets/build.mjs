@@ -21,7 +21,7 @@ const THUMBS = join(ROOT, "public", "thumbs");
 const REPORT = join(ROOT, "scripts", "blender", "report.json");
 const MANIFEST = join(ROOT, "src", "scene", "assets", "assetManifest.ts");
 const KITS = ["interior", "exterior"];
-const BUDGET_BYTES = { interior: 300_000, exterior: 150_000, street: 120_000 };
+const BUDGET_BYTES = { interior: 420_000, exterior: 150_000, street: 120_000 };
 const STREET_REPORT = join(ROOT, "scripts", "blender", "street-report.json");
 // EXT_meshopt_compression (decodable by three r180's MeshoptDecoder), keep
 // node names / materials / extras. -vpf keeps float positions so each mesh

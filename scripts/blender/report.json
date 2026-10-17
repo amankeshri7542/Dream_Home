@@ -661,6 +661,34 @@
       "warnings": []
     },
     {
+      "id": "backsplash-module",
+      "kit": "interior",
+      "tris": 188,
+      "triBudget": 200,
+      "bounds": {
+        "w": 60.0,
+        "d": 2.0,
+        "h": 55.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 2.0,
+        "h": 55.0
+      },
+      "slots": [
+        "ceramic",
+        "accent"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "bathtub",
       "kit": "interior",
       "tris": 690,
@@ -712,6 +740,34 @@
       "fitScale": [
         1.0,
         0.9973,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "bed-panel",
+      "kit": "interior",
+      "tris": 396,
+      "triBudget": 500,
+      "bounds": {
+        "w": 240.0,
+        "d": 8.0,
+        "h": 115.0
+      },
+      "size": {
+        "w": 240.0,
+        "d": 8.0,
+        "h": 115.0
+      },
+      "slots": [
+        "wood",
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
         1.0
       ],
       "ao": "cycles",
@@ -805,6 +861,34 @@
       "warnings": []
     },
     {
+      "id": "ceiling-fan",
+      "kit": "interior",
+      "tris": 484,
+      "triBudget": 500,
+      "bounds": {
+        "w": 120.0,
+        "d": 120.0,
+        "h": 35.0
+      },
+      "size": {
+        "w": 120.0,
+        "d": 120.0,
+        "h": 35.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        1.0002,
+        1.0002,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "coffee-table",
       "kit": "interior",
       "tris": 360,
@@ -827,6 +911,91 @@
         1.0,
         1.0,
         1.0027
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "console-table",
+      "kit": "interior",
+      "tris": 384,
+      "triBudget": 400,
+      "bounds": {
+        "w": 110.0,
+        "d": 35.0,
+        "h": 80.0
+      },
+      "size": {
+        "w": 110.0,
+        "d": 35.0,
+        "h": 80.0
+      },
+      "slots": [
+        "wood",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        0.9943,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "curtains",
+      "kit": "interior",
+      "tris": 680,
+      "triBudget": 700,
+      "bounds": {
+        "w": 200.0,
+        "d": 16.0,
+        "h": 250.0
+      },
+      "size": {
+        "w": 200.0,
+        "d": 16.0,
+        "h": 250.0
+      },
+      "slots": [
+        "fabric",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0191,
+        1.006
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "cushions",
+      "kit": "interior",
+      "tris": 492,
+      "triBudget": 500,
+      "bounds": {
+        "w": 110.0,
+        "d": 22.0,
+        "h": 40.0
+      },
+      "size": {
+        "w": 110.0,
+        "d": 22.0,
+        "h": 40.0
+      },
+      "slots": [
+        "fabric",
+        "accent",
+        "linen"
+      ],
+      "fitScale": [
+        0.9821,
+        1.0515,
+        0.9874
       ],
       "ao": "cycles",
       "errors": [],
@@ -975,6 +1144,35 @@
       "warnings": []
     },
     {
+      "id": "diwan",
+      "kit": "interior",
+      "tris": 1040,
+      "triBudget": 1100,
+      "bounds": {
+        "w": 190.0,
+        "d": 85.0,
+        "h": 62.0
+      },
+      "size": {
+        "w": 190.0,
+        "d": 85.0,
+        "h": 62.0
+      },
+      "slots": [
+        "wood",
+        "fabric",
+        "linen"
+      ],
+      "fitScale": [
+        1.0,
+        0.976,
+        0.9738
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "diya",
       "kit": "interior",
       "tris": 144,
@@ -1090,6 +1288,35 @@
       "warnings": []
     },
     {
+      "id": "jhula",
+      "kit": "interior",
+      "tris": 1396,
+      "triBudget": 1400,
+      "bounds": {
+        "w": 190.0,
+        "d": 110.0,
+        "h": 210.0
+      },
+      "size": {
+        "w": 190.0,
+        "d": 110.0,
+        "h": 210.0
+      },
+      "slots": [
+        "wood",
+        "fabric",
+        "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "kitchen-base",
       "kit": "interior",
       "tris": 352,
@@ -1108,6 +1335,35 @@
         "accent",
         "stone",
         "metal"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "kitchen-chimney",
+      "kit": "interior",
+      "tris": 312,
+      "triBudget": 400,
+      "bounds": {
+        "w": 75.0,
+        "d": 50.0,
+        "h": 110.0
+      },
+      "size": {
+        "w": 75.0,
+        "d": 50.0,
+        "h": 110.0
+      },
+      "slots": [
+        "metal",
+        "accent",
+        "glow"
       ],
       "fitScale": [
         1.0,
@@ -1321,6 +1577,35 @@
       "warnings": []
     },
     {
+      "id": "mirror-cabinet",
+      "kit": "interior",
+      "tris": 254,
+      "triBudget": 300,
+      "bounds": {
+        "w": 60.0,
+        "d": 15.0,
+        "h": 70.0
+      },
+      "size": {
+        "w": 60.0,
+        "d": 15.0,
+        "h": 70.0
+      },
+      "slots": [
+        "wood",
+        "glass",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "office-chair",
       "kit": "interior",
       "tris": 668,
@@ -1350,6 +1635,33 @@
       "warnings": [
         "fit scale drift 1.075,1.021,0.998"
       ]
+    },
+    {
+      "id": "ottoman",
+      "kit": "interior",
+      "tris": 304,
+      "triBudget": 400,
+      "bounds": {
+        "w": 50.0,
+        "d": 50.0,
+        "h": 42.0
+      },
+      "size": {
+        "w": 50.0,
+        "d": 50.0,
+        "h": 42.0
+      },
+      "slots": [
+        "fabric"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
     },
     {
       "id": "pendant-light",
@@ -1549,6 +1861,36 @@
       "warnings": []
     },
     {
+      "id": "shoe-rack",
+      "kit": "interior",
+      "tris": 696,
+      "triBudget": 700,
+      "bounds": {
+        "w": 90.0,
+        "d": 35.0,
+        "h": 95.0
+      },
+      "size": {
+        "w": 90.0,
+        "d": 35.0,
+        "h": 95.0
+      },
+      "slots": [
+        "wood",
+        "metal",
+        "rubber",
+        "terracotta"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "shop-counter",
       "kit": "interior",
       "tris": 572,
@@ -1628,6 +1970,35 @@
       "fitScale": [
         1.0,
         1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "sideboard",
+      "kit": "interior",
+      "tris": 819,
+      "triBudget": 850,
+      "bounds": {
+        "w": 150.0,
+        "d": 45.0,
+        "h": 85.0
+      },
+      "size": {
+        "w": 150.0,
+        "d": 45.0,
+        "h": 85.0
+      },
+      "slots": [
+        "wood",
+        "metal",
+        "ceramic"
+      ],
+      "fitScale": [
+        1.0,
+        0.9956,
         1.0
       ],
       "ao": "cycles",
@@ -1719,6 +2090,36 @@
       "warnings": []
     },
     {
+      "id": "table-lamp",
+      "kit": "interior",
+      "tris": 316,
+      "triBudget": 350,
+      "bounds": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 52.0
+      },
+      "size": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 52.0
+      },
+      "slots": [
+        "accent",
+        "metal",
+        "linen",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        1.0257,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
       "id": "toilet",
       "kit": "interior",
       "tris": 728,
@@ -1740,6 +2141,36 @@
       "fitScale": [
         1.0,
         0.9985,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "tv-panel",
+      "kit": "interior",
+      "tris": 880,
+      "triBudget": 1000,
+      "bounds": {
+        "w": 200.0,
+        "d": 40.0,
+        "h": 200.0
+      },
+      "size": {
+        "w": 200.0,
+        "d": 40.0,
+        "h": 200.0
+      },
+      "slots": [
+        "wood",
+        "metal",
+        "rubber",
+        "glass"
+      ],
+      "fitScale": [
+        1.0,
+        0.9709,
         1.0
       ],
       "ao": "cycles",
@@ -1770,6 +2201,95 @@
       "fitScale": [
         1.0,
         1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "vase-books",
+      "kit": "interior",
+      "tris": 316,
+      "triBudget": 350,
+      "bounds": {
+        "w": 40.0,
+        "d": 25.0,
+        "h": 38.0
+      },
+      "size": {
+        "w": 40.0,
+        "d": 25.0,
+        "h": 38.0
+      },
+      "slots": [
+        "accent",
+        "ceramic",
+        "linen",
+        "leaf"
+      ],
+      "fitScale": [
+        0.9986,
+        1.0549,
+        1.0344
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "wall-art",
+      "kit": "interior",
+      "tris": 296,
+      "triBudget": 300,
+      "bounds": {
+        "w": 100.0,
+        "d": 5.0,
+        "h": 60.0
+      },
+      "size": {
+        "w": 100.0,
+        "d": 5.0,
+        "h": 60.0
+      },
+      "slots": [
+        "wood",
+        "linen",
+        "accent",
+        "terracotta"
+      ],
+      "fitScale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "id": "wall-light",
+      "kit": "interior",
+      "tris": 290,
+      "triBudget": 300,
+      "bounds": {
+        "w": 20.0,
+        "d": 16.0,
+        "h": 30.0
+      },
+      "size": {
+        "w": 20.0,
+        "d": 16.0,
+        "h": 30.0
+      },
+      "slots": [
+        "metal",
+        "accent",
+        "glow"
+      ],
+      "fitScale": [
+        1.0,
+        0.9978,
         1.0
       ],
       "ao": "cycles",
@@ -1837,7 +2357,7 @@
   ],
   "kits": {
     "interior": {
-      "bytes": 889820,
+      "bytes": 1288364,
       "materials": [
         "fabric",
         "linen",
@@ -1854,9 +2374,9 @@
         "glow",
         "leaf"
       ],
-      "nodes": 146,
+      "nodes": 216,
       "errors": [],
-      "tris": 23355,
+      "tris": 32898,
       "items": [
         "bed-double",
         "bed-single",
@@ -1899,7 +2419,25 @@
         "plant-floor",
         "plant-small",
         "floor-lamp",
-        "pendant-light"
+        "pendant-light",
+        "curtains",
+        "wall-art",
+        "tv-panel",
+        "ceiling-fan",
+        "wall-light",
+        "table-lamp",
+        "jhula",
+        "diwan",
+        "shoe-rack",
+        "sideboard",
+        "console-table",
+        "ottoman",
+        "bed-panel",
+        "kitchen-chimney",
+        "backsplash-module",
+        "mirror-cabinet",
+        "cushions",
+        "vase-books"
       ]
     },
     "exterior": {
@@ -1992,6 +2530,25 @@
     "plant-small",
     "floor-lamp",
     "pendant-light",
+    "curtains",
+    "wall-art",
+    "tv-panel",
+    "ceiling-fan",
+    "wall-light",
+    "table-lamp",
+    "jhula",
+    "diwan",
+    "shoe-rack",
+    "sideboard",
+    "console-table",
+    "ottoman",
+    "bed-panel",
+    "kitchen-chimney",
+    "backsplash",
+    "backsplash-module",
+    "mirror-cabinet",
+    "cushions",
+    "vase-books",
     "tree-oak",
     "tree-pine",
     "tree-palm",

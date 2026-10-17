@@ -20,6 +20,16 @@ export type Panel =
   | "site"
   | null;
 export type SheetSnap = "hidden" | "peek" | "medium" | "expanded";
+/** The Room Studio's tabs; each runs on one of the editing modes. */
+export type RoomTab = "furniture" | "colours" | "layout" | "doors";
+export const ROOM_TABS: readonly RoomTab[] = ["furniture", "colours", "layout", "doors"];
+export const TAB_MODE: Record<RoomTab, "build" | "openings" | "decorate"> = {
+  furniture: "decorate",
+  colours: "decorate",
+  layout: "build",
+  doors: "openings",
+};
+export type RoomFocus = { floorId: string; roomId: string };
 export type Tool = "select" | "move" | "resize";
 export type Overlay =
   | "start"
@@ -70,6 +80,12 @@ export type EditorState = {
   tray: { selected: string | null; unit: string };
   /** Component ids briefly outlined in red after a blocked edit. */
   flash: string[];
+  /** The hero room (Room level), or null at Home level. */
+  focus: RoomFocus | null;
+  /** The Room Studio tab (remembered between rooms). */
+  roomTab: RoomTab;
+  /** The floor shown at Home before entering a room (restored on leaving). */
+  homeFloor: string | "all";
 };
 
 export const DEFAULT_VIEW: SceneView = {
@@ -113,6 +129,9 @@ export function initialEditorState(
     confirm: null,
     tray: { selected: null, unit: "auto" },
     flash: [],
+    focus: null,
+    roomTab: "furniture",
+    homeFloor: "all",
     ...patch,
   };
 }
@@ -150,6 +169,11 @@ export type EditorAction =
   | { type: "tray-select"; id: string | null }
   | { type: "tray-unit"; unit: string }
   | { type: "flash"; ids: string[] }
+  /** Fly into a room and make it the hero (Room level). */
+  | { type: "enter-room"; floorId: string; roomId: string; tab?: RoomTab }
+  /** Fly back out to the whole home (Home level). */
+  | { type: "leave-room" }
+  | { type: "room-tab"; tab: RoomTab }
   | { type: "escape" };
 
 /** View presets applied when switching modes, so each mode reads at a glance. */
@@ -174,6 +198,72 @@ const withCamera = (state: EditorState, command: CameraIntent): EditorState => (
 export const selectionFloorId = (t: SelectionTarget | null) =>
   t && "floorId" in t ? t.floorId : null;
 
+/** The tab a mode stands for when entering a room from it. */
+function tabForMode(mode: EditorMode, remembered: RoomTab): RoomTab {
+  if (mode === "openings") return "doors";
+  if (mode === "decorate") return remembered === "colours" ? "colours" : "furniture";
+  return remembered;
+}
+function enterRoom(state: EditorState, floorId: string, roomId: string, tab: RoomTab): EditorState {
+  const mode = TAB_MODE[tab];
+  const same = state.focus?.roomId === roomId && state.focus.floorId === floorId;
+  const next: EditorState = {
+    ...state,
+    focus: { floorId, roomId },
+    roomTab: tab,
+    homeFloor: state.focus ? state.homeFloor : state.view.floor,
+    mode,
+    lastEditMode: mode,
+    selection: { kind: "room", floorId, id: roomId },
+    tool: "select",
+    panel: null,
+    // A room picked on the open floor plan keeps the plan open.
+    lens: state.lens,
+    sheet: state.focus && state.sheet === "expanded" ? "expanded" : "medium",
+    viewOptions: false,
+    chromeHidden: false,
+    view: { ...modeView(mode, state.view), floor: floorId },
+    explore: "orbit",
+    hour: state.mode === "explore" ? BUILD_HOUR : state.hour,
+    tray: { ...state.tray, selected: null },
+  };
+  return same ? next : withCamera(next, { type: "fit", subject: "room", floorId, roomId, view: "room" });
+}
+function leaveRoom(state: EditorState, camera = true): EditorState {
+  if (!state.focus) return state;
+  const next: EditorState = {
+    ...state,
+    focus: null,
+    mode: "build",
+    lastEditMode: "build",
+    selection: null,
+    sheet: "hidden",
+    panel: null,
+    tool: "select",
+    viewOptions: false,
+    view: { ...modeView("build", state.view), floor: state.homeFloor },
+  };
+  return camera ? withCamera(next, { type: "fit", subject: "home", view: "return" }) : next;
+}
+const focusTarget = (f: RoomFocus): SelectionTarget => ({ kind: "room", floorId: f.floorId, id: f.roomId });
+
+/**
+ * The view the scene renders: the editor's view, plus the dollhouse focus
+ * while a room is the hero (its floor only, cut open, neighbours faded; kept
+ * "soft" while moving or resizing so the neighbours stay visible).
+ */
+export function sceneView(s: EditorState): SceneView {
+  if (!s.focus) return s.view;
+  return {
+    ...s.view,
+    floor: s.focus.floorId,
+    stage: 4,
+    roof: false,
+    cutaway: true,
+    focus: { ...s.focus, soft: s.tool !== "select" || s.lens },
+  };
+}
+
 export function editorReducer(
   state: EditorState,
   action: EditorAction,
@@ -181,6 +271,27 @@ export function editorReducer(
   switch (action.type) {
     case "select": {
       const target = action.target;
+      if (state.focus) {
+        // Inside a room: empty space returns to the room, another room
+        // becomes the hero, furniture and openings are picked in place.
+        if (!target) return { ...state, selection: focusTarget(state.focus), viewOptions: false };
+        if (target.kind === "room") {
+          if (target.id === state.focus.roomId) return { ...state, selection: target, viewOptions: false };
+          if (action.origin === "history") return state;
+          return enterRoom(state, target.floorId, target.id, state.roomTab);
+        }
+        if (target.kind === "furniture" || target.kind === "opening")
+          return { ...state, selection: target, viewOptions: false };
+        if (action.origin === "history") return state;
+        return editorReducer(leaveRoom(state, false), action);
+      }
+      // At Home, a room is opened as the hero (never by undo/redo).
+      if (target?.kind === "room" && state.mode !== "outside" && state.mode !== "explore") {
+        if (action.origin === "history") return { ...state, flash: [target.id] };
+        return enterRoom(state, target.floorId, target.id, tabForMode(state.mode, state.roomTab));
+      }
+      if (target && action.origin === "history" && (target.kind === "furniture" || target.kind === "opening"))
+        return state;
       if (!target)
         return {
           ...state,
@@ -224,6 +335,13 @@ export function editorReducer(
         : next;
     }
     case "set-mode": {
+      if (state.focus) {
+        if (action.mode === "decorate")
+          return editorReducer(state, { type: "room-tab", tab: state.roomTab === "colours" ? "colours" : "furniture" });
+        if (action.mode === "openings") return editorReducer(state, { type: "room-tab", tab: "doors" });
+        const home = leaveRoom(state);
+        return action.mode === "build" ? home : editorReducer(home, action);
+      }
       if (action.mode === state.mode) return state;
       const keep =
         state.selection &&
@@ -269,8 +387,8 @@ export function editorReducer(
           : { type: "fit", subject: "home", view: action.mode === "explore" ? "hero" : "keep" },
       );
     }
-    case "set-tool":
-      return {
+    case "set-tool": {
+      const next: EditorState = {
         ...state,
         tool: action.tool,
         // Resizing happens in the plan lens; moving also works directly in 3D.
@@ -280,7 +398,16 @@ export function editorReducer(
         sheet:
           action.tool !== "select" && state.selection ? "peek" : state.sheet,
       };
+      // Moving a hero room needs the whole floor in view; Done flies back in.
+      const f = state.focus;
+      if (f && state.tool === "select" && action.tool !== "select")
+        return withCamera(next, { type: "fit", subject: "floor", floorId: f.floorId, view: "keep" });
+      if (f && state.tool !== "select" && action.tool === "select")
+        return withCamera(next, { type: "fit", subject: "room", floorId: f.floorId, roomId: f.roomId, view: "keep" });
+      return next;
+    }
     case "open-panel":
+      if (state.focus) return editorReducer(leaveRoom(state), action);
       if (action.panel === state.panel && !state.selection)
         return { ...state, panel: null, sheet: "hidden" };
       return {
@@ -308,6 +435,7 @@ export function editorReducer(
         tool: "select",
       };
     case "sheet":
+      if (action.snap === "hidden" && state.focus) return leaveRoom(state);
       if (action.snap === "hidden")
         return { ...state, sheet: "hidden", selection: null, panel: null };
       return { ...state, sheet: action.snap };
@@ -324,6 +452,7 @@ export function editorReducer(
     case "view":
       return { ...state, view: { ...state.view, ...action.patch } };
     case "choose-floor":
+      if (state.focus) return editorReducer(leaveRoom(state), action);
       return {
         ...state,
         view: { ...state.view, floor: action.floor },
@@ -367,7 +496,38 @@ export function editorReducer(
       return { ...state, tray: { ...state.tray, unit: action.unit } };
     case "flash":
       return { ...state, flash: action.ids };
+    case "enter-room":
+      return enterRoom(state, action.floorId, action.roomId, action.tab ?? state.roomTab);
+    case "leave-room":
+      return leaveRoom(state);
+    case "room-tab": {
+      if (!state.focus) return { ...state, roomTab: action.tab };
+      const mode = TAB_MODE[action.tab];
+      return {
+        ...state,
+        roomTab: action.tab,
+        mode,
+        lastEditMode: mode,
+        selection: focusTarget(state.focus),
+        tool: "select",
+        panel: null,
+        // The floor plan is a layout tool: only the Layout tab keeps it open.
+        lens: action.tab === "layout" ? state.lens : false,
+        viewOptions: false,
+        view: { ...modeView(mode, state.view), floor: state.focus.floorId },
+      };
+    }
     case "escape": {
+      if (state.focus) {
+        if (state.confirm) return { ...state, confirm: null };
+        if (state.viewOptions) return { ...state, viewOptions: false };
+        if (state.tool !== "select") return { ...state, tool: "select" };
+        if (state.lens) return { ...state, lens: false };
+        if (state.selection && state.selection.kind !== "room")
+          return { ...state, selection: focusTarget(state.focus) };
+        if (state.sheet === "expanded") return { ...state, sheet: "medium" };
+        return leaveRoom(state);
+      }
       if (state.confirm) return { ...state, confirm: null };
       if (state.viewOptions) return { ...state, viewOptions: false };
       if (state.tray.selected)

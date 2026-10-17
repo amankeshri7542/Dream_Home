@@ -4,9 +4,9 @@
 // faces are `facade` when their outward sample is outside the building, else
 // `paint` coloured by the room on that side.
 import { inside } from "../../../domain/geometry";
-import { roomWallPaint, WALL_PAINTS } from "../../../domain/materials";
+import { roomAccentWall, roomWallPaint, WALL_PAINTS } from "../../../domain/materials";
 import { wallPieces, type WallPiece } from "../../../domain/walls";
-import type { GeometryFloor, Rect, Wall } from "../../../domain/types";
+import type { GeometryFloor, Rect, StylePreset, Wall } from "../../../domain/types";
 import { FLOOR_SURFACE, GROUND_TOP, SLAB_TOP } from "../../coords";
 import { junctionAdjustments, wallThickness } from "./junctions";
 import { visibleFaces, type FaceRect, type SoupBox, type SoupFace } from "./boxSoup";
@@ -38,9 +38,34 @@ export function classifyPoint(floor: GeometryFloor, x: number, z: number) {
   return { outside: false, roomId: room?.id ?? null };
 }
 
-export function roomPaint(floor: GeometryFloor, roomId: string | null): string {
+export function roomPaint(floor: GeometryFloor, roomId: string | null, look: StylePreset | null = null): string {
   const room = roomId ? floor.rooms.find((r) => r.id === roomId) : undefined;
-  return room ? WALL_PAINTS[roomWallPaint(room)].color : DEFAULT_PAINT;
+  return room ? WALL_PAINTS[roomWallPaint(room, look)].color : DEFAULT_PAINT;
+}
+
+/**
+ * Paint for a vertical wall face seen from inside a room: the room's accent
+ * colour on the inside face of its accent edge, else its wall paint.
+ * `axis`/`side`/`plane` describe the face (normal along x = 0 or z = 2,
+ * pointing `side`, at `plane` metres).
+ */
+export function facePaint(
+  floor: GeometryFloor,
+  roomId: string | null,
+  axis: number,
+  side: number,
+  plane: number,
+  look: StylePreset | null = null,
+): string {
+  const room = roomId ? floor.rooms.find((r) => r.id === roomId) : undefined;
+  const accent = room ? roomAccentWall(room) : null;
+  if (room && accent) {
+    const b = room.bounds;
+    const edge = axis === 2 ? (side > 0 ? "north" : "south") : side > 0 ? "west" : "east";
+    const line = edge === "north" ? b.z : edge === "south" ? b.z + b.d : edge === "west" ? b.x : b.x + b.w;
+    if (edge === accent.edge && Math.abs(plane * 100 - line) <= 15) return WALL_PAINTS[accent.color].color;
+  }
+  return roomPaint(floor, roomId, look);
 }
 
 /** Domain wall pieces (cm) for a wall at a given height — exposed for tests. */
@@ -80,6 +105,8 @@ export type WallContext = {
   band?: string | null;
   /** The porch door already has a canopy: no chhajja there. */
   entranceId?: string | null;
+  /** The home's Look: rooms without a paint use its palette. */
+  look?: StylePreset | null;
 };
 
 export const CHHAJJA_DEPTH = 0.5;
@@ -194,7 +221,7 @@ export function wallShell(ctx: WallContext, walls: readonly Wall[]) {
           face,
           rect,
           bucket: "paint",
-          color: rgb(roomPaint(floor, where.roomId)),
+          color: rgb(facePaint(floor, where.roomId, face.axis, face.side, face.plane, ctx.look ?? null)),
           roomId: where.roomId,
           outside: false,
         });
@@ -297,7 +324,7 @@ function sideInfo(ctx: WallContext, wall: Wall, along: number, side: Side) {
   const across = lineOf(wall) / 100 + side * (t / 2 + 0.03);
   const [x, z] = wall.axis === "x" ? [along, across] : [across, along];
   const where = classifyPoint(ctx.floor, x * 100, z * 100);
-  return { ...where, color: where.outside ? null : roomPaint(ctx.floor, where.roomId) };
+  return { ...where, color: where.outside ? null : roomPaint(ctx.floor, where.roomId, ctx.look ?? null) };
 }
 
 /**

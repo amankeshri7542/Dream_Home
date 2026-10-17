@@ -3,7 +3,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
 import { createStarter } from "../src/domain/starters";
 import type { HomeBrief } from "../src/ai/brief";
 import { plannerHomePlan } from "../src/ai/planner";
-import { mobile, noOverflow, seed, stored, undo } from "./support/dreamHome";
+import { mobile, noOverflow, roomTab, seed, stored, tool, undo } from "./support/dreamHome";
 
 const brief: HomeBrief = {
   plot: { w: 30, d: 50 },
@@ -123,11 +123,12 @@ test("“Make it nice” restyles one room as one undoable step", async ({ page 
     plan: { paint: "eucalyptus", floor: "terrazzo", fabric: "mustard", wood: "walnut", accent: "terracotta", layout: "fresh", extras: ["plant-floor", "rug-round"], notes: ["Eucalyptus walls and mustard cushions."] },
   }));
   await seed(page, project);
-  await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Decorate", exact: true }).click();
-  await page.getByRole("toolbar", { name: "Decorating tools" }).getByRole("button", { name: "Rooms" }).click();
+  // Open the living room from "Your rooms"; it becomes the hero, on its Furniture tab.
+  await tool(page, "Rooms").click();
   const living = project.floors[0].rooms.find((r) => r.kind === "living")!;
   await page.locator(".room-card").filter({ hasText: living.name }).click();
-  await page.getByRole("radiogroup", { name: "Makeover style" }).getByRole("radio", { name: "Colourful" }).click();
+  await expect(roomTab(page, "Furniture")).toHaveAttribute("aria-selected", "true");
+  await page.getByLabel("Makeover style").selectOption("colourful");
   await page.getByRole("button", { name: "Make it nice" }).click();
   const room = async () => (await stored(page)).floors[0].rooms.find((r) => r.id === living.id)!;
   await expect.poll(async () => (await room()).wallColor).toBe("eucalyptus");
@@ -136,7 +137,7 @@ test("“Make it nice” restyles one room as one undoable step", async ({ page 
   expect(after.floorMaterial).toBe("terrazzo");
   expect(after.furniture?.some((i) => i.catalogId === "rug-round")).toBe(true);
   expect(after.furniture?.some((i) => i.finish === "mustard")).toBe(true);
-  await expect(page.getByRole("status").filter({ hasText: "Eucalyptus walls and mustard cushions." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Eucalyptus walls and mustard cushions." }).first()).toBeVisible();
   await undo(page);
   await expect.poll(async () => (await room()).wallColor).toBeUndefined();
 });

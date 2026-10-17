@@ -1,6 +1,5 @@
-import { useRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { friendlyError, useEditor } from "../editor/EditorProvider";
-import type { SheetSnap } from "../editor/state";
 import { ROOM_META, type RoomKind } from "../domain/types";
 
 /** What a room is for, in friendly words ("Utility" also covers studies and offices). */
@@ -8,7 +7,13 @@ const kindLabel = (kind: RoomKind) => (kind === "utility" ? "Study or utility" :
 import { floorName, length, unitLabel } from "../domain/display";
 import { Icon, roomIcon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
+/** Whole feet (or tenths of a metre) read more easily than 17.1 × 9.2. */
+const friendlyLength = (cm: number, unit: "ft" | "m") =>
+  unit === "ft" ? String(Math.round(cm / 30.48)) : (Math.round(cm / 10) / 10).toString();
 import { RoomInspector } from "./inspectors/RoomInspector";
+import { Header, SheetHandle } from "./SheetParts";
+import { RoomStudio } from "./studio/RoomStudio";
+import { SpaceTabs } from "./HomeBar";
 import { PlotInspector } from "./inspectors/PlotInspector";
 import { SpacesList } from "./inspectors/SpacesList";
 import { SpaceDetails } from "./inspectors/SpaceDetails";
@@ -21,113 +26,6 @@ import { wallLabel } from "../domain/openingCommands";
 import { floorForGeometry } from "../domain/core";
 import type { TrayPointer } from "../components/RoomTray";
 
-const ORDER: SheetSnap[] = ["peek", "medium", "expanded"];
-/** Whole feet (or tenths of a metre) read more easily than 17.1 × 9.2. */
-const friendlyLength = (cm: number, unit: "ft" | "m") =>
-  unit === "ft" ? String(Math.round(cm / 30.48)) : (Math.round(cm / 10) / 10).toString();
-
-function SheetHandle({ desktop }: { desktop: boolean }) {
-  const { state, dispatch } = useEditor();
-  const start = useRef<{ y: number; id: number } | null>(null);
-  if (desktop) return null;
-  const index = Math.max(0, ORDER.indexOf(state.sheet));
-  const step = (delta: number) => {
-    const next = ORDER[Math.max(0, Math.min(ORDER.length - 1, index + delta))];
-    dispatch({ type: "sheet", snap: next });
-  };
-  return (
-    <div
-      className="dh-sheet-handle"
-      role="slider"
-      tabIndex={0}
-      aria-label="Details panel size"
-      aria-valuemin={0}
-      aria-valuemax={2}
-      aria-valuenow={index}
-      aria-valuetext={state.sheet}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          step(1);
-        }
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          step(-1);
-        }
-      }}
-      onPointerDown={(e) => {
-        start.current = { y: e.clientY, id: e.pointerId };
-        e.currentTarget.setPointerCapture(e.pointerId);
-      }}
-      onPointerUp={(e) => {
-        const s = start.current;
-        start.current = null;
-        if (!s || s.id !== e.pointerId) return;
-        const dy = e.clientY - s.y;
-        if (Math.abs(dy) < 8) step(index === ORDER.length - 1 ? -2 : 1);
-        else step(dy < 0 ? (dy < -160 ? 2 : 1) : dy > 160 ? -2 : -1);
-      }}
-      onPointerCancel={() => {
-        start.current = null;
-      }}
-    >
-      <i />
-    </div>
-  );
-}
-
-function Header({
-  title,
-  kicker,
-  meta,
-  icon,
-  color,
-  onBack,
-  desktop,
-}: {
-  title: string;
-  kicker?: string;
-  meta?: string;
-  icon?: ReactNode;
-  color?: string;
-  onBack?: () => void;
-  desktop: boolean;
-}) {
-  const { state, dispatch } = useEditor();
-  const small = state.sheet === "peek";
-  return (
-    <div className="dh-inspector-head">
-      {onBack && (
-        <IconButton icon={Icon.left} tone="plain" label="Back to the list" onClick={onBack} />
-      )}
-      {icon && (
-        <span className="dh-chip-icon" style={color ? { background: color } : undefined}>
-          {icon}
-        </span>
-      )}
-      <div className="dh-inspector-title">
-        {kicker && <span className="dh-kicker">{kicker}</span>}
-        <h2>{title}</h2>
-        {meta && <p className="dh-truncate dh-num">{meta}</p>}
-      </div>
-      {!desktop && (
-        <IconButton
-          icon={small ? Icon.expand : Icon.collapse}
-          tone="plain"
-          label={small ? "Show details" : "Show less"}
-          onClick={() => dispatch({ type: "sheet", snap: small ? "medium" : "peek" })}
-        />
-      )}
-      <IconButton
-        icon={Icon.close}
-        tone="plain"
-        label="Close details"
-        onClick={() => dispatch({ type: "close-panel" })}
-      />
-    </div>
-  );
-}
-
 export function Inspector({
   desktop,
   onTrayDrag,
@@ -139,6 +37,8 @@ export function Inspector({
 }) {
   const editor = useEditor();
   const { state, dispatch, selected, unit, project, error, setError } = editor;
+  // A hero room has its own studio.
+  if (state.focus) return <RoomStudio desktop={desktop} />;
   const open = !!selected || !!state.panel;
   if (!open || state.mode === "explore") return null;
   let content: ReactNode = null;
@@ -153,8 +53,13 @@ export function Inspector({
 
   const back = (to: typeof state.selection) => () => dispatch({ type: "select", target: to });
   if (state.panel === "catalog" && !selected) {
-    label = "Add space";
-    content = <CatalogPanel />;
+    label = "Add room";
+    content = (
+      <>
+        <SpaceTabs />
+        <CatalogPanel />
+      </>
+    );
   } else if (selected?.opening && selected.floor && selected.wall) {
     const room = selected.floor.rooms.find((r) =>
       wallLabel(floorForGeometry(project, selected.floor!.id), selected.wall!).includes(r.name),
@@ -239,7 +144,12 @@ export function Inspector({
     );
   } else if (state.panel === "tray") {
     label = "Room tray";
-    content = <TrayPanel onDrag={onTrayDrag} onDrop={onTrayDrop} />;
+    content = (
+      <>
+        <SpaceTabs />
+        <TrayPanel onDrag={onTrayDrag} onDrop={onTrayDrop} />
+      </>
+    );
   } else if (selected?.room && selected.floor) {
     const room = selected.room;
     const RoomGlyph = roomIcon(room.kind, room.name);
@@ -295,6 +205,7 @@ export function Inspector({
     content = (
       <>
         <Header desktop={desktop} title="Rooms & spaces" kicker={floorName(project.floors.indexOf(editor.activeFloor))} />
+        <SpaceTabs />
         {errorBox}
         <SpacesList />
       </>

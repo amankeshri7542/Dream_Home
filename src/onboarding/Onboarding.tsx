@@ -315,12 +315,12 @@ const TOUR = [
   {
     target: ".dh-scene-host",
     title: "This is your home!",
-    body: "Tap any room to pick it. Drag to spin the view; pinch or scroll to zoom in.",
+    body: "Tap any room to step inside and make it yours. Drag to spin the view; pinch or scroll to zoom.",
   },
   {
     target: "[data-chrome='palette']",
-    title: "Your building tools",
-    body: "Add rooms, move them like puzzle pieces, or resize them. Green fits, red shows what’s in the way.",
+    title: "Four big buttons",
+    body: "Add a room, style the outside, explore your home, or let AI design one for you.",
   },
   {
     target: "[data-chrome='topbar'] [role='toolbar']",

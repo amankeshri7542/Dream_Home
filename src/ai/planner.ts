@@ -1,6 +1,7 @@
 // The built-in planner: a careful, rule-based designer used when the AI is
 // unavailable (offline, out of free designs, or not set up). It follows the
 // same brief and returns the same plan shape, so the engine treats both alike.
+import { ACCENT_FOR_PAINT, isWallPaint } from "../domain/materials";
 import type { HomeBrief, HomePlan, PlannedRoom, RoomBrief, RoomPlan, RoomUse, Vibe, Zone } from "./brief";
 import { defaultRoomName } from "./schema";
 
@@ -135,19 +136,28 @@ const BEDROOM_NAMES: Partial<Record<RoomUse, string[]>> = {
   bedroom: ["Bedroom 2", "Bedroom 3", "Bedroom 4", "Bedroom 5"],
 };
 
+/**
+ * Pieces added on top of the designer layout (which already brings rugs,
+ * lamps, art, curtains and fans): a little character per room use.
+ */
 const EXTRAS: Partial<Record<RoomUse, string[]>> = {
-  living: ["rug-rect", "plant-floor", "floor-lamp"],
-  "master-bedroom": ["rug-rect", "plant-small", "dresser"],
+  living: ["ottoman", "wall-light", "diya"],
+  "master-bedroom": ["dresser", "ottoman", "wall-light"],
   "kids-bedroom": ["rug-round", "desk", "bookshelf"],
-  "grandparents-bedroom": ["armchair", "plant-small"],
-  "guest-bedroom": ["plant-small"],
-  bedroom: ["rug-round", "plant-small"],
+  "grandparents-bedroom": ["armchair", "wall-light"],
+  "guest-bedroom": ["console-table", "plant-small"],
+  bedroom: ["plant-small", "wall-light"],
   kitchen: ["plant-small", "pendant-light"],
-  dining: ["pendant-light", "plant-floor"],
-  pooja: ["prayer-mat", "plant-small"],
-  office: ["bookshelf", "plant-floor"],
-  bathroom: ["plant-small"],
+  dining: ["wall-light", "plant-floor"],
+  pooja: ["plant-small", "wall-light"],
+  office: ["plant-floor", "wall-art"],
+  bathroom: ["plant-small", "wall-light"],
+  utility: ["shoe-rack"],
 };
+/** Rooms whose main wall (behind the bed) gets a deeper feature colour. */
+const FEATURE_WALL: ReadonlySet<RoomUse> = new Set(["master-bedroom", "kids-bedroom", "guest-bedroom"]);
+const featureWall = (use: RoomUse, paint: string) =>
+  FEATURE_WALL.has(use) && isWallPaint(paint) ? { accentWall: ACCENT_FOR_PAINT[paint] } : {};
 
 /** A complete plan from the brief alone. `variant` picks between looks. */
 export function plannerHomePlan(brief: HomeBrief, variant = 0): HomePlan {
@@ -163,22 +173,24 @@ export function plannerHomePlan(brief: HomeBrief, variant = 0): HomePlan {
       BEDROOM_NAMES[use]?.[n] ?? (use === "bathroom" && n > 0 ? `Bathroom ${n + 1}` : defaultRoomName(use));
     const wet = use === "bathroom" || use === "kitchen";
     const bedroom = use.endsWith("bedroom");
+    const paint = bedroom
+      ? look.paints.bedroom[bedroomIndex % look.paints.bedroom.length]
+      : use === "living" || use === "dining"
+        ? look.paints.living
+        : use === "kitchen"
+          ? look.paints.kitchen
+          : look.paints.other;
     return {
       use,
       name,
       zone: vastu ? (VASTU[use] ?? "any") : "any",
-      paint: bedroom
-        ? look.paints.bedroom[bedroomIndex % look.paints.bedroom.length]
-        : use === "living" || use === "dining"
-          ? look.paints.living
-          : use === "kitchen"
-            ? look.paints.kitchen
-            : look.paints.other,
+      paint,
       floor: wet ? look.floors.wet : bedroom ? look.floors.bedroom : look.floors.living,
       fabric: look.palette.fabric[Math.max(0, bedroomIndex) % look.palette.fabric.length],
       wood: look.palette.wood,
       accent: look.palette.accent[n % look.palette.accent.length],
       extras: EXTRAS[use] ?? [],
+      ...featureWall(use, paint),
     };
   });
   const notes = [
@@ -207,19 +219,21 @@ export function plannerRoomPlan(brief: RoomBrief, variant = 0): RoomPlan {
   const use: RoomUse =
     brief.kind === "bedroom" ? "bedroom" : brief.kind === "shop" ? "living" : (brief.kind as RoomUse);
   const wet = brief.kind === "bathroom" || brief.kind === "kitchen";
+  const paint =
+    brief.kind === "bedroom"
+      ? look.paints.bedroom[variant % look.paints.bedroom.length]
+      : brief.kind === "kitchen"
+        ? look.paints.kitchen
+        : look.paints.living;
   return {
-    paint:
-      brief.kind === "bedroom"
-        ? look.paints.bedroom[variant % look.paints.bedroom.length]
-        : brief.kind === "kitchen"
-          ? look.paints.kitchen
-          : look.paints.living,
+    paint,
     floor: wet ? look.floors.wet : brief.kind === "bedroom" ? look.floors.bedroom : look.floors.living,
     fabric: look.palette.fabric[variant % look.palette.fabric.length],
     wood: look.palette.wood,
     accent: look.palette.accent[variant % look.palette.accent.length],
     layout: brief.items.length < 2 ? "fresh" : "keep",
     extras: EXTRAS[use] ?? [],
+    ...featureWall(brief.kind === "bedroom" ? "master-bedroom" : use, paint),
     notes: [`${look.name.replace(/ (home|house)$/i, "")} colours for your ${brief.name.toLowerCase()}.`],
   };
 }

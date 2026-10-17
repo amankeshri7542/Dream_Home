@@ -56,6 +56,8 @@ const bool = (k: string, d: boolean) => (params.has(k) ? params.get(k) === "1" |
 
 export function LabApp() {
   const [projectKey, setProjectKey] = useState(params.get("project") ?? "compact");
+  // Screenshot scripts can hand the lab any project (`__lab.useProject(p)`).
+  const [custom, setCustom] = useState<Project | null>(null);
   const [roofStyle, setRoofStyle] = useState<RoofStyle | "">((params.get("roofStyle") as RoofStyle) ?? "");
   const [exterior, setExterior] = useState<ExteriorFinishId | "">((params.get("exterior") as ExteriorFinishId) ?? "");
   const [hour, setHour] = useState(num("hour", 10.5));
@@ -82,12 +84,12 @@ export function LabApp() {
   const [highlight, setHighlight] = useState<string[]>([]);
 
   const project = useMemo(() => {
-    const base = (PROJECTS[projectKey] ?? PROJECTS.compact)() ?? createPreset("compact");
+    const base = custom ?? (PROJECTS[projectKey] ?? PROJECTS.compact)() ?? createPreset("compact");
     const style = { ...(base.style ?? {}) };
     if (roofStyle) style.roof = { style: roofStyle, material: roofStyle === "flat" ? "membrane" : style.roof?.material ?? "terracotta", pitch: style.roof?.pitch ?? 30 };
     if (exterior) style.exterior = exterior;
     return { ...base, style };
-  }, [projectKey, roofStyle, exterior]);
+  }, [projectKey, roofStyle, exterior, custom]);
 
   // Initial selection from ?select=<roomId>.
   useEffect(() => {
@@ -114,6 +116,7 @@ export function LabApp() {
       setHour,
       setView: (patch: Partial<SceneView>) => setView((v) => ({ ...v, ...patch })),
       setProject: setProjectKey,
+      useProject: setCustom,
       setRoofStyle,
       setExterior,
       setMode,

@@ -48,7 +48,8 @@ export type CameraCommand = { id: number } & (
       subject: CameraSubject;
       floorId?: string;
       roomId?: string;
-      view?: "hero" | "top" | "front" | "keep";
+      /** "room": the dollhouse hero pose; "return": back to where the home was seen from. */
+      view?: "hero" | "top" | "front" | "keep" | "room" | "return";
       instant?: boolean;
     }
   | { type: "dolly"; factor: number }

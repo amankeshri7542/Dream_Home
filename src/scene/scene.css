@@ -50,6 +50,16 @@
   transition: background 120ms ease, box-shadow 120ms ease;
   user-select: none;
 }
+/* A finger-sized (44 px) tap area around the small label (already absolute). */
+.scene-room-label::after {
+  content: "";
+  position: absolute;
+  inset: -9px -4px;
+}
+.scene-room-label:focus-visible {
+  outline: 3px solid #b5562f;
+  outline-offset: 2px;
+}
 .scene-room-label-name {
   font-weight: 650;
   overflow: hidden;

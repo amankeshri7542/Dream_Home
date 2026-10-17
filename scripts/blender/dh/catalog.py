@@ -27,6 +27,10 @@ LANDSCAPE_TINTS = {
 }
 
 
+# The slot defaults the original 44-item kit resolved to (see load()).
+PINNED_DEFAULTS = {"fabric": "sage", "wood": "oak", "accent": "sage"}
+
+
 class Spec:
     """A buildable model (one root node in a kit GLB)."""
 
@@ -44,8 +48,12 @@ class Spec:
 
     @property
     def grounded(self):
-        """Whether the model rests on the floor (AO ground / thumbnail shadow)."""
-        return self.layer not in ("high", "ceiling") and self.id != "cloud"
+        """Whether the model rests on the floor (AO ground / thumbnail shadow).
+        Wall pieces mounted at floor level (curtains, headboard panels) and
+        tabletop decor count as grounded; mounted and ceiling pieces do not."""
+        if self.id == "cloud" or self.layer == "ceiling":
+            return False
+        return not self.mount_y
 
     def to_json(self):
         return {"id": self.id, "kit": self.kit, "size": {"w": self.w, "d": self.d, "h": self.h}, "slots": self.slots, "triBudget": self.tri_budget}
@@ -83,7 +91,8 @@ def load():
     finishes = furn["finishes"]
 
     # Default finish per tintable slot = most common defaultFinish among items
-    # whose finishSlot is that slot (ties -> palette order).
+    # whose finishSlot is that slot (ties -> palette order). Pinned so adding
+    # catalog items never recolours the untinted slots of existing models.
     slot_defaults = {}
     for slot, cfg in slots.items():
         if not cfg.get("tint"):
@@ -93,6 +102,7 @@ def load():
         order = list(palette.keys())
         best = sorted(counts.items(), key=lambda kv: (-kv[1], order.index(kv[0])))
         name = best[0][0] if best else order[0]
+        name = PINNED_DEFAULTS.get(slot, name) if PINNED_DEFAULTS.get(slot) in palette else name
         slot_defaults[slot] = palette[name]
 
     def item_tints(item):

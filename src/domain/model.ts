@@ -19,7 +19,7 @@ import {
   allocateId,
   componentIds,
   contains,
-  freeRect,
+  snugRect,
   inside,
   overlaps,
   snap,
@@ -154,7 +154,7 @@ export function findRoomPosition(
     ...deriveFloorVoids(project, floorId).map((v) => v.bounds),
     ...(unitId === null ? floor.unitAreas.map((a) => a.bounds) : []),
   ];
-  return freeRect(area, blockers, w, d);
+  return snugRect(area, blockers, w, d);
 }
 export function addRoom(
   project: Project,

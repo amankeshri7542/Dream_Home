@@ -17,6 +17,7 @@ import {
   homeBox,
   plotBox,
   roomBox,
+  roomHeroPose,
   floorBox,
   topPose,
   type Box,
@@ -58,6 +59,8 @@ export function CameraRig({ project, view, insets, command, reducedMotion, apiRe
   const invalidate = useThree((s) => s.invalidate);
   const store = useSceneStore();
   const lastFit = useRef<FitIntent>({ subject: "home", view: "hero" });
+  /** Where the home was seen from before flying into a room ("return" goes back). */
+  const homePose = useRef<Pose | null>(null);
   const userMoved = useRef(false);
   const lastUpdate = useRef(0);
   const intro = useRef<"pending" | "running" | "done">("pending");
@@ -91,6 +94,10 @@ export function CameraRig({ project, view, insets, command, reducedMotion, apiRe
         return frontPose(road);
       case "keep":
         return current;
+      case "room":
+        return roomHeroPose(current);
+      case "return":
+        return homePose.current ?? heroPose(road);
       default:
         return intent.subject === "room" || intent.subject === "floor"
           ? { azimuth: current.azimuth, polar: FOCUS_POLAR }
@@ -128,6 +135,9 @@ export function CameraRig({ project, view, insets, command, reducedMotion, apiRe
   const applyFit = (intent: FitIntent, animate: boolean) => {
     const c = controls.current;
     if (!c) return;
+    // Remember the home view when flying into a room from outside one.
+    if (intent.view === "room" && lastFit.current.subject !== "room")
+      homePose.current = { azimuth: c.azimuthAngle, polar: c.polarAngle };
     const pose = poseFor(intent, c);
     const azimuth = nearestAngle(c.azimuthAngle, pose.azimuth);
     const fit = computeFit(intent, { azimuth, polar: pose.polar });
@@ -313,6 +323,13 @@ export function CameraRig({ project, view, insets, command, reducedMotion, apiRe
     if (!command || handled.current === command.id) return;
     handled.current = command.id;
     const animate = !latest.current.reducedMotion;
+    // An explicit command ends the opening glide, so later re-framing
+    // follows the command's subject (a room) instead of the intro's home.
+    if (intro.current === "running") {
+      intro.current = "done";
+      onIntro?.(false);
+      if (controls.current) controls.current.smoothTime = animate ? SMOOTH : 0;
+    }
     switch (command.type) {
       case "fit":
         applyFit(

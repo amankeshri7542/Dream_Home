@@ -3,9 +3,9 @@
 // skip rebuilding (selection/hover/labels never rebuild geometry).
 import { useRef } from "react";
 import { floorForGeometry } from "../../domain/core";
-import { exteriorFinish, frontDoorColor, styleDetails, trimColor, DOOR_COLORS, TRIM_COLORS, type ExteriorFinishId } from "../../domain/materials";
+import { exteriorFinish, frontDoorColor, styleDetails, stylePreset, trimColor, DOOR_COLORS, TRIM_COLORS, type ExteriorFinishId } from "../../domain/materials";
 import { deriveWalls } from "../../domain/walls";
-import type { EdgeSide, GeometryFloor, Project, RailingKind, Void, Wall } from "../../domain/types";
+import type { EdgeSide, GeometryFloor, Project, RailingKind, StylePreset, Void, Wall } from "../../domain/types";
 import type { SceneView } from "../types";
 import { floorBase } from "../coords";
 import { FACADE_LOOKS } from "../materials/palette";
@@ -21,6 +21,8 @@ export type FloorStyle = {
   band: string | null;
   chhajja: boolean;
   railing: RailingKind;
+  /** The Look: default room paints and floors follow its palettes. */
+  look: StylePreset | null;
 };
 
 export type FloorModel = {
@@ -56,6 +58,7 @@ export function projectStyle(project: Project): FloorStyle {
     band: FACADE_LOOKS[exterior].band ?? null,
     chhajja: details.chhajja,
     railing: details.railing,
+    look: stylePreset(project),
   };
 }
 

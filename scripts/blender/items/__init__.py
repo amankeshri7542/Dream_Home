@@ -23,4 +23,4 @@ def procedural(*ids):
     return deco
 
 
-from . import sleep, seating, tables, storage, kitchen, bath, decor, retail, trees, garden, vehicles, india  # noqa: E402,F401
+from . import sleep, seating, tables, storage, kitchen, bath, decor, retail, trees, garden, vehicles, india, designer  # noqa: E402,F401

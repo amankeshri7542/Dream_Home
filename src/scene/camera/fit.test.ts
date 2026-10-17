@@ -51,6 +51,17 @@ describe("fitBox", () => {
     expect(Math.min(xSlack / 195, ySlack / 422)).toBeCloseTo(0.08, 1);
   });
 
+  it("keeps a room above a phone sheet that covers 60% of the screen", () => {
+    // A room seen from above the sheet: top bar 56 px, sheet + bars 506 px.
+    const insets = { top: 56, right: 0, bottom: 506, left: 0 };
+    const room = { ...base, min: [-2, 0, -2] as [number, number, number], max: [2, 1.4, 2] as [number, number, number], insets };
+    const { px } = project(room);
+    for (const p of px) {
+      expect(p.y).toBeGreaterThanOrEqual(56 - 0.5);
+      expect(p.y).toBeLessThanOrEqual(844 - 506 + 0.5);
+    }
+  });
+
   it("keeps corners inside the safe rect and centres the target in it", () => {
     const insets = { top: 60, right: 0, bottom: 300, left: 0 };
     const { px, target } = project({ ...base, insets, width: 390, height: 844 });

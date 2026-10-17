@@ -1,7 +1,15 @@
 // Material identities and resolution rules. The renderer maps ids to textures;
 // the domain owns which ids exist and how legacy fields stay in sync.
 import { finalizeEdit } from "./edit";
-import { findRoom, replaceRoom } from "./furniture";
+import {
+  FURNITURE_FINISHES,
+  autoLayoutKind,
+  findRoom,
+  furnitureCatalogItem,
+  replaceRoom,
+  type AutoLayoutKind,
+  type FinishSlot,
+} from "./furniture";
 import { allocateId, componentIds } from "./geometry";
 import {
   autoLandscape,
@@ -13,8 +21,11 @@ import {
 import { roomFloorFinish } from "./roomDetails";
 import { RAILING_KINDS, STYLE_PRESETS } from "./persist";
 import type {
+  AccentWall,
   ComponentRef,
+  EdgeSide,
   EditResult,
+  FurnitureItem,
   LandscapeItem,
   Project,
   ProjectStyle,
@@ -155,8 +166,16 @@ export function exteriorFinish(p: Project): ExteriorFinishId {
   if (isExterior(p.style?.exterior)) return p.style.exterior;
   return p.finish ?? "ivory";
 }
-export function roomFloorMaterial(room: Room): FloorMaterialId {
+/**
+ * A room's floor: its chosen material, else its legacy family, else (with a
+ * Look) the look's floor for the room, else the room-type default.
+ */
+export function roomFloorMaterial(room: Room, look?: StylePreset | null): FloorMaterialId {
   if (isFloorMaterial(room.floorMaterial)) return room.floorMaterial;
+  if (!room.floorFinish || room.floorFinish === "auto") {
+    const palette = roomPalette(look, room);
+    if (palette) return palette.floor;
+  }
   return LEGACY_FLOOR[roomFloorFinish(room)];
 }
 const DEFAULT_PAINT: Record<RoomKind, WallPaintId> = {
@@ -168,8 +187,222 @@ const DEFAULT_PAINT: Record<RoomKind, WallPaintId> = {
   utility: "warm-white",
   shop: "warm-white",
 };
-export function roomWallPaint(room: Room): WallPaintId {
-  return isWallPaint(room.wallColor) ? room.wallColor : DEFAULT_PAINT[room.kind];
+/** A room's wall paint: its own, else (with a Look) the look's, else the room-type default. */
+export function roomWallPaint(room: Room, look?: StylePreset | null): WallPaintId {
+  if (isWallPaint(room.wallColor)) return room.wallColor;
+  return roomPalette(look, room)?.paint ?? DEFAULT_PAINT[room.kind];
+}
+/** A room's accent wall, when it has a valid one. */
+export function roomAccentWall(room: Room): { edge: EdgeSide; color: WallPaintId } | null {
+  const a = room.accentWall;
+  return a && EDGE_SIDES.includes(a.edge) && isWallPaint(a.color) ? { edge: a.edge, color: a.color } : null;
+}
+const EDGE_SIDES: readonly EdgeSide[] = ["north", "east", "south", "west"];
+
+// ---------------------------------------------------------------------------
+// Room palettes: every automatic room already looks designed. A Look picks a
+// coordinated palette per room use (bedrooms vary by room); pieces without a
+// chosen finish, walls without a paint and floors without a material use it.
+// Homes without a Look keep the original defaults.
+// ---------------------------------------------------------------------------
+export type RoomPalette = {
+  paint: WallPaintId;
+  floor: FloorMaterialId;
+  /** Upholstery: beds, sofas, diwans. */
+  fabric: string;
+  /** Soft furnishings: rugs, curtains, headboard panels, mats. */
+  soft: string;
+  /** Pops of colour: cushions, poufs, armchairs, desk chairs. */
+  pop: string;
+  /** Wood: tables, storage, frames. */
+  wood: string;
+  /** One accent colour per room: lamps, art, accessories. */
+  accent: string;
+  /** Kitchen cabinets. */
+  cabinet: string;
+  /** Tiles: backsplashes. */
+  tile: string;
+};
+type PaletteKind = Exclude<AutoLayoutKind, "shop">;
+type Swatches = Omit<RoomPalette, "cabinet" | "tile"> & Partial<Pick<RoomPalette, "cabinet" | "tile">>;
+const LOOK_PALETTES: Record<StylePreset, Record<PaletteKind, Swatches[]>> = {
+  "indian-modern": {
+    living: [
+      { paint: "warm-white", floor: "marble", fabric: "oat", soft: "terracotta", pop: "mustard", wood: "walnut", accent: "mustard" },
+      { paint: "linen", floor: "marble", fabric: "sage", soft: "oat", pop: "terracotta", wood: "teak", accent: "terracotta" },
+    ],
+    bedroom: [
+      { paint: "sage", floor: "oak", fabric: "oat", soft: "sage", pop: "mustard", wood: "walnut", accent: "mustard" },
+      { paint: "dusty-blue", floor: "oak", fabric: "oat", soft: "navy", pop: "mustard", wood: "oak", accent: "navy" },
+      { paint: "blush", floor: "herringbone", fabric: "oat", soft: "blush", pop: "terracotta", wood: "teak", accent: "terracotta" },
+      { paint: "linen", floor: "oak", fabric: "sage", soft: "oat", pop: "peacock", wood: "walnut", accent: "peacock" },
+    ],
+    kitchen: [
+      { paint: "linen", floor: "terrazzo", fabric: "oat", soft: "oat", pop: "mustard", wood: "oak", accent: "charcoal", cabinet: "sage", tile: "mustard" },
+      { paint: "warm-white", floor: "terrazzo", fabric: "oat", soft: "oat", pop: "terracotta", wood: "walnut", accent: "charcoal", cabinet: "white", tile: "peacock" },
+    ],
+    dining: [
+      { paint: "linen", floor: "marble", fabric: "oat", soft: "terracotta", pop: "mustard", wood: "walnut", accent: "mustard" },
+    ],
+    bathroom: [
+      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "sage", pop: "sage", wood: "oak", accent: "white", tile: "peacock" },
+    ],
+    prayer: [
+      { paint: "warm-white", floor: "marble", fabric: "maroon", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
+    ],
+    study: [
+      { paint: "sage", floor: "oak", fabric: "oat", soft: "oat", pop: "navy", wood: "oak", accent: "mustard" },
+    ],
+    utility: [
+      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "oat", pop: "sage", wood: "oak", accent: "white" },
+    ],
+  },
+  "indian-classic": {
+    living: [
+      { paint: "ochre", floor: "marble", fabric: "maroon", soft: "mustard", pop: "peacock", wood: "walnut", accent: "peacock" },
+      { paint: "clay", floor: "marble", fabric: "peacock", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
+    ],
+    bedroom: [
+      { paint: "clay", floor: "walnut", fabric: "maroon", soft: "mustard", pop: "peacock", wood: "walnut", accent: "mustard" },
+      { paint: "terracotta", floor: "walnut", fabric: "oat", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
+      { paint: "eucalyptus", floor: "walnut", fabric: "peacock", soft: "oat", pop: "mustard", wood: "walnut", accent: "mustard" },
+      { paint: "linen", floor: "herringbone", fabric: "mustard", soft: "maroon", pop: "peacock", wood: "teak", accent: "maroon" },
+    ],
+    kitchen: [
+      { paint: "linen", floor: "limestone", fabric: "oat", soft: "maroon", pop: "mustard", wood: "walnut", accent: "charcoal", cabinet: "peacock", tile: "mustard" },
+    ],
+    dining: [
+      { paint: "clay", floor: "marble", fabric: "maroon", soft: "maroon", pop: "mustard", wood: "walnut", accent: "mustard" },
+    ],
+    bathroom: [
+      { paint: "warm-white", floor: "limestone", fabric: "oat", soft: "maroon", pop: "mustard", wood: "walnut", accent: "mustard", tile: "maroon" },
+    ],
+    prayer: [
+      { paint: "ochre", floor: "marble", fabric: "maroon", soft: "maroon", pop: "mustard", wood: "teak", accent: "mustard" },
+    ],
+    study: [
+      { paint: "eucalyptus", floor: "walnut", fabric: "oat", soft: "mustard", pop: "maroon", wood: "walnut", accent: "mustard" },
+    ],
+    utility: [
+      { paint: "linen", floor: "limestone", fabric: "oat", soft: "oat", pop: "mustard", wood: "walnut", accent: "white" },
+    ],
+  },
+  diorama: {
+    living: [
+      { paint: "warm-white", floor: "oak", fabric: "sage", soft: "oat", pop: "mustard", wood: "oak", accent: "terracotta" },
+    ],
+    bedroom: [
+      { paint: "greige", floor: "oak", fabric: "sage", soft: "oat", pop: "blush", wood: "oak", accent: "sage" },
+      { paint: "dusty-blue", floor: "oak", fabric: "navy", soft: "oat", pop: "mustard", wood: "oak", accent: "mustard" },
+      { paint: "blush", floor: "oak", fabric: "oat", soft: "blush", pop: "terracotta", wood: "white", accent: "terracotta" },
+    ],
+    kitchen: [
+      { paint: "linen", floor: "light-tile", fabric: "oat", soft: "oat", pop: "terracotta", wood: "oak", accent: "white", cabinet: "sage", tile: "white" },
+    ],
+    dining: [
+      { paint: "linen", floor: "limestone", fabric: "sage", soft: "oat", pop: "mustard", wood: "oak", accent: "terracotta" },
+    ],
+    bathroom: [
+      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "sage", pop: "sage", wood: "oak", accent: "white", tile: "sage" },
+    ],
+    prayer: [
+      { paint: "warm-white", floor: "limestone", fabric: "terracotta", soft: "terracotta", pop: "mustard", wood: "walnut", accent: "mustard" },
+    ],
+    study: [
+      { paint: "sage", floor: "oak", fabric: "oat", soft: "oat", pop: "charcoal", wood: "oak", accent: "mustard" },
+    ],
+    utility: [
+      { paint: "warm-white", floor: "light-tile", fabric: "oat", soft: "oat", pop: "sage", wood: "oak", accent: "white" },
+    ],
+  },
+};
+/** Stable small hash of a room id (bedrooms pick their palette by it). */
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+/** The coordinated palette a Look gives a room (null without a Look, or for shops). */
+export function roomPalette(
+  look: StylePreset | null | undefined,
+  room: Pick<Room, "id" | "kind" | "name">,
+): RoomPalette | null {
+  if (!look || !(look in LOOK_PALETTES)) return null;
+  const kind = autoLayoutKind(room);
+  if (kind === "shop") return null;
+  const options = LOOK_PALETTES[look][kind];
+  const s = options[hashId(room.id) % options.length];
+  return { cabinet: s.accent, tile: s.accent, ...s };
+}
+/** The palette for a room of this project (null for homes without a Look). */
+export function autoPalette(project: Pick<Project, "style">, room: Room): RoomPalette | null {
+  return roomPalette(project.style?.preset ?? null, room);
+}
+const SOFT_PIECES = new Set(["rug-rect", "rug-round", "curtains", "bed-panel", "prayer-mat", "sleeping-mat"]);
+const POP_PIECES = new Set(["cushions", "ottoman", "armchair", "office-chair"]);
+const CABINETS = new Set(["kitchen-counter", "kitchen-base", "kitchen-sink", "kitchen-stove", "kitchen-upper", "kitchen-island"]);
+const TILES = new Set(["backsplash", "backsplash-module"]);
+/** Appliances keep their catalog colour. */
+const APPLIANCES = new Set(["fridge"]);
+/** The palette's finish for a catalog piece (only one the piece comes in). */
+export function paletteFinish(palette: RoomPalette | null, catalogId: string): string | undefined {
+  const entry = furnitureCatalogItem(catalogId);
+  if (!palette || !entry?.finishSlot || APPLIANCES.has(catalogId)) return undefined;
+  const pick =
+    entry.finishSlot === "fabric"
+      ? SOFT_PIECES.has(catalogId)
+        ? palette.soft
+        : POP_PIECES.has(catalogId)
+          ? palette.pop
+          : palette.fabric
+      : entry.finishSlot === "wood"
+        ? palette.wood
+        : CABINETS.has(catalogId)
+          ? palette.cabinet
+          : TILES.has(catalogId)
+            ? palette.tile
+            : palette.accent;
+  return entry.finishes?.includes(pick) ? pick : undefined;
+}
+/** Colour for a piece's other tintable parts (a bed's frame, an artwork's frame, a jhula's cushion). */
+export function paletteTint(palette: RoomPalette | null, slot: FinishSlot): string | undefined {
+  if (!palette) return undefined;
+  const id = slot === "fabric" ? palette.pop : slot === "wood" ? palette.wood : palette.accent;
+  return FURNITURE_FINISHES[slot]?.[id];
+}
+/** The finish a piece shows: its own, else its room's palette, else the catalog default. */
+export function effectiveFinish(
+  project: Pick<Project, "style">,
+  room: Room,
+  item: Pick<FurnitureItem, "catalogId" | "finish">,
+): string | undefined {
+  return (
+    item.finish ??
+    paletteFinish(autoPalette(project, room), item.catalogId) ??
+    furnitureCatalogItem(item.catalogId)?.defaultFinish
+  );
+}
+/** A contrasting paint for a feature wall, from a room's main paint. */
+export const ACCENT_FOR_PAINT: Record<WallPaintId, WallPaintId> = {
+  "warm-white": "terracotta",
+  linen: "ochre",
+  greige: "charcoal",
+  sage: "eucalyptus",
+  eucalyptus: "navy",
+  "dusty-blue": "navy",
+  navy: "dusty-blue",
+  terracotta: "clay",
+  blush: "terracotta",
+  ochre: "terracotta",
+  clay: "terracotta",
+  charcoal: "linen",
+};
+/** A tasteful accent-wall colour for a room (from its paint and the home's Look). */
+export function suggestAccentWall(project: Pick<Project, "style">, room: Room): WallPaintId {
+  return ACCENT_FOR_PAINT[roomWallPaint(room, project.style?.preset ?? null)];
 }
 export const hasCourtyard = (p: Project) =>
   p.verticalSpaces.some((v) => v.kind === "courtyard");
@@ -279,6 +512,27 @@ export function setRoomWallColor(
     const { wallColor: _c, ...rest } = room;
     void _c;
     return id === null ? rest : { ...rest, wallColor: id };
+  });
+}
+/**
+ * Paints one wall of a room (its inside face) as a feature wall, or clears it
+ * (edge null). Without a colour it picks one that suits the room's paint.
+ */
+export function setRoomAccentWall(
+  p: Project,
+  floorId: string | null,
+  roomId: string,
+  edge: EdgeSide | null,
+  color?: string,
+): EditResult {
+  if (edge !== null && !EDGE_SIDES.includes(edge)) return INVALID;
+  if (color !== undefined && !isWallPaint(color)) return INVALID;
+  return editRoom(p, floorId, roomId, (room) => {
+    const { accentWall: _a, ...rest } = room;
+    void _a;
+    if (edge === null) return rest;
+    const accentWall: AccentWall = { edge, color: color ?? suggestAccentWall(p, room) };
+    return { ...rest, accentWall };
   });
 }
 export type StylePatch = {
@@ -481,7 +735,8 @@ registerValidation((p, issue) => {
   const room = (r: Room, source: ComponentRef, floorIds: string[]) => {
     if (
       (r.floorMaterial !== undefined && !isFloorMaterial(r.floorMaterial)) ||
-      (r.wallColor !== undefined && !isWallPaint(r.wallColor))
+      (r.wallColor !== undefined && !isWallPaint(r.wallColor)) ||
+      (r.accentWall !== undefined && !roomAccentWall(r))
     )
       bad(source, floorIds);
   };

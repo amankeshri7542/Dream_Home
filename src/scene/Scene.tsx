@@ -17,6 +17,7 @@ import { createOverlayRegistry } from "./overlay/registry";
 import { SceneOverlay, roomLabels } from "./overlay/SceneOverlay";
 import { visibility } from "./building/visibility";
 import { cutPlane } from "./materials/cutPlane";
+import { focusHides } from "./materials/focus";
 import { bridge } from "./debug/DebugBridge";
 import "./scene.css";
 
@@ -51,9 +52,13 @@ function cutAwareEvents(store: Parameters<typeof createEvents>[0]) {
     ...base,
     filter: (items: Intersection[], state: RootState) => {
       const kept = items.filter((hit) => {
-        const mat = (hit.object as { material?: { clippingPlanes?: unknown[] | null } }).material;
-        const clipped = !!mat && !Array.isArray(mat) && !!mat.clippingPlanes?.length;
-        return !(clipped && hit.point.y > cutPlane.constant + 0.001);
+        const mat = (hit.object as { material?: { clippingPlanes?: unknown[] | null; userData?: { dhFocusCut?: boolean } } }).material;
+        const single = !!mat && !Array.isArray(mat);
+        const clipped = single && !!mat.clippingPlanes?.length;
+        if (clipped && hit.point.y > cutPlane.constant + 0.001) return false;
+        // Walls the hero-room focus has cut away can't be tapped either.
+        const focusCut = single && !!mat.userData?.dhFocusCut;
+        return !(focusCut && focusHides(hit.point.x, hit.point.y, hit.point.z));
       });
       return base.filter ? base.filter(kept, state) : kept;
     },
@@ -120,9 +125,11 @@ function SceneCanvas(props: SceneProps & { gpu: string | null }) {
           ? sel.roomId
           : null
       : null;
+  // Inside a hero room the room itself is the subject: no labels at all.
+  const focused = !!props.view.focus;
   const labels = useMemo(
-    () => roomLabels(props.project, vis.labelsFloorId, props.areaUnit, inRoom),
-    [props.project, vis.labelsFloorId, props.areaUnit, inRoom],
+    () => (focused ? [] : roomLabels(props.project, vis.labelsFloorId, props.areaUnit, inRoom)),
+    [props.project, vis.labelsFloorId, props.areaUnit, inRoom, focused],
   );
   const dpr = tierDpr(spec, typeof window !== "undefined" ? window.devicePixelRatio : 1);
   const editMode = props.mode !== "explore";

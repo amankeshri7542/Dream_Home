@@ -35,6 +35,7 @@ import { PhotoCapture } from "./PhotoCapture";
 import { TIERS, MEASURE_FRAMES } from "./quality/quality";
 import type { QualityTier } from "../editor/types";
 import { useSceneStore } from "./store";
+import { InteriorContext } from "./props/interior";
 
 const Effects = lazy(() => import("./effects/Effects"));
 
@@ -100,6 +101,12 @@ export function SceneRoot(props: RootProps) {
   });
 
   const vis = visibility(project, view);
+  // Room palettes, night lamps: what interior props need beyond their floor.
+  const interiorExplore = mode === "explore" || explore === "showcase";
+  const interior = useMemo(
+    () => ({ project, tier, explore: interiorExplore, furnishedFloorId: vis.furnishedFloorId }),
+    [project, tier, interiorExplore, vis.furnishedFloorId],
+  );
   const offset = plotOffset(project);
   const entrance = useMemo(() => (vis.stage >= 4 ? findEntrance(project) : null), [project, vis.stage]);
   const layout = useMemo(() => siteLayout(project, findEntrance(project)), [project]);
@@ -176,6 +183,7 @@ export function SceneRoot(props: RootProps) {
       <ShadowInvalidator version={version} />
       <SkyDome light={light} />
       <Lights light={light} shadowBox={shadowBox} mapSize={size.width < 768 ? spec.shadowMapSizeMobile : spec.shadowMapSize} entrance={entranceWorld} />
+      <InteriorContext.Provider value={interior}>
       <group position={offset}>
         <Ground project={project} ground={ground} library={library} light={light} />
         <Plot project={project} layout={layout} landscape={view.landscape} library={library} />
@@ -207,6 +215,7 @@ export function SceneRoot(props: RootProps) {
         {props.ghost && <Ghost project={project} ghost={props.ghost} offset={offset} />}
         <Night light={light} library={library} floors={nightFloors} />
       </group>
+      </InteriorContext.Provider>
       <CameraRig
         project={project}
         view={view}

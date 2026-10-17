@@ -22,11 +22,13 @@ import type {
 } from "../domain/types";
 import {
   DEFAULT_VIEW,
+  ROOM_TABS,
   editorReducer,
   initialEditorState,
   type EditorAction,
   type EditorState,
 } from "./state";
+import { neighbourRoom } from "./rooms";
 import {
   loadPreferences,
   savePreferences,
@@ -192,6 +194,14 @@ export function EditorProvider({
 
   const stateRef = useRef(state);
   stateRef.current = state;
+  const projectRef = useRef(project);
+  projectRef.current = project;
+  // The hero room was removed, set aside or undone away: back to the home.
+  useEffect(() => {
+    const f = state.focus;
+    if (f && !project.floors.some((fl) => fl.id === f.floorId && fl.rooms.some((r) => r.id === f.roomId)))
+      dispatch({ type: "leave-room" });
+  }, [project, state.focus]);
   const run = useCallback(
     (result: EditResult, label: string, opts: RunOptions = {}) => {
       const meta: HistoryMeta = {
@@ -245,7 +255,7 @@ export function EditorProvider({
     (meta: HistoryMeta | undefined, verb: "Undid" | "Redid") => {
       if (!meta) return;
       const target = meta.selection as SelectionTarget | null | undefined;
-      if (target) dispatch({ type: "select", target, origin: "canvas" });
+      if (target) dispatch({ type: "select", target, origin: "history" });
       if (meta.label)
         dispatch({ type: "notify", text: `${verb}: ${meta.label}`, tone: "info" });
     },
@@ -317,7 +327,12 @@ export function EditorProvider({
       if (!loadPreferences().singleKeyShortcuts) return;
       const s = stateRef.current;
       if (e.key === "?") dispatch({ type: "overlay", overlay: "shortcuts" });
-      else if (/^[1-5]$/.test(e.key))
+      else if (s.focus && /^[1-4]$/.test(e.key))
+        dispatch({ type: "room-tab", tab: ROOM_TABS[Number(e.key) - 1] });
+      else if (s.focus && (e.key === "[" || e.key === "]")) {
+        const next = neighbourRoom(projectRef.current, s.focus.roomId, e.key === "]" ? 1 : -1);
+        if (next) dispatch({ type: "enter-room", ...next });
+      } else if (/^[1-5]$/.test(e.key))
         dispatch({ type: "set-mode", mode: EDIT_MODES[Number(e.key) - 1] });
       else if (key === "p" && s.mode !== "explore")
         dispatch({ type: "lens", open: !s.lens });

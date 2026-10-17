@@ -3,6 +3,7 @@
 // so older saves round-trip byte-for-byte. Semantic rules live in feature modules.
 import { LIMITS } from "./limits";
 import type {
+  EdgeSide,
   FurnitureItem,
   LandscapeItem,
   OpeningKind,
@@ -39,6 +40,7 @@ const ROOF_STYLES = ["flat", "gable", "hip", "shed"];
 export const STYLE_PRESETS: readonly StylePreset[] = ["indian-modern", "indian-classic", "diorama"];
 export const RAILING_KINDS: readonly RailingKind[] = ["glass", "grille", "jaali"];
 const optBool = (v: unknown) => v === undefined || typeof v === "boolean";
+const EDGES: readonly EdgeSide[] = ["north", "south", "east", "west"];
 
 function checkOpening(v: unknown): v is PlacedOpening {
   return (
@@ -176,6 +178,11 @@ export function checkRoomExtras(r: Obj) {
     throw new Error("Project contains an invalid room finish.");
   if (!optStr(r.attachedTo) || (typeof r.attachedTo === "string" && r.attachedTo.length > 120))
     throw new Error("Project contains an invalid attached bathroom.");
+  if (
+    r.accentWall !== undefined &&
+    !(obj(r.accentWall) && EDGES.includes(r.accentWall.edge as EdgeSide) && str(r.accentWall.color))
+  )
+    throw new Error("Project contains an invalid room finish.");
   if (r.furniture === undefined) return;
   if (
     !Array.isArray(r.furniture) ||
@@ -208,9 +215,12 @@ export function checkProjectExtras(p: Obj) {
 }
 export function copyRoomExtras(
   room: Room,
-): Pick<Room, "floorMaterial" | "wallColor" | "furniture" | "attachedTo"> {
+): Pick<Room, "floorMaterial" | "wallColor" | "furniture" | "attachedTo" | "accentWall"> {
   return {
     ...(room.attachedTo !== undefined ? { attachedTo: room.attachedTo } : {}),
+    ...(room.accentWall !== undefined
+      ? { accentWall: { edge: room.accentWall.edge, color: room.accentWall.color } }
+      : {}),
     ...(room.floorMaterial !== undefined
       ? { floorMaterial: room.floorMaterial }
       : {}),

@@ -15,6 +15,14 @@ import {
   type WebGLProgramParametersWithUniforms,
 } from "three";
 import { CUT_PLANES } from "./cutPlane";
+import {
+  FOCUS_CLIP,
+  FOCUS_COLOR,
+  FOCUS_FRAGMENT_DECL,
+  FOCUS_VERTEX,
+  FOCUS_VERTEX_DECL,
+  focusUniforms,
+} from "./focus";
 import { UI_COLORS } from "./palette";
 
 export const RISE_SLOTS = 4;
@@ -63,7 +71,11 @@ uniform vec4 uPopY;
 #endif
 `;
 
-export type PatchOptions = { clip?: boolean; poche?: boolean; rise?: boolean; pop?: boolean };
+/**
+ * `focus`: "fade" tints everything outside the hero room; "cut" also cuts
+ * neighbouring walls down to a stub (see focus.ts).
+ */
+export type PatchOptions = { clip?: boolean; poche?: boolean; rise?: boolean; pop?: boolean; focus?: "fade" | "cut" };
 
 function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOptions) {
   const defines: string[] = [];
@@ -93,6 +105,20 @@ function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOpti
         "if (!gl_FrontFacing) gl_FragColor = vec4(uPoche, 1.0);\n#include <tonemapping_fragment>",
       );
   }
+  if (opts.focus) {
+    const define = opts.focus === "cut" ? "#define DH_FOCUS\n#define DH_FOCUS_CUT\n" : "#define DH_FOCUS\n";
+    Object.assign(shader.uniforms, focusUniforms);
+    shader.vertexShader =
+      define +
+      FOCUS_VERTEX_DECL +
+      shader.vertexShader.replace("#include <project_vertex>", "#include <project_vertex>\n" + FOCUS_VERTEX);
+    shader.fragmentShader =
+      define +
+      FOCUS_FRAGMENT_DECL +
+      shader.fragmentShader
+        .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\n" + FOCUS_CLIP)
+        .replace("#include <tonemapping_fragment>", FOCUS_COLOR + "\n#include <tonemapping_fragment>");
+  }
 }
 
 /** Apply patches to a material (idempotent per material instance). */
@@ -102,7 +128,8 @@ export function patchMaterial<T extends Material>(material: T, opts: PatchOption
     material.clipShadows = true;
   }
   if (opts.poche) material.side = DoubleSide;
-  const key = `dh:${opts.rise ? "r" : ""}${opts.pop ? "p" : ""}${opts.poche ? "c" : ""}`;
+  const key = `dh:${opts.rise ? "r" : ""}${opts.pop ? "p" : ""}${opts.poche ? "c" : ""}${opts.focus ? opts.focus[0] : ""}`;
+  if (opts.focus === "cut") material.userData.dhFocusCut = true;
   material.onBeforeCompile = (shader) => patchShader(shader, opts);
   material.customProgramCacheKey = () => key;
   material.needsUpdate = true;
@@ -114,7 +141,7 @@ let popDepth: MeshDepthMaterial | null = null;
 /** Shadow depth materials that replicate the rise / pop vertex motion. */
 export function riseDepthMaterial() {
   if (!riseDepth)
-    riseDepth = patchMaterial(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), { rise: true });
+    riseDepth = patchMaterial(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), { rise: true, focus: "cut" });
   return riseDepth;
 }
 export function popDepthMaterial() {

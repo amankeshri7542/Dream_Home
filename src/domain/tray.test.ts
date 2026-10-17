@@ -5,6 +5,7 @@ import {
   parseProject,
   projectStats,
   setFloorCount,
+  updateRoom,
   validateProject,
 } from "./model";
 import { componentIds } from "./geometry";
@@ -118,6 +119,10 @@ describe("room holding tray", () => {
     project = successful(addRoom(project, "f0", "bedroom"));
     const newRoom = project.floors[0].rooms.at(-1)!;
     expect(newRoom.id).not.toBe("room-bedroom");
+    // Fill the bedroom's old spot with the new room.
+    project = successful(
+      updateRoom(project, "f0", newRoom.id, { bounds: { ...sketch().floors[0].rooms[0].bounds } }),
+    );
     const restored = successful(
       restoreStagedRoom(project, "room-bedroom", "f0"),
     );

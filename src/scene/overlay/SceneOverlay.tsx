@@ -102,9 +102,15 @@ export function SceneOverlay({ project, labels, selection, ghost, registry, onSe
           className={`scene-room-label${selectedId === l.id ? " selected" : ""}`}
           style={{ visibility: "hidden" }}
           role="button"
-          tabIndex={-1}
+          tabIndex={0}
+          aria-label={`Open ${l.name}`}
           onClick={(e) => {
             e.stopPropagation();
+            onSelect({ kind: "room", floorId: l.floorId, id: l.id });
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
             onSelect({ kind: "room", floorId: l.floorId, id: l.id });
           }}
         >

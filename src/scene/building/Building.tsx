@@ -6,8 +6,9 @@ import type { Group, Mesh } from "three";
 import type { Project } from "../../domain/types";
 import { PICKABLE, type EditorMode, type SelectionTarget } from "../../editor/types";
 import type { SceneView } from "../types";
-import { easeInOutCubic, floorBase } from "../coords";
+import { FLOOR_SURFACE, easeInOutCubic, floorBase, plotOffset } from "../coords";
 import { CUT_OFF, cutHeight, setCutHeight } from "../materials/cutPlane";
+import { focusState, setFocus, setFocusMix } from "../materials/focus";
 import type { MaterialLibrary } from "../materials/library";
 import { useSceneStore } from "../store";
 import { FloorView, type Interaction, type PickKind } from "./FloorView";
@@ -83,6 +84,50 @@ export function Building({ project, view, mode, library, aoStrips, reducedMotion
       () => setCutHeight(targetCut),
     );
   }, [targetCut, topWall, reducedMotion, store, gl, invalidate]);
+
+  // Dollhouse hero room: neighbours fade and drop to a stub; the room glows.
+  const focusKey = useMemo(() => {
+    const f = view.focus;
+    const floor = f ? project.floors.find((x) => x.id === f.floorId) : undefined;
+    const room = floor?.rooms.find((r) => r.id === f!.roomId);
+    if (!f || !floor || !room) return null;
+    const [ox, , oz] = plotOffset(project);
+    const pad = 0.14;
+    return JSON.stringify({
+      x0: room.bounds.x / 100 + ox - pad,
+      z0: room.bounds.z / 100 + oz - pad,
+      x1: (room.bounds.x + room.bounds.w) / 100 + ox + pad,
+      z1: (room.bounds.z + room.bounds.d) / 100 + oz + pad,
+      stubY: floorBase(floor) + FLOOR_SURFACE + 0.3,
+      soft: !!f.soft,
+    });
+  }, [view.focus, project]);
+  useEffect(() => {
+    const target = focusKey ? (JSON.parse(focusKey) as { x0: number; z0: number; x1: number; z1: number; stubY: number; soft: boolean }) : null;
+    const fadeTo = target ? (target.soft ? 0.3 : 1) : 0,
+      glowTo = target && !target.soft ? 0.85 : 0;
+    const fadeFrom = focusState.active ? focusState.fade : 0;
+    if (target) setFocus(target, target.soft ? 1e6 : target.stubY);
+    const done = () => {
+      setFocusMix(fadeTo, glowTo);
+      if (!target) setFocus(null);
+      gl.shadowMap.needsUpdate = true;
+      invalidate();
+    };
+    if (reducedMotion || Math.abs(fadeFrom - fadeTo) < 0.001) {
+      done();
+      return;
+    }
+    return store.tween(
+      0.45,
+      (t) => {
+        const k = easeInOutCubic(t);
+        setFocusMix(fadeFrom + (fadeTo - fadeFrom) * k, glowTo * k);
+        gl.shadowMap.needsUpdate = true;
+      },
+      done,
+    );
+  }, [focusKey, reducedMotion, store, gl, invalidate]);
 
   const furnished = models.find((m) => m.floor.id === vis.furnishedFloorId && m.stage >= 4);
   const pickFurniture = useMemo(

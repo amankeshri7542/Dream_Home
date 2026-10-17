@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 import { createPreset, migrateV1 } from "../src/domain/model";
 import type { Project } from "../src/domain/types";
@@ -6,16 +6,20 @@ import { RESIZE_HANDLES, resizeBounds } from "../src/domain/resize";
 
 import {
   KEY,
+  ROOM_ACTIONS,
   chooseFloor,
   closeDetails,
   controls,
+  dock,
   freshVisit,
   history,
+  homeAction,
   mobile,
   noOverflow,
   openPlan,
   redo,
   renderedModel,
+  roomTab,
   stableBox,
   seed,
   showDetails,
@@ -128,7 +132,7 @@ test("old Hindi preference normalizes to English and keeps units", async ({
   );
   await freshVisit(page);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(controls(page, "Rooms")).toBeVisible();
+  await expect(homeAction(page, "Add room")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Hindi", exact: true }),
   ).toHaveCount(0);
@@ -174,6 +178,7 @@ test("room list editing updates plan, undo/redo and persisted dimensions", async
   await openPlan(page);
   await controls(page, "Rooms").click();
   await page.locator(".room-card").filter({ hasText: "Living room" }).click();
+  await roomTab(page, "Layout").click();
   const width = page.getByRole("spinbutton", {
     name: "Room width",
     exact: true,
@@ -251,9 +256,9 @@ test("actual 3D picking, orbit and construction views render without service req
     labelBox.y + labelBox.height / 2,
   );
   await expect(
-    page.getByRole("complementary", { name: "Kitchen", exact: true }),
+    page.getByRole("complementary", { name: "Kitchen studio", exact: true }),
   ).toBeVisible();
-  await showDetails(page);
+  await roomTab(page, "Layout").click();
   await expect(
     page.getByRole("spinbutton", { name: "Room width", exact: true }),
   ).toBeVisible();
@@ -300,7 +305,7 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
   const rect = page.locator(".plan-room").first().locator("rect").first();
   await rect.click();
   await expect(
-    page.getByRole("complementary", { name: fixture.floors[0].rooms[0].name }),
+    page.getByRole("complementary", { name: `${fixture.floors[0].rooms[0].name} studio` }),
   ).toBeVisible();
   expect((await stored(page)).floors[0].rooms[0].bounds).toEqual(
     fixture.floors[0].rooms[0].bounds,
@@ -330,7 +335,9 @@ test("mobile plan taps never move rooms; explicit dragging commits after pointer
   expect((await stored(page)).floors[0].rooms[0].bounds.x).toBe(
     fixture.floors[0].rooms[0].bounds.x,
   );
-  await tool(page, "Move").click();
+  // Moving happens inside the room: open it from the plan, then Move.
+  await rect.click();
+  await dock(page, "Move").click();
   await dragRoom(true);
   await undo(page);
   expect((await stored(page)).floors[0].rooms[0].bounds.x).toBe(
@@ -350,9 +357,11 @@ test("key mobile controls are 48px and remain within 360, 390 and 430px screens"
     }
     await noOverflow(page);
     for (const button of [
-      controls(page, "My plot"),
-      controls(page, "Rooms"),
-      controls(page, "View"),
+      homeAction(page, "Add room"),
+      homeAction(page, "Outside"),
+      homeAction(page, "Explore"),
+      homeAction(page, "Design with AI"),
+      controls(page, "View") as Locator,
       page.getByRole("button", { name: "Fit home", exact: true }),
       page.getByRole("button", { name: "Undo last change", exact: true }),
       page.getByRole("button", { name: "More options", exact: true }),
@@ -378,10 +387,7 @@ test("key mobile controls are 48px and remain within 360, 390 and 430px screens"
   await page.getByRole("button", { name: "Fit plan", exact: true }).click();
   await expect(svg).toHaveAttribute("viewBox", original!);
   async function controlsDoNotOverlap() {
-    const movement = (await page
-      .getByRole("toolbar", { name: "Building tools" })
-      .getByRole("button", { name: "Move", exact: true })
-      .boundingBox())!;
+    const movement = (await page.getByRole("toolbar", { name: "Home actions" }).boundingBox())!;
     for (const tool of await page.locator(".plan-tools button").all()) {
       const box = (await tool.boundingBox())!;
       const overlap =
@@ -391,7 +397,7 @@ test("key mobile controls are 48px and remain within 360, 390 and 430px screens"
           Math.max(movement.y, box.y);
       expect(
         overlap,
-        "Plan zoom controls must not cover the Move rooms action",
+        "Plan zoom controls must not cover the Home bar",
       ).toBe(false);
     }
   }
@@ -513,6 +519,7 @@ test("WebGL fallback leaves the 2D plan editable", async ({ page }) => {
   await expect(page.locator(".plan-svg")).toBeVisible();
   await controls(page, "Rooms").click();
   await page.locator(".room-card").first().click();
+  await roomTab(page, "Layout").click();
   await expect(
     page.getByRole("spinbutton", { name: "Room width", exact: true }),
   ).toBeVisible();
@@ -695,7 +702,7 @@ test("catalog, rotation, duplication, building expansion and exterior finish per
 }) => {
   await seed(page, sparseHome(), "m");
   await builderTool(page, "Add space").click();
-  const dialog = page.getByRole("region", { name: "Add space", exact: true });
+  const dialog = page.getByRole("region", { name: "Add room", exact: true });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Compact", exact: true }).click();
   await dialog.getByRole("button", { name: /^Study / }).click();
@@ -707,6 +714,8 @@ test("catalog, rotation, duplication, building expansion and exterior finish per
     .poll(async () => (await stored(page)).floors[0].rooms.length)
     .toBe(3);
   const oldRoom = (await stored(page)).floors[0].rooms.at(-1)!;
+  // The new room opens as the hero; its Layout tab rotates and copies it.
+  await roomTab(page, "Layout").click();
   await page.getByRole("button", { name: "Rotate", exact: true }).click();
   await expect
     .poll(async () => (await stored(page)).floors[0].rooms.at(-1)!.bounds.w)
@@ -750,11 +759,10 @@ test("desktop Plan + 3D shows synchronized geometry without overlapping building
   // The plan docks beside the tools; the 3D canvas never resizes or remounts.
   expect(await page.locator("canvas").boundingBox()).toEqual(canvasBefore);
   const plan = (await page.locator(".plan-pane").boundingBox())!;
-  const tools = (await page
-    .getByRole("toolbar", { name: "Building tools" })
-    .boundingBox())!;
-  expect(plan.x).toBeGreaterThanOrEqual(tools.x + tools.width);
+  const topbar = (await page.locator("[data-chrome=topbar]").boundingBox())!;
+  expect(plan.y).toBeGreaterThanOrEqual(topbar.y + topbar.height);
   await page.locator(".plan-room").first().locator("rect").first().click();
+  await roomTab(page, "Layout").click();
   const width = page.getByRole("spinbutton", {
     name: "Room width",
     exact: true,
@@ -779,12 +787,12 @@ test("short mobile multi-floor plan keeps selection, floors and zoom reachable",
   await page.locator(".plan-room").first().locator("rect").first().click();
   await chooseFloor(page, "Floor 1");
   await page.locator(".plan-room").first().locator("rect").first().click();
-  await expect(page.getByRole("toolbar", { name: /actions$/ })).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: ROOM_ACTIONS })).toBeVisible();
   const boxes = await Promise.all([
     page.locator(".dh-lens-title").boundingBox(),
     page.locator(".dh-lens-floors").boundingBox(),
     page.locator(".plan-tools").boundingBox(),
-    page.getByRole("toolbar", { name: /actions$/ }).boundingBox(),
+    page.getByRole("toolbar", { name: ROOM_ACTIONS }).boundingBox(),
   ]);
   for (let i = 0; i < boxes.length; i++) {
     const a = boxes[i]!;
@@ -834,7 +842,8 @@ test("available plot space preserves upper balconies and undo", async ({
 test("fit view restores the camera after using zoom buttons", async ({
   page,
 }) => {
-  await page.setViewportSize(mobile);
+  // Zoom buttons are a desktop control; phones pinch.
+  await page.setViewportSize({ width: 1280, height: 800 });
   await seed(page, createPreset("compact"));
   await renderedModel(page);
   // The renderer's debug bridge reports the camera distance to its target.
@@ -870,6 +879,7 @@ test("inspecting a minimum-sized room does not invalidate rounded feet", async (
   await seed(page, original);
   await controls(page, "Rooms").click();
   await page.locator(".room-card").first().click();
+  await roomTab(page, "Layout").click();
   const width = page.getByRole("spinbutton", {
     name: "Room width",
     exact: true,
@@ -1033,9 +1043,7 @@ test("tray drags survive an unrelated pointer cancellation and cancel safely wit
   const room = fixture.floors[0].rooms.shift()!;
   fixture.stagedRooms = [{ room, sourceFloorId: fixture.floors[0].id }];
   await seed(page, fixture, "m");
-  await page
-    .getByRole("button", { name: "Room tray, 1 piece", exact: true })
-    .click();
+  await tool(page, "Tray").click();
   const grip = page.getByRole("button", {
     name: `Place ${room.name} from tray`,
     exact: true,
@@ -1100,9 +1108,7 @@ test("tray drags survive an unrelated pointer cancellation and cancel safely wit
     .click();
   await page.getByRole("button", { name: "Close floor plan", exact: true }).click();
   await openPlan(page);
-  await page
-    .getByRole("button", { name: "Room tray, 1 piece", exact: true })
-    .click();
+  await tool(page, "Tray").click();
   expect(await stored(page)).toEqual(fixture);
   await page
     .getByRole("button", { name: `Find a spot for ${room.name}`, exact: true })
@@ -1128,9 +1134,7 @@ test("native phone touch restores a tray piece and resizes its top left corner",
       room = fixture.floors[0].rooms.shift()!;
     fixture.stagedRooms = [{ room, sourceFloorId: fixture.floors[0].id }];
     await seed(page, fixture, "m");
-    await page
-      .getByRole("button", { name: "Room tray, 1 piece", exact: true })
-      .tap();
+    await tool(page, "Tray").tap();
     const grip = (await page
       .getByRole("button", {
         name: `Place ${room.name} from tray`,
@@ -1179,8 +1183,10 @@ test("native phone touch restores a tray piece and resizes its top left corner",
     expect(
       (await stored(page)).floors[0].rooms.find((item) => item.id === room.id),
     ).toEqual(room);
+    // The placed room opens as the hero; resizing lives in its Layout tab.
+    await roomTab(page, "Layout").tap();
     await page
-      .getByRole("toolbar", { name: /actions$/ })
+      .getByRole("toolbar", { name: ROOM_ACTIONS })
       .getByRole("button", { name: "Edit in 2D", exact: true })
       .tap();
     const corner = page.locator('[data-resize-handle="nw"]');

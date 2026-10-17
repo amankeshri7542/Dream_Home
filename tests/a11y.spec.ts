@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test, expect, type Page } from "@playwright/test";
 import { createPreset } from "../src/domain/model";
-import { mobile, seed } from "./support/dreamHome";
+import { enterRoom, goHome, homeAction, mobile, roomTab, seed } from "./support/dreamHome";
 
 // axe-core is injected as a plain script: its UMD bundle must not go through
 // the test transpiler (node_modules is a symlink in this checkout).
@@ -28,23 +28,30 @@ async function audit(page: Page, label: string) {
   expect(serious, `${label} accessibility`).toEqual([]);
 }
 
-const MODES = ["Build", "Doors & windows", "Decorate", "Outside", "Explore"];
-
 for (const [name, size] of [
   ["phone", mobile],
   ["desktop", { width: 1440, height: 1000 }],
 ] as const) {
-  test(`every mode passes automated accessibility checks on ${name}`, async ({ page }) => {
+  test(`home, every room tab, Outside and Explore pass automated accessibility checks on ${name}`, async ({ page }) => {
     await page.setViewportSize(size);
-    await seed(page, createPreset("compact"));
-    for (const mode of MODES) {
-      await page
-        .getByRole("navigation", { name: "Modes" })
-        .getByRole("button", { name: mode, exact: true })
-        .click();
-      await audit(page, mode);
-      if (mode === "Explore") await page.getByRole("button", { name: "Back to building" }).click();
+    const project = createPreset("compact");
+    await seed(page, project);
+    await audit(page, "home");
+    await enterRoom(page, project.floors[0].rooms[0].name);
+    for (const tab of ["Furniture", "Colours", "Layout", "Doors"]) {
+      await roomTab(page, tab).click();
+      await audit(page, `room ${tab}`);
     }
+    await goHome(page);
+    await homeAction(page, "Add room").click();
+    await audit(page, "add room");
+    await goHome(page);
+    await homeAction(page, "Outside").click();
+    await audit(page, "outside");
+    await goHome(page);
+    await homeAction(page, "Explore").click();
+    await audit(page, "explore");
+    await page.getByRole("button", { name: "Back to building" }).click();
   });
 }
 

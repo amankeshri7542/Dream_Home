@@ -4,7 +4,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
 [
   {
     "floor": "floor-0",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -39,7 +39,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-0-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -434,7 +442,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-1",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -469,7 +477,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-1-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -864,7 +880,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-2",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -899,7 +915,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-2-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -1294,7 +1318,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-3",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -1329,7 +1353,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-3-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -1724,7 +1756,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-4",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -1759,7 +1791,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-4-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -2154,7 +2194,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-5",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -2189,7 +2229,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-5-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -2584,7 +2632,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-6",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -2619,7 +2667,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-6-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -3014,7 +3070,7 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
   },
   {
     "floor": "floor-7",
-    "furnishings": "b6cf24d6",
+    "furnishings": "9695c90e",
     "walls": [
       {
         "exterior": false,
@@ -3049,7 +3105,15 @@ exports[`golden derived geometry > keeps blueprint-apartments-8f walls, openings
       {
         "exterior": false,
         "id": "floor-7-x-2600-1850-2340",
-        "openings": [],
+        "openings": [
+          {
+            "center": 2095,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -3622,7 +3686,7 @@ exports[`golden derived geometry > keeps blueprint-home-1f walls, openings and f
 [
   {
     "floor": "floor-0",
-    "furnishings": "7d4e685c",
+    "furnishings": "ac88aa8d",
     "walls": [
       {
         "exterior": false,
@@ -3676,15 +3740,7 @@ exports[`golden derived geometry > keeps blueprint-home-1f walls, openings and f
       {
         "exterior": false,
         "id": "floor-0-x-460-60-510",
-        "openings": [
-          {
-            "center": 285,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -3720,7 +3776,15 @@ exports[`golden derived geometry > keeps blueprint-home-1f walls, openings and f
       {
         "exterior": false,
         "id": "floor-0-x-860-60-510",
-        "openings": [],
+        "openings": [
+          {
+            "center": 285,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -3855,7 +3919,7 @@ exports[`golden derived geometry > keeps blueprint-home-3f-east walls, openings 
 [
   {
     "floor": "floor-0",
-    "furnishings": "2d7d835e",
+    "furnishings": "189c4479",
     "walls": [
       {
         "exterior": false,
@@ -4066,7 +4130,15 @@ exports[`golden derived geometry > keeps blueprint-home-3f-east walls, openings 
       {
         "exterior": false,
         "id": "floor-0-z-810-390-720",
-        "openings": [],
+        "openings": [
+          {
+            "center": 555,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -4082,7 +4154,7 @@ exports[`golden derived geometry > keeps blueprint-home-3f-east walls, openings 
   },
   {
     "floor": "floor-1",
-    "furnishings": "5d58a62f",
+    "furnishings": "474ef130",
     "walls": [
       {
         "exterior": true,
@@ -4139,7 +4211,15 @@ exports[`golden derived geometry > keeps blueprint-home-3f-east walls, openings 
       {
         "exterior": false,
         "id": "floor-1-x-510-70-440",
-        "openings": [],
+        "openings": [
+          {
+            "center": 255,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": true,
@@ -4250,15 +4330,7 @@ exports[`golden derived geometry > keeps blueprint-home-3f-east walls, openings 
       {
         "exterior": false,
         "id": "floor-1-z-70-60-510",
-        "openings": [
-          {
-            "center": 285,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -4279,7 +4351,7 @@ exports[`golden derived geometry > keeps blueprint-home-3f-east walls, openings 
   },
   {
     "floor": "floor-2",
-    "furnishings": "87ce359b",
+    "furnishings": "8dd84f9f",
     "walls": [
       {
         "exterior": true,
@@ -4440,7 +4512,7 @@ exports[`golden derived geometry > keeps blueprint-home-courtyard walls, opening
 [
   {
     "floor": "floor-0",
-    "furnishings": "ba810cda",
+    "furnishings": "c8b1d10b",
     "walls": [
       {
         "exterior": true,
@@ -4471,7 +4543,15 @@ exports[`golden derived geometry > keeps blueprint-home-courtyard walls, opening
       {
         "exterior": false,
         "id": "floor-0-x-1060-660-790",
-        "openings": [],
+        "openings": [
+          {
+            "center": 725,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -4745,7 +4825,7 @@ exports[`golden derived geometry > keeps blueprint-home-duplex walls, openings a
 [
   {
     "floor": "floor-0",
-    "furnishings": "8c2933a6",
+    "furnishings": "597750b7",
     "walls": [
       {
         "exterior": false,
@@ -4952,7 +5032,7 @@ exports[`golden derived geometry > keeps blueprint-home-duplex walls, openings a
   },
   {
     "floor": "floor-1",
-    "furnishings": "4f246c46",
+    "furnishings": "dfdce625",
     "walls": [
       {
         "exterior": false,
@@ -5136,7 +5216,7 @@ exports[`golden derived geometry > keeps blueprint-home-villa walls, openings an
 [
   {
     "floor": "floor-0",
-    "furnishings": "8bc559d9",
+    "furnishings": "241410a8",
     "walls": [
       {
         "exterior": true,
@@ -5172,15 +5252,7 @@ exports[`golden derived geometry > keeps blueprint-home-villa walls, openings an
       {
         "exterior": false,
         "id": "floor-0-x-370-60-510",
-        "openings": [
-          {
-            "center": 285,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -5216,7 +5288,15 @@ exports[`golden derived geometry > keeps blueprint-home-villa walls, openings an
       {
         "exterior": false,
         "id": "floor-0-x-680-60-510",
-        "openings": [],
+        "openings": [
+          {
+            "center": 285,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -5369,7 +5449,7 @@ exports[`golden derived geometry > keeps blueprint-market-2f walls, openings and
 [
   {
     "floor": "floor-0",
-    "furnishings": "bc89d528",
+    "furnishings": "379ce208",
     "walls": [
       {
         "exterior": false,
@@ -5451,15 +5531,7 @@ exports[`golden derived geometry > keeps blueprint-market-2f walls, openings and
       {
         "exterior": false,
         "id": "floor-0-z-1140-60-1420",
-        "openings": [
-          {
-            "center": 740,
-            "height": 220,
-            "kind": "door",
-            "sill": 0,
-            "width": 100,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -5516,13 +5588,21 @@ exports[`golden derived geometry > keeps blueprint-market-2f walls, openings and
       {
         "exterior": false,
         "id": "floor-0-z-660-60-1420",
-        "openings": [],
+        "openings": [
+          {
+            "center": 740,
+            "height": 220,
+            "kind": "door",
+            "sill": 0,
+            "width": 100,
+          },
+        ],
       },
     ],
   },
   {
     "floor": "floor-1",
-    "furnishings": "bc89d528",
+    "furnishings": "379ce208",
     "walls": [
       {
         "exterior": false,
@@ -5604,15 +5684,7 @@ exports[`golden derived geometry > keeps blueprint-market-2f walls, openings and
       {
         "exterior": false,
         "id": "floor-1-z-1140-60-1420",
-        "openings": [
-          {
-            "center": 740,
-            "height": 220,
-            "kind": "door",
-            "sill": 0,
-            "width": 100,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -5669,7 +5741,15 @@ exports[`golden derived geometry > keeps blueprint-market-2f walls, openings and
       {
         "exterior": false,
         "id": "floor-1-z-660-60-1420",
-        "openings": [],
+        "openings": [
+          {
+            "center": 740,
+            "height": 220,
+            "kind": "door",
+            "sill": 0,
+            "width": 100,
+          },
+        ],
       },
     ],
   },
@@ -5680,7 +5760,7 @@ exports[`golden derived geometry > keeps preset-compact walls, openings and furn
 [
   {
     "floor": "floor-0",
-    "furnishings": "7e11c97d",
+    "furnishings": "137b91d8",
     "walls": [
       {
         "exterior": false,
@@ -5934,20 +6014,12 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
 [
   {
     "floor": "floor-0",
-    "furnishings": "71a30c96",
+    "furnishings": "aa1846c4",
     "walls": [
       {
         "exterior": false,
         "id": "floor-0-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -6071,15 +6143,7 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
       {
         "exterior": false,
         "id": "floor-0-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -6107,7 +6171,15 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
       {
         "exterior": false,
         "id": "floor-0-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -6223,7 +6295,15 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
       {
         "exterior": false,
         "id": "floor-0-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -6268,20 +6348,12 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
   },
   {
     "floor": "floor-1",
-    "furnishings": "ba9291e7",
+    "furnishings": "4601d183",
     "walls": [
       {
         "exterior": false,
         "id": "floor-1-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -6415,15 +6487,7 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
       {
         "exterior": false,
         "id": "floor-1-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -6451,7 +6515,15 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
       {
         "exterior": false,
         "id": "floor-1-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -6567,7 +6639,15 @@ exports[`golden derived geometry > keeps preset-courtyard walls, openings and fu
       {
         "exterior": false,
         "id": "floor-1-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -6617,20 +6697,12 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
 [
   {
     "floor": "floor-0",
-    "furnishings": "71a30c96",
+    "furnishings": "aa1846c4",
     "walls": [
       {
         "exterior": false,
         "id": "floor-0-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -6728,15 +6800,7 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
       {
         "exterior": false,
         "id": "floor-0-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -6751,7 +6815,15 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
       {
         "exterior": false,
         "id": "floor-0-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -6867,7 +6939,15 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
       {
         "exterior": false,
         "id": "floor-0-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -6899,20 +6979,12 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
   },
   {
     "floor": "floor-1",
-    "furnishings": "ba9291e7",
+    "furnishings": "4601d183",
     "walls": [
       {
         "exterior": false,
         "id": "floor-1-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -7020,15 +7092,7 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
       {
         "exterior": false,
         "id": "floor-1-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -7043,7 +7107,15 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
       {
         "exterior": false,
         "id": "floor-1-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -7159,7 +7231,15 @@ exports[`golden derived geometry > keeps preset-family walls, openings and furni
       {
         "exterior": false,
         "id": "floor-1-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -7196,7 +7276,7 @@ exports[`golden derived geometry > keeps starter-courtyard-610x1219-1b-1f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "1dab0b59",
+    "furnishings": "8165d010",
     "walls": [
       {
         "exterior": true,
@@ -7293,7 +7373,15 @@ exports[`golden derived geometry > keeps starter-courtyard-610x1219-1b-1f walls,
       {
         "exterior": false,
         "id": "floor-0-x-850-60-280",
-        "openings": [],
+        "openings": [
+          {
+            "center": 170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": true,
@@ -7311,15 +7399,7 @@ exports[`golden derived geometry > keeps starter-courtyard-610x1219-1b-1f walls,
       {
         "exterior": false,
         "id": "floor-0-z-280-570-850",
-        "openings": [
-          {
-            "center": 710,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -7447,7 +7527,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-1b-1f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "5cda11cd",
+    "furnishings": "46ba1901",
     "walls": [
       {
         "exterior": true,
@@ -7552,7 +7632,15 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-1b-1f walls,
       {
         "exterior": false,
         "id": "floor-0-x-940-60-580",
-        "openings": [],
+        "openings": [
+          {
+            "center": 320,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": true,
@@ -7698,7 +7786,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-1b-2f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "a808d717",
+    "furnishings": "f3de8926",
     "walls": [
       {
         "exterior": false,
@@ -7967,7 +8055,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-1b-2f walls,
   },
   {
     "floor": "floor-1",
-    "furnishings": "3cd7c18f",
+    "furnishings": "e73f924d",
     "walls": [
       {
         "exterior": false,
@@ -8177,7 +8265,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-2b-1f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "b339a437",
+    "furnishings": "ba82d65a",
     "walls": [
       {
         "exterior": true,
@@ -8300,7 +8388,15 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-2b-1f walls,
       {
         "exterior": false,
         "id": "floor-0-x-940-60-580",
-        "openings": [],
+        "openings": [
+          {
+            "center": 320,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": true,
@@ -8451,7 +8547,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-2b-2f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "a808d717",
+    "furnishings": "f3de8926",
     "walls": [
       {
         "exterior": false,
@@ -8720,7 +8816,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-2b-2f walls,
   },
   {
     "floor": "floor-1",
-    "furnishings": "a370f249",
+    "furnishings": "80815e0e",
     "walls": [
       {
         "exterior": false,
@@ -8938,7 +9034,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-3b-1f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "1c2d716d",
+    "furnishings": "f1a4c79e",
     "walls": [
       {
         "exterior": false,
@@ -8948,7 +9044,15 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-3b-1f walls,
       {
         "exterior": false,
         "id": "floor-0-x-1160-60-580",
-        "openings": [],
+        "openings": [
+          {
+            "center": 320,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": true,
@@ -9243,7 +9347,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-3b-2f walls,
 [
   {
     "floor": "floor-0",
-    "furnishings": "a808d717",
+    "furnishings": "f3de8926",
     "walls": [
       {
         "exterior": false,
@@ -9512,7 +9616,7 @@ exports[`golden derived geometry > keeps starter-courtyard-914x1524-3b-2f walls,
   },
   {
     "floor": "floor-1",
-    "furnishings": "d1e0b4c3",
+    "furnishings": "d9b693fc",
     "walls": [
       {
         "exterior": false,
@@ -9753,7 +9857,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-1b-1f walls
 [
   {
     "floor": "floor-0",
-    "furnishings": "8f55f830",
+    "furnishings": "ac2abc68",
     "walls": [
       {
         "exterior": true,
@@ -9843,7 +9947,15 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-1b-1f walls
       {
         "exterior": false,
         "id": "floor-0-x-660-660-790",
-        "openings": [],
+        "openings": [
+          {
+            "center": 725,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -10004,7 +10116,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-1b-2f walls
 [
   {
     "floor": "floor-0",
-    "furnishings": "5de9b805",
+    "furnishings": "f04ae473",
     "walls": [
       {
         "exterior": false,
@@ -10268,7 +10380,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-1b-2f walls
   },
   {
     "floor": "floor-1",
-    "furnishings": "60059c6c",
+    "furnishings": "f21dc412",
     "walls": [
       {
         "exterior": false,
@@ -10473,7 +10585,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-2b-1f walls
 [
   {
     "floor": "floor-0",
-    "furnishings": "7be0a8c8",
+    "furnishings": "73224d62",
     "walls": [
       {
         "exterior": true,
@@ -10581,7 +10693,15 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-2b-1f walls
       {
         "exterior": false,
         "id": "floor-0-x-660-660-790",
-        "openings": [],
+        "openings": [
+          {
+            "center": 725,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -10747,7 +10867,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-2b-2f walls
 [
   {
     "floor": "floor-0",
-    "furnishings": "5de9b805",
+    "furnishings": "f04ae473",
     "walls": [
       {
         "exterior": false,
@@ -11011,7 +11131,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-2b-2f walls
   },
   {
     "floor": "floor-1",
-    "furnishings": "a2728327",
+    "furnishings": "06ceb89b",
     "walls": [
       {
         "exterior": false,
@@ -11224,7 +11344,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-3b-1f walls
 [
   {
     "floor": "floor-0",
-    "furnishings": "ba810cda",
+    "furnishings": "c8b1d10b",
     "walls": [
       {
         "exterior": true,
@@ -11255,7 +11375,15 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-3b-1f walls
       {
         "exterior": false,
         "id": "floor-0-x-1060-660-790",
-        "openings": [],
+        "openings": [
+          {
+            "center": 725,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -11529,7 +11657,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-3b-2f walls
 [
   {
     "floor": "floor-0",
-    "furnishings": "5de9b805",
+    "furnishings": "f04ae473",
     "walls": [
       {
         "exterior": false,
@@ -11793,7 +11921,7 @@ exports[`golden derived geometry > keeps starter-courtyard-1219x1829-3b-2f walls
   },
   {
     "floor": "floor-1",
-    "furnishings": "c8328c89",
+    "furnishings": "85120025",
     "walls": [
       {
         "exterior": false,
@@ -12029,7 +12157,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-1b-1f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "bfc4b456",
+    "furnishings": "c9bc0bbe",
     "walls": [
       {
         "exterior": true,
@@ -12085,20 +12213,20 @@ exports[`golden derived geometry > keeps starter-family-610x1219-1b-1f walls, op
       {
         "exterior": false,
         "id": "floor-0-x-740-60-280",
-        "openings": [],
-      },
-      {
-        "exterior": false,
-        "id": "floor-0-z-280-460-740",
         "openings": [
           {
-            "center": 600,
+            "center": 170,
             "height": 215,
             "kind": "door",
             "sill": 0,
             "width": 90,
           },
         ],
+      },
+      {
+        "exterior": false,
+        "id": "floor-0-z-280-460-740",
+        "openings": [],
       },
       {
         "exterior": false,
@@ -12200,7 +12328,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-1b-2f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "7c28ea82",
+    "furnishings": "f5982372",
     "walls": [
       {
         "exterior": true,
@@ -12394,7 +12522,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-1b-2f walls, op
   },
   {
     "floor": "floor-1",
-    "furnishings": "f3eabdb7",
+    "furnishings": "301913e0",
     "walls": [
       {
         "exterior": true,
@@ -12547,7 +12675,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-2b-1f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "294dac60",
+    "furnishings": "8eb6954b",
     "walls": [
       {
         "exterior": true,
@@ -12608,20 +12736,20 @@ exports[`golden derived geometry > keeps starter-family-610x1219-2b-1f walls, op
       {
         "exterior": false,
         "id": "floor-0-x-870-60-280",
-        "openings": [],
-      },
-      {
-        "exterior": false,
-        "id": "floor-0-z-280-620-870",
         "openings": [
           {
-            "center": 745,
+            "center": 170,
             "height": 215,
             "kind": "door",
             "sill": 0,
             "width": 90,
           },
         ],
+      },
+      {
+        "exterior": false,
+        "id": "floor-0-z-280-620-870",
+        "openings": [],
       },
       {
         "exterior": false,
@@ -12749,7 +12877,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-2b-2f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "7c28ea82",
+    "furnishings": "f5982372",
     "walls": [
       {
         "exterior": true,
@@ -12943,7 +13071,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-2b-2f walls, op
   },
   {
     "floor": "floor-1",
-    "furnishings": "703357ee",
+    "furnishings": "bebe1aae",
     "walls": [
       {
         "exterior": true,
@@ -13096,7 +13224,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-3b-2f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "7c28ea82",
+    "furnishings": "f5982372",
     "walls": [
       {
         "exterior": true,
@@ -13290,7 +13418,7 @@ exports[`golden derived geometry > keeps starter-family-610x1219-3b-2f walls, op
   },
   {
     "floor": "floor-1",
-    "furnishings": "2fc00a3a",
+    "furnishings": "68d6b02e",
     "walls": [
       {
         "exterior": true,
@@ -13471,7 +13599,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-1b-1f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "4b99eabf",
+    "furnishings": "db75fdaa",
     "walls": [
       {
         "exterior": true,
@@ -13655,7 +13783,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-1b-2f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "df0579b5",
+    "furnishings": "eda42069",
     "walls": [
       {
         "exterior": false,
@@ -13862,7 +13990,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-1b-2f walls, op
   },
   {
     "floor": "floor-1",
-    "furnishings": "69150543",
+    "furnishings": "155d6942",
     "walls": [
       {
         "exterior": false,
@@ -14015,7 +14143,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-2b-1f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "17a1c934",
+    "furnishings": "2dac033b",
     "walls": [
       {
         "exterior": true,
@@ -14048,7 +14176,15 @@ exports[`golden derived geometry > keeps starter-family-914x1524-2b-1f walls, op
       {
         "exterior": false,
         "id": "floor-0-x-460-60-400",
-        "openings": [],
+        "openings": [
+          {
+            "center": 230,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -14107,15 +14243,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-2b-1f walls, op
       {
         "exterior": false,
         "id": "floor-0-z-400-60-460",
-        "openings": [
-          {
-            "center": 260,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -14222,7 +14350,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-2b-2f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "df0579b5",
+    "furnishings": "eda42069",
     "walls": [
       {
         "exterior": false,
@@ -14429,7 +14557,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-2b-2f walls, op
   },
   {
     "floor": "floor-1",
-    "furnishings": "6499fb67",
+    "furnishings": "33e908b7",
     "walls": [
       {
         "exterior": false,
@@ -14590,7 +14718,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-3b-1f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "7770f364",
+    "furnishings": "4e64cb2b",
     "walls": [
       {
         "exterior": false,
@@ -14677,7 +14805,15 @@ exports[`golden derived geometry > keeps starter-family-914x1524-3b-1f walls, op
       {
         "exterior": false,
         "id": "floor-0-x-800-60-400",
-        "openings": [],
+        "openings": [
+          {
+            "center": 230,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -14687,15 +14823,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-3b-1f walls, op
       {
         "exterior": false,
         "id": "floor-0-z-400-430-800",
-        "openings": [
-          {
-            "center": 615,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -14828,7 +14956,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-3b-2f walls, op
 [
   {
     "floor": "floor-0",
-    "furnishings": "df0579b5",
+    "furnishings": "eda42069",
     "walls": [
       {
         "exterior": false,
@@ -15035,7 +15163,7 @@ exports[`golden derived geometry > keeps starter-family-914x1524-3b-2f walls, op
   },
   {
     "floor": "floor-1",
-    "furnishings": "86d34ec7",
+    "furnishings": "09c5f79a",
     "walls": [
       {
         "exterior": false,
@@ -15219,7 +15347,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-1b-1f walls, o
 [
   {
     "floor": "floor-0",
-    "furnishings": "d17d7d9a",
+    "furnishings": "92964a78",
     "walls": [
       {
         "exterior": true,
@@ -15403,7 +15531,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-1b-2f walls, o
 [
   {
     "floor": "floor-0",
-    "furnishings": "8c2933a6",
+    "furnishings": "597750b7",
     "walls": [
       {
         "exterior": false,
@@ -15610,7 +15738,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-1b-2f walls, o
   },
   {
     "floor": "floor-1",
-    "furnishings": "69150543",
+    "furnishings": "9e7d213e",
     "walls": [
       {
         "exterior": false,
@@ -15763,7 +15891,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-2b-1f walls, o
 [
   {
     "floor": "floor-0",
-    "furnishings": "b5f0d723",
+    "furnishings": "1034a101",
     "walls": [
       {
         "exterior": true,
@@ -15965,7 +16093,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-2b-2f walls, o
 [
   {
     "floor": "floor-0",
-    "furnishings": "8c2933a6",
+    "furnishings": "597750b7",
     "walls": [
       {
         "exterior": false,
@@ -16172,7 +16300,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-2b-2f walls, o
   },
   {
     "floor": "floor-1",
-    "furnishings": "e0df15d2",
+    "furnishings": "0fb40451",
     "walls": [
       {
         "exterior": false,
@@ -16333,7 +16461,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-3b-1f walls, o
 [
   {
     "floor": "floor-0",
-    "furnishings": "7d4e685c",
+    "furnishings": "ac88aa8d",
     "walls": [
       {
         "exterior": false,
@@ -16387,15 +16515,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-3b-1f walls, o
       {
         "exterior": false,
         "id": "floor-0-x-460-60-510",
-        "openings": [
-          {
-            "center": 285,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -16431,7 +16551,15 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-3b-1f walls, o
       {
         "exterior": false,
         "id": "floor-0-x-860-60-510",
-        "openings": [],
+        "openings": [
+          {
+            "center": 285,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -16566,7 +16694,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-3b-2f walls, o
 [
   {
     "floor": "floor-0",
-    "furnishings": "8c2933a6",
+    "furnishings": "597750b7",
     "walls": [
       {
         "exterior": false,
@@ -16773,7 +16901,7 @@ exports[`golden derived geometry > keeps starter-family-1219x1829-3b-2f walls, o
   },
   {
     "floor": "floor-1",
-    "furnishings": "4f246c46",
+    "furnishings": "dfdce625",
     "walls": [
       {
         "exterior": false,
@@ -16957,7 +17085,7 @@ exports[`golden derived geometry > keeps starter-open-610x1219-1b-1f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "5fd699ea",
+    "furnishings": "0c67ae24",
     "walls": [
       {
         "exterior": false,
@@ -16995,7 +17123,15 @@ exports[`golden derived geometry > keeps starter-open-610x1219-1b-1f walls, open
       {
         "exterior": false,
         "id": "floor-0-x-600-60-280",
-        "openings": [],
+        "openings": [
+          {
+            "center": 170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": true,
@@ -17018,15 +17154,7 @@ exports[`golden derived geometry > keeps starter-open-610x1219-1b-1f walls, open
       {
         "exterior": false,
         "id": "floor-0-z-280-350-600",
-        "openings": [
-          {
-            "center": 475,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -17128,7 +17256,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-1b-1f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "e527c6d4",
+    "furnishings": "59cb3044",
     "walls": [
       {
         "exterior": false,
@@ -17312,7 +17440,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-1b-2f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "abb91c65",
+    "furnishings": "d79b39f2",
     "walls": [
       {
         "exterior": true,
@@ -17519,7 +17647,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-1b-2f walls, open
   },
   {
     "floor": "floor-1",
-    "furnishings": "0c89bb31",
+    "furnishings": "8ca869dd",
     "walls": [
       {
         "exterior": true,
@@ -17672,7 +17800,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-2b-1f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "c4126db6",
+    "furnishings": "96a10ac5",
     "walls": [
       {
         "exterior": false,
@@ -17879,7 +18007,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-2b-2f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "abb91c65",
+    "furnishings": "d79b39f2",
     "walls": [
       {
         "exterior": true,
@@ -18086,7 +18214,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-2b-2f walls, open
   },
   {
     "floor": "floor-1",
-    "furnishings": "b0cf04fe",
+    "furnishings": "949d1881",
     "walls": [
       {
         "exterior": true,
@@ -18247,7 +18375,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-3b-1f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "6bd33d49",
+    "furnishings": "3265fe95",
     "walls": [
       {
         "exterior": true,
@@ -18283,15 +18411,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-3b-1f walls, open
       {
         "exterior": false,
         "id": "floor-0-x-360-60-400",
-        "openings": [
-          {
-            "center": 230,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -18332,7 +18452,15 @@ exports[`golden derived geometry > keeps starter-open-914x1524-3b-1f walls, open
       {
         "exterior": false,
         "id": "floor-0-x-660-60-400",
-        "openings": [],
+        "openings": [
+          {
+            "center": 230,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -18485,7 +18613,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-3b-2f walls, open
 [
   {
     "floor": "floor-0",
-    "furnishings": "abb91c65",
+    "furnishings": "d79b39f2",
     "walls": [
       {
         "exterior": true,
@@ -18692,7 +18820,7 @@ exports[`golden derived geometry > keeps starter-open-914x1524-3b-2f walls, open
   },
   {
     "floor": "floor-1",
-    "furnishings": "7b4fd311",
+    "furnishings": "ab78a34e",
     "walls": [
       {
         "exterior": true,
@@ -18876,7 +19004,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-1b-1f walls, ope
 [
   {
     "floor": "floor-0",
-    "furnishings": "5ce34b65",
+    "furnishings": "8e0f7352",
     "walls": [
       {
         "exterior": false,
@@ -19060,7 +19188,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-1b-2f walls, ope
 [
   {
     "floor": "floor-0",
-    "furnishings": "77e9af96",
+    "furnishings": "05b737c1",
     "walls": [
       {
         "exterior": true,
@@ -19267,7 +19395,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-1b-2f walls, ope
   },
   {
     "floor": "floor-1",
-    "furnishings": "0c89bb31",
+    "furnishings": "c986728c",
     "walls": [
       {
         "exterior": true,
@@ -19420,7 +19548,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-2b-1f walls, ope
 [
   {
     "floor": "floor-0",
-    "furnishings": "9ed7d13e",
+    "furnishings": "65984e6e",
     "walls": [
       {
         "exterior": false,
@@ -19622,7 +19750,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-2b-2f walls, ope
 [
   {
     "floor": "floor-0",
-    "furnishings": "77e9af96",
+    "furnishings": "05b737c1",
     "walls": [
       {
         "exterior": true,
@@ -19829,7 +19957,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-2b-2f walls, ope
   },
   {
     "floor": "floor-1",
-    "furnishings": "57b9bc2b",
+    "furnishings": "bbfb9b84",
     "walls": [
       {
         "exterior": true,
@@ -19990,7 +20118,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-3b-1f walls, ope
 [
   {
     "floor": "floor-0",
-    "furnishings": "8bc559d9",
+    "furnishings": "241410a8",
     "walls": [
       {
         "exterior": true,
@@ -20026,15 +20154,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-3b-1f walls, ope
       {
         "exterior": false,
         "id": "floor-0-x-370-60-510",
-        "openings": [
-          {
-            "center": 285,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -20070,7 +20190,15 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-3b-1f walls, ope
       {
         "exterior": false,
         "id": "floor-0-x-680-60-510",
-        "openings": [],
+        "openings": [
+          {
+            "center": 285,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -20223,7 +20351,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-3b-2f walls, ope
 [
   {
     "floor": "floor-0",
-    "furnishings": "77e9af96",
+    "furnishings": "05b737c1",
     "walls": [
       {
         "exterior": true,
@@ -20430,7 +20558,7 @@ exports[`golden derived geometry > keeps starter-open-1219x1829-3b-2f walls, ope
   },
   {
     "floor": "floor-1",
-    "furnishings": "ee3d149c",
+    "furnishings": "2bfa590a",
     "walls": [
       {
         "exterior": true,
@@ -20614,7 +20742,7 @@ exports[`golden derived geometry > keeps v1-compact walls, openings and furnishi
 [
   {
     "floor": "floor-0",
-    "furnishings": "7e11c97d",
+    "furnishings": "137b91d8",
     "walls": [
       {
         "exterior": false,
@@ -20868,20 +20996,12 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
 [
   {
     "floor": "floor-0",
-    "furnishings": "71a30c96",
+    "furnishings": "aa1846c4",
     "walls": [
       {
         "exterior": false,
         "id": "floor-0-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -21005,15 +21125,7 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
       {
         "exterior": false,
         "id": "floor-0-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -21041,7 +21153,15 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
       {
         "exterior": false,
         "id": "floor-0-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -21157,7 +21277,15 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
       {
         "exterior": false,
         "id": "floor-0-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -21202,20 +21330,12 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
   },
   {
     "floor": "floor-1",
-    "furnishings": "ba9291e7",
+    "furnishings": "4601d183",
     "walls": [
       {
         "exterior": false,
         "id": "floor-1-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": true,
@@ -21349,15 +21469,7 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
       {
         "exterior": false,
         "id": "floor-1-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -21385,7 +21497,15 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
       {
         "exterior": false,
         "id": "floor-1-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -21501,7 +21621,15 @@ exports[`golden derived geometry > keeps v1-courtyard walls, openings and furnis
       {
         "exterior": false,
         "id": "floor-1-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -21551,20 +21679,12 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
 [
   {
     "floor": "floor-0",
-    "furnishings": "71a30c96",
+    "furnishings": "aa1846c4",
     "walls": [
       {
         "exterior": false,
         "id": "floor-0-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -21662,15 +21782,7 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
       {
         "exterior": false,
         "id": "floor-0-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -21685,7 +21797,15 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
       {
         "exterior": false,
         "id": "floor-0-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -21801,7 +21921,15 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
       {
         "exterior": false,
         "id": "floor-0-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -21833,20 +21961,12 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
   },
   {
     "floor": "floor-1",
-    "furnishings": "ba9291e7",
+    "furnishings": "4601d183",
     "walls": [
       {
         "exterior": false,
         "id": "floor-1-x-1030-300-580",
-        "openings": [
-          {
-            "center": 440,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -21954,15 +22074,7 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
       {
         "exterior": false,
         "id": "floor-1-x-860-1100-1500",
-        "openings": [
-          {
-            "center": 1300,
-            "height": 215,
-            "kind": "door",
-            "sill": 0,
-            "width": 90,
-          },
-        ],
+        "openings": [],
       },
       {
         "exterior": false,
@@ -21977,7 +22089,15 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
       {
         "exterior": false,
         "id": "floor-1-z-1100-500-860",
-        "openings": [],
+        "openings": [
+          {
+            "center": 680,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,
@@ -22093,7 +22213,15 @@ exports[`golden derived geometry > keeps v1-family walls, openings and furnishin
       {
         "exterior": false,
         "id": "floor-1-z-580-1030-1310",
-        "openings": [],
+        "openings": [
+          {
+            "center": 1170,
+            "height": 215,
+            "kind": "door",
+            "sill": 0,
+            "width": 90,
+          },
+        ],
       },
       {
         "exterior": false,

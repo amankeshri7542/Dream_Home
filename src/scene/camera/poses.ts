@@ -21,6 +21,21 @@ export const ROAD_AZIMUTH: Record<EdgeSide, number> = {
 export const HERO_POLAR = 57 * DEG;
 export const FRONT_POLAR = 80 * DEG;
 export const FOCUS_POLAR = 50 * DEG;
+/** The dollhouse view of one room: a little higher than eye-level 3/4. */
+export const ROOM_POLAR = 46 * DEG;
+/**
+ * Hero pose for a room: a 3/4 diagonal (the room's corner nearest the camera
+ * at the bottom of the screen), choosing the diagonal closest to where the
+ * camera already is, so flying in never spins the house around.
+ */
+export function roomHeroPose(current: Pose): Pose {
+  const diagonals = [45, 135, -135, -45].map((d) => d * DEG);
+  const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+  const best = diagonals.reduce((a, b) =>
+    Math.abs(wrap(b - current.azimuth)) < Math.abs(wrap(a - current.azimuth)) ? b : a,
+  );
+  return { azimuth: best, polar: ROOM_POLAR };
+}
 export const TOP_POLAR = 0.0001;
 export const HERO_OFFSET = 35 * DEG;
 
@@ -97,15 +112,14 @@ export function roomBox(project: Project, view: SceneView, floorId: string, room
   const vis = visibility(project, view);
   const cut = vis.cutActive && vis.top?.id === floorId ? (view.cutHeight ?? 120) / 100 : floor.height / 100;
   const r = room.bounds;
-  return offsetBox(
-    project,
-    r.x / 100 - 0.2,
-    (r.x + r.w) / 100 + 0.2,
-    base,
-    base + FLOOR_SURFACE + Math.min(cut, 1.4),
-    r.z / 100 - 0.2,
-    (r.z + r.d) / 100 + 0.2,
-  );
+  // Small rooms (a bathroom, a pooja room) still get a comfortable 3 m frame.
+  const grow = (lo: number, hi: number) => {
+    const extra = Math.max(0, 3 - (hi - lo)) / 2;
+    return [lo - extra, hi + extra];
+  };
+  const [x0, x1] = grow(r.x / 100 - 0.2, (r.x + r.w) / 100 + 0.2),
+    [z0, z1] = grow(r.z / 100 - 0.2, (r.z + r.d) / 100 + 0.2);
+  return offsetBox(project, x0, x1, base, base + FLOOR_SURFACE + Math.min(cut, 1.4), z0, z1);
 }
 
 /** Bounding sphere radius of a box (for distance limits). */

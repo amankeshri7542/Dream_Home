@@ -2,7 +2,7 @@
 // picking), structural slabs, the ground-floor foundation and void hit planes.
 import { roomFloorMaterial, type FloorMaterialId } from "../../../domain/materials";
 import { slabTiles } from "../../../domain/model";
-import type { GeometryFloor } from "../../../domain/types";
+import type { GeometryFloor, StylePreset } from "../../../domain/types";
 import { FLOOR_SURFACE, SLAB_DEPTH, SLAB_TOP } from "../../coords";
 import { rgb, type Buckets, type QuadBuilder, type V3 } from "./QuadBuilder";
 
@@ -32,11 +32,11 @@ export function emitHallFloor(floor: GeometryFloor, base: number, holes: boolean
 }
 
 /** One quad per room at the finish level, bucketed by floor material id. */
-export function emitRoomFloors(floor: GeometryFloor, base: number, buckets: Buckets<string>) {
+export function emitRoomFloors(floor: GeometryFloor, base: number, buckets: Buckets<string>, look: StylePreset | null = null) {
   const used = new Set<FloorMaterialId>();
   const y = base + FLOOR_SURFACE;
   for (const room of floor.rooms) {
-    const id = roomFloorMaterial(room);
+    const id = roomFloorMaterial(room, look);
     used.add(id);
     const b = buckets.get(`floor:${id}`);
     b.setOwner(ownerKey("room", room.id));

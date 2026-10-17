@@ -1,11 +1,8 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { createPreset } from "../src/domain/model";
 import { createStarter } from "../src/domain/starters";
 import { TEMPLATES, buildTemplate } from "../src/onboarding/templates";
-import { mobile, seed, stored, undo } from "./support/dreamHome";
-
-const mode = (page: Page, name: string) =>
-  page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name, exact: true });
+import { dock, enterRoom, homeAction, mobile, roomTab, seed, stored, tool, undo } from "./support/dreamHome";
 
 function family() {
   const result = createStarter(
@@ -20,8 +17,7 @@ test("decorate: add furniture, recolour it, paint the walls and undo", async ({ 
   await page.setViewportSize(mobile);
   const project = family();
   await seed(page, project);
-  await mode(page, "Decorate").click();
-  await page.getByRole("toolbar", { name: "Decorating tools" }).getByRole("button", { name: "Rooms" }).click();
+  await tool(page, "Rooms").click();
   const living = project.floors[0].rooms.find((r) => r.kind === "living")!;
   await page.locator(".room-card").filter({ hasText: living.name }).click();
   await page.getByRole("button", { name: `Add floor plant to ${living.name}` }).click();
@@ -29,7 +25,7 @@ test("decorate: add furniture, recolour it, paint the walls and undo", async ({ 
     .poll(async () => (await stored(page)).floors[0].rooms.find((r) => r.id === living.id)?.furniture?.some((f) => f.catalogId === "plant-floor"))
     .toBe(true);
   // The new piece is selected; change the sofa colour instead via the room list.
-  await page.getByRole("button", { name: /^Back to the list|Back to/ }).first().click();
+  await page.getByRole("button", { name: `Back to ${living.name}` }).click();
   const sofa = page.locator(".dh-furniture-chip").filter({ hasText: /sofa|Loveseat/i }).first();
   await sofa.click();
   await page.getByRole("radiogroup", { name: "Colour" }).getByRole("radio", { name: "Navy" }).click();
@@ -41,6 +37,7 @@ test("decorate: add furniture, recolour it, paint the walls and undo", async ({ 
     )
     .toBe(true);
   await page.getByRole("button", { name: `Back to ${living.name}` }).click();
+  await roomTab(page, "Colours").click();
   await page.getByRole("radiogroup", { name: "Wall paint" }).getByRole("radio", { name: "Sage" }).click();
   await expect
     .poll(async () => (await stored(page)).floors[0].rooms.find((r) => r.id === living.id)?.wallColor)
@@ -54,10 +51,9 @@ test("decorate: add furniture, recolour it, paint the walls and undo", async ({ 
 test("doors & windows: restyle, slide, remove and add, then go back to automatic", async ({ page }) => {
   const project = createPreset("compact");
   await seed(page, project);
-  await mode(page, "Doors & windows").click();
-  await page.getByRole("toolbar", { name: "Door and window tools" }).getByRole("button", { name: "Rooms" }).click();
   const bedroom = project.floors[0].rooms.find((r) => r.kind === "bedroom")!;
-  await page.locator(".room-card").filter({ hasText: bedroom.name }).click();
+  await enterRoom(page, bedroom.name);
+  await roomTab(page, "Doors").click();
   await page.getByRole("list", { name: `Doors and windows of ${bedroom.name}` })
     .getByRole("listitem").filter({ hasText: /^Window/ }).first().click();
   await page.getByLabel("Opening style").selectOption("picture-window");
@@ -73,25 +69,22 @@ test("doors & windows: restyle, slide, remove and add, then go back to automatic
   await expect
     .poll(async () => (await stored(page)).floors[0].openings!.some((o) => o.id === picture.id))
     .toBe(false);
-  // The freed wall takes a new window.
-  // Removing returns to the room list; pick the bedroom again.
-  await page.locator(".room-card").filter({ hasText: bedroom.name }).click();
+  // The freed wall takes a new window (removing returns to the room's Doors tab).
   await page.getByRole("button", { name: /^Window A window/ }).click();
   await page.getByRole("button", { name: "Add window" }).click();
   await expect
     .poll(async () => (await stored(page)).floors[0].openings!.length)
     .toBeGreaterThan(0);
-  await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
-  await page.getByRole("toolbar", { name: "Door and window tools" }).getByRole("button", { name: "Automatic" }).click();
+  // The new window opens on its own; back in the room, the Doors tab can reset them all.
+  await page.getByRole("button", { name: `Back to ${bedroom.name}` }).click();
+  await page.getByRole("button", { name: "Make doors & windows automatic" }).click();
   await page.getByRole("dialog", { name: /automatic/ }).getByRole("button", { name: "Make them automatic" }).click();
   await expect.poll(async () => (await stored(page)).floors[0].openings).toBeUndefined();
 });
 
 test("outside: roof, exterior, garden and fence choices persist", async ({ page }) => {
   await seed(page, family());
-  await mode(page, "Outside").click();
+  await homeAction(page, "Outside").click();
   await page.getByRole("button", { name: "House style" }).click();
   await page.getByRole("button", { name: "Gable", exact: true }).click();
   await expect.poll(async () => (await stored(page)).style?.roof?.style).toBe("gable");
@@ -116,8 +109,8 @@ test("a full house can grow to fit a new room in one tap", async ({ page }) => {
   if (!bungalow.ok) throw new Error(bungalow.error);
   await seed(page, bungalow.project);
   const before = await stored(page);
-  await page.getByRole("toolbar", { name: "Building tools" }).getByRole("button", { name: "Add space" }).click();
-  const region = page.getByRole("region", { name: "Add space" });
+  await homeAction(page, "Add room").click();
+  const region = page.getByRole("region", { name: "Add room" });
   await region.locator(".catalog-card").filter({ hasText: "Fits if the house grows" }).first().click();
   const grow = region.getByRole("button", { name: /Grow house & add / });
   await expect(grow).toBeVisible();
@@ -145,7 +138,7 @@ test("the home checklist reports progress and offers fixes", async ({ page }) =>
   await expect(list).toContainText("Friendly checks");
   // Adding the missing bathroom completes the list: a celebration invites exploring.
   await list.getByRole("listitem").filter({ hasText: "There’s a bathroom" }).getByRole("button").click();
-  const region = page.getByRole("region", { name: "Add space" });
+  const region = page.getByRole("region", { name: "Add room" });
   await region.locator(".catalog-card").filter({ hasText: /^Bathroom/ }).first().click();
   await region.getByRole("button", { name: /^Add bathroom$|Grow house & add bathroom/i }).click();
   const party = page.getByRole("dialog", { name: "Ready to move in!" });
@@ -161,15 +154,15 @@ test("a bedroom gets its own attached bathroom from the action bar, and undo rem
   const project = createPreset("compact");
   await seed(page, project);
   const bedroom = project.floors[0].rooms.find((r) => r.kind === "bedroom")!;
-  await page.locator(".scene-room-label").filter({ hasText: bedroom.name }).click();
-  await page.getByRole("toolbar", { name: `${bedroom.name} actions` }).getByRole("button", { name: "More" }).click();
+  await enterRoom(page, bedroom.name);
+  await dock(page, "More actions").click();
   await page.getByRole("menuitem", { name: "Add attached bathroom" }).click();
   await expect
     .poll(async () => (await stored(page)).floors[0].rooms.find((r) => r.attachedTo === bedroom.id)?.kind)
     .toBe("bathroom");
   await expect(page.getByRole("status", { name: "Notifications" })).toContainText("its own bathroom");
   // The option disappears once the bedroom has one.
-  await page.getByRole("toolbar", { name: `${bedroom.name} actions` }).getByRole("button", { name: "More" }).click();
+  await dock(page, "More actions").click();
   await expect(page.getByRole("menuitem", { name: "Add attached bathroom" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await undo(page);

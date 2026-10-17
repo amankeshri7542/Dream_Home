@@ -1,3 +1,29 @@
+# Dream Home v4 verification — 17 October 2026
+
+Room Studio, doors that always work and designer interiors. Checks were run locally on macOS (Apple M4) with Node 24 and Google Chrome. Nothing was committed or pushed.
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | passed |
+| `npm run lint` | passed |
+| `npm test` (Vitest) | **687 tests** in 37 files passed |
+| `npx playwright test` (Chrome, reduced motion) | **93 passed**, 12 skipped (screenshot captures, run with `DH_SHOTS=1`) |
+| `npm run build` | passed |
+| `git diff --check` | passed |
+
+What the new checks cover:
+- **Doors:** every starting home (each template × plot × bedroom count) and every AI-planner brief has 0 rooms nobody can reach and 0 doors opening onto a wall or a gap. Before the fix, 83 of 196 had at least one.
+- **Room Studio:** tapping a room flies to it and keeps it clear of the tray. The tabs (Furniture, Colours, Layout, Doors), ‹ › stepping, the piece view, Back to home, history that never changes level, moving and Edit in 2D inside a room, the action bar's More menu, and set-aside drops are all exercised. axe scans cover Home, each room tab, Add room, Outside and Explore at 390 and 1440 px.
+- **Designer interiors:** draw calls stay at 76–79 in Build with 0 idle frames; the night walk lights the lamps. Screenshots of the bedroom, living room, kitchen, dining room and pooja room at 390 and 1440 px, day and night, are in `docs/screenshots/interiors/` and were inspected by eye.
+- **Desktop and phone walkthrough** (1440 × 900 and 375 × 812):
+  - Home shows four actions;
+  - a room opens in the side panel (desktop) or the tray (phone);
+  - all six Layout actions fit;
+  - the floor plan docks beside the 3D view;
+  - phones show three round buttons instead of six.
+
+---
+
 # Warm diorama sandbox verification — 14 October 2026
 
 Checks were run locally on macOS (Apple M4) with Node 24 and the installed Google Chrome. Nothing was committed or pushed.

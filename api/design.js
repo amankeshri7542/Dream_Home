@@ -108,13 +108,16 @@ var furniture_default = {
       navy: "#40506d",
       charcoal: "#4b4845",
       mustard: "#cf9f45",
-      blush: "#dca9a1"
+      blush: "#dca9a1",
+      peacock: "#2f6e73",
+      maroon: "#7f3035"
     },
     wood: {
       oak: "#c49a6c",
       walnut: "#7a5538",
       white: "#ece6dc",
-      black: "#3b3734"
+      black: "#3b3734",
+      teak: "#8b5a36"
     },
     accent: {
       sage: "#8fa69c",
@@ -122,7 +125,9 @@ var furniture_default = {
       navy: "#40506d",
       white: "#ece6dc",
       charcoal: "#4b4845",
-      mustard: "#cf9f45"
+      mustard: "#cf9f45",
+      peacock: "#2f6e73",
+      maroon: "#7f3035"
     }
   },
   slots: {
@@ -143,50 +148,69 @@ var furniture_default = {
     terracotta: { color: "#c46f48", roughness: 0.85 }
   },
   items: [
-    { id: "bed-double", label: "Double bed", category: "sleep", size: { w: 160, d: 210, h: 95 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [140, 200], d: [190, 220] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "sage", slots: ["wood", "linen", "fabric"], triBudget: 1800, rooms: ["bedroom"] },
-    { id: "bed-single", label: "Single bed", category: "sleep", size: { w: 100, d: 205, h: 90 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [80, 130], d: [190, 215] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "oat", slots: ["wood", "linen", "fabric"], triBudget: 1400, rooms: ["bedroom"] },
-    { id: "sleeping-mat", label: "Sleeping mat", category: "sleep", size: { w: 76, d: 115, h: 10 }, layer: "floor", wallSnap: false, blocksWalk: false, stretch: { w: [40, 90], d: [40, 120] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "mustard", "blush"], defaultFinish: "sage", slots: ["fabric", "linen"], triBudget: 400, rooms: ["bedroom"] },
-    { id: "bedside-table", label: "Bedside table", category: "sleep", size: { w: 45, d: 40, h: 50 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "metal"], triBudget: 400, rooms: ["bedroom"] },
-    { id: "wardrobe", label: "Wardrobe", category: "storage", size: { w: 120, d: 60, h: 210 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [80, 160] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "white", slots: ["wood", "metal"], triBudget: 700, rooms: ["bedroom"] },
-    { id: "dresser", label: "Dresser", category: "storage", size: { w: 100, d: 45, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "walnut", slots: ["wood", "metal"], triBudget: 600, rooms: ["bedroom"] },
-    { id: "sofa-3", label: "Three-seat sofa", category: "seating", size: { w: 220, d: 90, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [170, 260], d: [70, 100] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "sage", slots: ["fabric", "wood_dark"], triBudget: 1500, rooms: ["living"] },
-    { id: "sofa-2", label: "Loveseat", category: "seating", size: { w: 160, d: 90, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 170], d: [50, 100] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "terracotta", slots: ["fabric", "wood_dark"], triBudget: 1200, rooms: ["living"] },
-    { id: "armchair", label: "Armchair", category: "seating", size: { w: 85, d: 85, h: 80 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "mustard", slots: ["fabric", "wood_dark"], triBudget: 900, rooms: ["living", "bedroom"] },
-    { id: "dining-chair", label: "Dining chair", category: "seating", size: { w: 45, d: 50, h: 88 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood"], triBudget: 500, rooms: ["dining", "kitchen"] },
-    { id: "office-chair", label: "Desk chair", category: "work", size: { w: 60, d: 60, h: 95 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard"], defaultFinish: "charcoal", slots: ["fabric", "metal", "rubber"], triBudget: 700, rooms: ["utility", "bedroom", "living"] },
-    { id: "coffee-table", label: "Coffee table", category: "tables", size: { w: 110, d: 60, h: 42 }, layer: "standard", wallSnap: false, blocksWalk: false, stretch: { w: [60, 140], d: [40, 70] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "linen"], triBudget: 400, rooms: ["living"] },
-    { id: "side-table", label: "Side table", category: "tables", size: { w: 45, d: 45, h: 55 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "walnut", slots: ["wood"], triBudget: 300, rooms: ["living", "bedroom"] },
-    { id: "dining-table", label: "Dining table", category: "tables", size: { w: 150, d: 90, h: 75 }, layer: "standard", wallSnap: false, blocksWalk: true, stretch: { w: [80, 240], d: [60, 110] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "ceramic", "terracotta"], triBudget: 600, rooms: ["dining", "kitchen"] },
-    { id: "dining-table-round", label: "Round table", category: "tables", size: { w: 110, d: 110, h: 75 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "walnut", slots: ["wood"], triBudget: 500, rooms: ["dining", "kitchen"] },
-    { id: "desk", label: "Desk", category: "work", size: { w: 130, d: 60, h: 75 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 160], d: [45, 70] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "linen", "rubber"], triBudget: 700, rooms: ["utility", "bedroom", "living"] },
-    { id: "bookshelf", label: "Bookshelf", category: "storage", size: { w: 90, d: 32, h: 190 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "accent", "linen"], triBudget: 900, rooms: ["living", "bedroom", "utility"] },
-    { id: "media-unit", label: "TV & media unit", category: "storage", size: { w: 170, d: 45, h: 110 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "walnut", slots: ["wood", "rubber", "glass"], triBudget: 600, rooms: ["living"] },
-    { id: "kitchen-counter", label: "Kitchen counter run", category: "kitchen", size: { w: 240, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 480], d: [60, 120] }, tile: { module: "kitchen-base", moduleWidth: 60, sink: "kitchen-sink", sinkWidth: 80, end: "kitchen-stove", endWidth: 60 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "sage", slots: ["accent", "stone", "metal"], triBudget: 400, rooms: ["kitchen"] },
-    { id: "kitchen-base", label: "Base cabinet", category: "kitchen", size: { w: 60, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "sage", slots: ["accent", "stone", "metal"], triBudget: 400, rooms: ["kitchen"] },
-    { id: "kitchen-sink", label: "Sink cabinet", category: "kitchen", size: { w: 80, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "sage", slots: ["accent", "stone", "metal", "water"], triBudget: 700, rooms: ["kitchen"] },
-    { id: "kitchen-stove", label: "Cooker", category: "kitchen", size: { w: 60, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "sage", slots: ["accent", "stone", "metal", "rubber"], triBudget: 700, rooms: ["kitchen"] },
-    { id: "kitchen-upper", label: "Wall cabinet", category: "kitchen", size: { w: 60, d: 35, h: 70 }, layer: "high", mountY: 145, wallSnap: true, blocksWalk: false, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "white", slots: ["accent", "metal"], triBudget: 300, rooms: ["kitchen"] },
+    { id: "bed-double", label: "Double bed", category: "sleep", size: { w: 160, d: 210, h: 95 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [140, 200], d: [190, 220] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "sage", slots: ["wood", "linen", "fabric"], triBudget: 1800, rooms: ["bedroom"], surface: 55 },
+    { id: "bed-single", label: "Single bed", category: "sleep", size: { w: 100, d: 205, h: 90 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [80, 130], d: [190, 215] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "oat", slots: ["wood", "linen", "fabric"], triBudget: 1400, rooms: ["bedroom"], surface: 55 },
+    { id: "sleeping-mat", label: "Sleeping mat", category: "sleep", size: { w: 76, d: 115, h: 10 }, layer: "floor", wallSnap: false, blocksWalk: false, stretch: { w: [40, 90], d: [40, 120] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "mustard", "blush", "peacock", "maroon"], defaultFinish: "sage", slots: ["fabric", "linen"], triBudget: 400, rooms: ["bedroom"] },
+    { id: "bedside-table", label: "Bedside table", category: "sleep", size: { w: 45, d: 40, h: 50 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "metal"], triBudget: 400, rooms: ["bedroom"], surface: 50 },
+    { id: "wardrobe", label: "Wardrobe", category: "storage", size: { w: 120, d: 60, h: 210 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [80, 160] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "white", slots: ["wood", "metal"], triBudget: 700, rooms: ["bedroom"] },
+    { id: "dresser", label: "Dresser", category: "storage", size: { w: 100, d: 45, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood", "metal"], triBudget: 600, rooms: ["bedroom"], surface: 80 },
+    { id: "sofa-3", label: "Three-seat sofa", category: "seating", size: { w: 220, d: 90, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [170, 260], d: [70, 100] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "sage", slots: ["fabric", "wood_dark"], triBudget: 1500, rooms: ["living"], surface: 45 },
+    { id: "sofa-2", label: "Loveseat", category: "seating", size: { w: 160, d: 90, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 170], d: [50, 100] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["fabric", "wood_dark"], triBudget: 1200, rooms: ["living"], surface: 45 },
+    { id: "armchair", label: "Armchair", category: "seating", size: { w: 85, d: 85, h: 80 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "mustard", slots: ["fabric", "wood_dark"], triBudget: 900, rooms: ["living", "bedroom"] },
+    { id: "dining-chair", label: "Dining chair", category: "seating", size: { w: 45, d: 50, h: 88 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood"], triBudget: 500, rooms: ["dining", "kitchen", "living"] },
+    { id: "office-chair", label: "Desk chair", category: "work", size: { w: 60, d: 60, h: 95 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "charcoal", slots: ["fabric", "metal", "rubber"], triBudget: 700, rooms: ["utility", "bedroom", "living"] },
+    { id: "coffee-table", label: "Coffee table", category: "tables", size: { w: 110, d: 60, h: 42 }, layer: "standard", wallSnap: false, blocksWalk: false, stretch: { w: [60, 140], d: [40, 70] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "linen"], triBudget: 400, rooms: ["living"], surface: 42 },
+    { id: "side-table", label: "Side table", category: "tables", size: { w: 45, d: 45, h: 55 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood"], triBudget: 300, rooms: ["living", "bedroom"], surface: 55 },
+    { id: "dining-table", label: "Dining table", category: "tables", size: { w: 150, d: 90, h: 75 }, layer: "standard", wallSnap: false, blocksWalk: true, stretch: { w: [80, 240], d: [60, 110] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "ceramic", "terracotta"], triBudget: 600, rooms: ["dining", "kitchen", "living"], surface: 75 },
+    { id: "dining-table-round", label: "Round table", category: "tables", size: { w: 110, d: 110, h: 75 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood"], triBudget: 500, rooms: ["dining", "kitchen", "living"], surface: 75 },
+    { id: "desk", label: "Desk", category: "work", size: { w: 130, d: 60, h: 75 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 160], d: [45, 70] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "linen", "rubber"], triBudget: 700, rooms: ["utility", "bedroom", "living"], surface: 75 },
+    { id: "bookshelf", label: "Bookshelf", category: "storage", size: { w: 90, d: 32, h: 190 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "accent", "linen"], triBudget: 900, rooms: ["living", "bedroom", "utility"], surface: 190 },
+    { id: "media-unit", label: "TV & media unit", category: "storage", size: { w: 170, d: 45, h: 110 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood", "rubber", "glass"], triBudget: 600, rooms: ["living"], surface: 50 },
+    { id: "kitchen-counter", label: "Kitchen counter run", category: "kitchen", size: { w: 240, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 480], d: [60, 120] }, tile: { module: "kitchen-base", moduleWidth: 60, sink: "kitchen-sink", sinkWidth: 80, end: "kitchen-stove", endWidth: 60 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "sage", slots: ["accent", "stone", "metal"], triBudget: 400, rooms: ["kitchen"], surface: 92 },
+    { id: "kitchen-base", label: "Base cabinet", category: "kitchen", size: { w: 60, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "sage", slots: ["accent", "stone", "metal"], triBudget: 400, rooms: ["kitchen"], surface: 92 },
+    { id: "kitchen-sink", label: "Sink cabinet", category: "kitchen", size: { w: 80, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "sage", slots: ["accent", "stone", "metal", "water"], triBudget: 700, rooms: ["kitchen"], surface: 92 },
+    { id: "kitchen-stove", label: "Cooker", category: "kitchen", size: { w: 60, d: 60, h: 92 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "sage", slots: ["accent", "stone", "metal", "rubber"], triBudget: 700, rooms: ["kitchen"], surface: 92 },
+    { id: "kitchen-upper", label: "Wall cabinet", category: "kitchen", size: { w: 60, d: 35, h: 70 }, layer: "high", mountY: 145, wallSnap: true, blocksWalk: false, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "white", slots: ["accent", "metal"], triBudget: 300, rooms: ["kitchen"] },
     { id: "fridge", label: "Fridge", category: "kitchen", size: { w: 70, d: 70, h: 190 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "accent", finishes: ["white", "charcoal", "sage", "mustard"], defaultFinish: "white", slots: ["accent", "metal"], triBudget: 500, rooms: ["kitchen"] },
-    { id: "kitchen-island", label: "Kitchen island", category: "kitchen", size: { w: 180, d: 90, h: 92 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "navy", slots: ["accent", "stone", "wood"], triBudget: 600, rooms: ["kitchen"] },
+    { id: "kitchen-island", label: "Kitchen island", category: "kitchen", size: { w: 180, d: 90, h: 92 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "navy", slots: ["accent", "stone", "wood"], triBudget: 600, rooms: ["kitchen"], surface: 92 },
     { id: "toilet", label: "Toilet", category: "bath", size: { w: 42, d: 68, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, slots: ["ceramic", "metal"], triBudget: 900, rooms: ["bathroom"] },
-    { id: "vanity", label: "Basin vanity", category: "bath", size: { w: 60, d: 46, h: 88 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [50, 120] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "ceramic", "metal", "water"], triBudget: 800, rooms: ["bathroom"] },
-    { id: "mirror", label: "Mirror", category: "bath", size: { w: 60, d: 4, h: 80 }, layer: "high", mountY: 110, wallSnap: true, blocksWalk: false, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "black", slots: ["wood", "glass"], triBudget: 150, rooms: ["bathroom", "bedroom"] },
+    { id: "vanity", label: "Basin vanity", category: "bath", size: { w: 60, d: 46, h: 88 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [50, 120] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "ceramic", "metal", "water"], triBudget: 800, rooms: ["bathroom"], surface: 88 },
+    { id: "mirror", label: "Mirror", category: "bath", size: { w: 60, d: 4, h: 80 }, layer: "high", mountY: 110, wallSnap: true, blocksWalk: false, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "black", slots: ["wood", "glass"], triBudget: 150, rooms: ["bathroom", "bedroom"] },
     { id: "shower", label: "Shower", category: "bath", size: { w: 90, d: 90, h: 205 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [75, 120], d: [75, 120] }, slots: ["ceramic", "metal", "glass", "water"], triBudget: 600, rooms: ["bathroom"] },
     { id: "bathtub", label: "Bathtub", category: "bath", size: { w: 170, d: 75, h: 58 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [150, 185] }, slots: ["ceramic", "metal", "water"], triBudget: 1e3, rooms: ["bathroom"] },
-    { id: "washing-machine", label: "Washing machine", category: "utility", size: { w: 60, d: 60, h: 85 }, layer: "standard", wallSnap: true, blocksWalk: true, slots: ["ceramic", "metal", "glass", "rubber"], triBudget: 600, rooms: ["utility", "bathroom", "kitchen"] },
-    { id: "laundry-counter", label: "Laundry worktop", category: "utility", size: { w: 110, d: 55, h: 90 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [40, 140] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "linen"], triBudget: 500, rooms: ["utility"] },
-    { id: "display-shelf", label: "Display shelving", category: "retail", size: { w: 120, d: 40, h: 180 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 300] }, tile: { module: "display-shelf-module", moduleWidth: 60 }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "accent", "linen", "terracotta"], triBudget: 900, rooms: ["shop"] },
-    { id: "display-shelf-module", label: "Shelf bay", category: "retail", size: { w: 60, d: 40, h: 180 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "oak", slots: ["wood", "accent", "linen", "terracotta"], triBudget: 600, rooms: ["shop"] },
-    { id: "shop-counter", label: "Shop counter", category: "retail", size: { w: 140, d: 60, h: 100 }, layer: "standard", wallSnap: false, blocksWalk: true, stretch: { w: [60, 200] }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "terracotta", slots: ["accent", "stone", "rubber"], triBudget: 600, rooms: ["shop"] },
-    { id: "prayer-shrine", label: "Prayer shrine", category: "decor", size: { w: 80, d: 50, h: 90 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black"], defaultFinish: "walnut", slots: ["wood", "terracotta", "glow"], triBudget: 700, rooms: ["utility"] },
-    { id: "prayer-mat", label: "Prayer mat", category: "decor", size: { w: 65, d: 56, h: 2 }, layer: "floor", wallSnap: false, blocksWalk: false, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "mustard", "blush"], defaultFinish: "terracotta", slots: ["fabric"], triBudget: 60, rooms: ["utility"] },
-    { id: "diya", label: "Diya lamp", category: "decor", size: { w: 16, d: 12, h: 9 }, layer: "standard", wallSnap: false, blocksWalk: false, slots: ["terracotta", "glow"], triBudget: 200, rooms: ["utility", "living"] },
-    { id: "rug-rect", label: "Rug", category: "decor", size: { w: 200, d: 140, h: 1 }, layer: "floor", wallSnap: false, blocksWalk: false, stretch: { w: [80, 400], d: [60, 300] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "oat", slots: ["fabric"], triBudget: 60, rooms: ["living", "bedroom", "dining"] },
-    { id: "rug-round", label: "Round rug", category: "decor", size: { w: 150, d: 150, h: 1 }, layer: "floor", wallSnap: false, blocksWalk: false, stretch: { w: [80, 300], d: [80, 300] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush"], defaultFinish: "blush", slots: ["fabric"], triBudget: 120, rooms: ["living", "bedroom", "dining"] },
+    { id: "washing-machine", label: "Washing machine", category: "utility", size: { w: 60, d: 60, h: 85 }, layer: "standard", wallSnap: true, blocksWalk: true, slots: ["ceramic", "metal", "glass", "rubber"], triBudget: 600, rooms: ["utility", "bathroom", "kitchen"], surface: 85 },
+    { id: "laundry-counter", label: "Laundry worktop", category: "utility", size: { w: 110, d: 55, h: 90 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [40, 140] }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "linen"], triBudget: 500, rooms: ["utility"], surface: 90 },
+    { id: "display-shelf", label: "Display shelving", category: "retail", size: { w: 120, d: 40, h: 180 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [60, 300] }, tile: { module: "display-shelf-module", moduleWidth: 60 }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "accent", "linen", "terracotta"], triBudget: 900, rooms: ["shop"] },
+    { id: "display-shelf-module", label: "Shelf bay", category: "retail", size: { w: 60, d: 40, h: 180 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "accent", "linen", "terracotta"], triBudget: 600, rooms: ["shop"] },
+    { id: "shop-counter", label: "Shop counter", category: "retail", size: { w: 140, d: 60, h: 100 }, layer: "standard", wallSnap: false, blocksWalk: true, stretch: { w: [60, 200] }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["accent", "stone", "rubber"], triBudget: 600, rooms: ["shop"], surface: 100 },
+    { id: "prayer-shrine", label: "Prayer shrine", category: "decor", size: { w: 80, d: 50, h: 90 }, layer: "standard", wallSnap: true, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood", "terracotta", "glow"], triBudget: 700, rooms: ["utility"], surface: 12 },
+    { id: "prayer-mat", label: "Prayer mat", category: "decor", size: { w: 65, d: 56, h: 2 }, layer: "floor", wallSnap: false, blocksWalk: false, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "mustard", "blush", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["fabric"], triBudget: 60, rooms: ["utility"] },
+    { id: "diya", label: "Diya lamp", category: "decor", size: { w: 16, d: 12, h: 9 }, layer: "decor", wallSnap: false, blocksWalk: false, slots: ["terracotta", "glow"], triBudget: 200, rooms: ["utility", "living"] },
+    { id: "rug-rect", label: "Rug", category: "decor", size: { w: 200, d: 140, h: 1 }, layer: "floor", wallSnap: false, blocksWalk: false, stretch: { w: [80, 400], d: [60, 300] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "oat", slots: ["fabric"], triBudget: 60, rooms: ["living", "bedroom", "dining"] },
+    { id: "rug-round", label: "Round rug", category: "decor", size: { w: 150, d: 150, h: 1 }, layer: "floor", wallSnap: false, blocksWalk: false, stretch: { w: [80, 300], d: [80, 300] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "blush", slots: ["fabric"], triBudget: 120, rooms: ["living", "bedroom", "dining"] },
     { id: "plant-floor", label: "Floor plant", category: "decor", size: { w: 45, d: 45, h: 120 }, layer: "standard", wallSnap: false, blocksWalk: true, slots: ["terracotta", "leaf"], triBudget: 800, rooms: ["living", "bedroom", "dining", "shop"] },
     { id: "plant-small", label: "Potted plant", category: "decor", size: { w: 30, d: 30, h: 50 }, layer: "standard", wallSnap: false, blocksWalk: false, slots: ["terracotta", "leaf"], triBudget: 300, rooms: ["living", "bedroom", "bathroom", "kitchen"] },
-    { id: "floor-lamp", label: "Floor lamp", category: "lighting", size: { w: 40, d: 40, h: 160 }, layer: "standard", wallSnap: false, blocksWalk: true, light: { y: 150, color: "#ffd59a", intensity: 1 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "white", slots: ["accent", "metal", "glow"], triBudget: 400, rooms: ["living", "bedroom"] },
-    { id: "pendant-light", label: "Pendant light", category: "lighting", size: { w: 45, d: 45, h: 50 }, layer: "ceiling", mountY: 200, wallSnap: false, blocksWalk: false, light: { y: 205, color: "#ffd59a", intensity: 1 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard"], defaultFinish: "terracotta", slots: ["accent", "metal", "glow"], triBudget: 300, rooms: ["dining", "kitchen", "living"] }
+    { id: "floor-lamp", label: "Floor lamp", category: "lighting", size: { w: 40, d: 40, h: 160 }, layer: "standard", wallSnap: false, blocksWalk: true, light: { y: 135, color: "#ffd59a", intensity: 1 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "white", slots: ["accent", "metal", "glow"], triBudget: 400, rooms: ["living", "bedroom"] },
+    { id: "pendant-light", label: "Pendant light", category: "lighting", size: { w: 45, d: 45, h: 50 }, layer: "ceiling", mountY: 200, wallSnap: false, blocksWalk: false, light: { y: 10, color: "#ffd59a", intensity: 1 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["accent", "metal", "glow"], triBudget: 300, rooms: ["dining", "kitchen", "living"] },
+    { id: "curtains", label: "Curtains", category: "decor", size: { w: 200, d: 16, h: 250 }, layer: "high", mountY: 0, wallSnap: true, blocksWalk: false, stretch: { w: [100, 400] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "oat", slots: ["fabric", "metal"], triBudget: 700, rooms: ["living", "bedroom", "dining", "utility"] },
+    { id: "wall-art", label: "Wall art", category: "decor", size: { w: 100, d: 5, h: 60 }, layer: "high", mountY: 135, wallSnap: true, blocksWalk: false, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["accent", "wood", "linen", "terracotta"], triBudget: 300, rooms: ["living", "bedroom", "dining", "utility"] },
+    { id: "tv-panel", label: "TV wall", category: "storage", size: { w: 200, d: 40, h: 200 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [170, 240] }, surface: 45, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood", "rubber", "glass", "metal"], triBudget: 1e3, rooms: ["living", "bedroom"] },
+    { id: "ceiling-fan", label: "Ceiling fan", category: "lighting", size: { w: 120, d: 120, h: 35 }, layer: "ceiling", mountY: 245, wallSnap: false, blocksWalk: false, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "white", slots: ["wood", "metal"], triBudget: 500, rooms: ["living", "bedroom", "dining", "kitchen", "utility"] },
+    { id: "wall-light", label: "Wall light", category: "lighting", size: { w: 20, d: 16, h: 30 }, layer: "high", mountY: 160, wallSnap: true, blocksWalk: false, light: { y: 15, color: "#ffcf8a", intensity: 0.8 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "mustard", slots: ["accent", "metal", "glow"], triBudget: 300, rooms: ["living", "bedroom", "dining", "bathroom", "utility"] },
+    { id: "table-lamp", label: "Table lamp", category: "lighting", size: { w: 30, d: 30, h: 52 }, layer: "decor", wallSnap: false, blocksWalk: false, light: { y: 38, color: "#ffd59a", intensity: 0.7 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "mustard", slots: ["accent", "linen", "glow", "metal"], triBudget: 350, rooms: ["bedroom", "living", "utility", "dining"] },
+    { id: "jhula", label: "Jhula swing", category: "seating", size: { w: 190, d: 110, h: 210 }, layer: "standard", wallSnap: false, blocksWalk: true, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "teak", slots: ["wood", "metal", "fabric"], triBudget: 1400, rooms: ["living"] },
+    { id: "diwan", label: "Diwan", category: "seating", size: { w: 190, d: 85, h: 62 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [150, 210] }, surface: 40, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["wood", "fabric", "linen"], triBudget: 1100, rooms: ["living", "bedroom"] },
+    { id: "shoe-rack", label: "Shoe rack", category: "storage", size: { w: 90, d: 35, h: 95 }, layer: "standard", wallSnap: true, blocksWalk: true, surface: 95, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood", "metal", "rubber", "terracotta"], triBudget: 700, rooms: ["utility", "living"] },
+    { id: "sideboard", label: "Crockery unit", category: "storage", size: { w: 150, d: 45, h: 85 }, layer: "standard", wallSnap: true, blocksWalk: true, stretch: { w: [100, 200] }, surface: 85, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "walnut", slots: ["wood", "metal", "ceramic"], triBudget: 850, rooms: ["dining", "living", "kitchen"] },
+    { id: "console-table", label: "Console table", category: "tables", size: { w: 110, d: 35, h: 80 }, layer: "standard", wallSnap: true, blocksWalk: true, surface: 80, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "oak", slots: ["wood", "metal"], triBudget: 400, rooms: ["living", "dining", "bedroom", "utility"] },
+    { id: "ottoman", label: "Pouf", category: "seating", size: { w: 50, d: 50, h: 42 }, layer: "standard", wallSnap: false, blocksWalk: true, surface: 42, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "mustard", slots: ["fabric"], triBudget: 400, rooms: ["living", "bedroom"] },
+    { id: "bed-panel", label: "Headboard panel", category: "sleep", size: { w: 240, d: 8, h: 115 }, layer: "wall", wallSnap: true, blocksWalk: false, stretch: { w: [140, 360] }, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "sage", slots: ["fabric", "wood"], triBudget: 500, rooms: ["bedroom"] },
+    { id: "kitchen-chimney", label: "Chimney hood", category: "kitchen", size: { w: 75, d: 50, h: 110 }, layer: "high", mountY: 165, wallSnap: true, blocksWalk: false, light: { y: 2, color: "#fff0d6", intensity: 0.6 }, finishSlot: "accent", finishes: ["charcoal", "white", "sage", "navy"], defaultFinish: "charcoal", slots: ["accent", "metal", "glow"], triBudget: 400, rooms: ["kitchen"] },
+    { id: "backsplash", label: "Backsplash tiles", category: "kitchen", size: { w: 120, d: 2, h: 55 }, layer: "wall", mountY: 90, wallSnap: true, blocksWalk: false, stretch: { w: [60, 480] }, tile: { module: "backsplash-module", moduleWidth: 60 }, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "white", slots: ["accent", "ceramic"], triBudget: 300, rooms: ["kitchen", "bathroom"] },
+    { id: "backsplash-module", label: "Tile panel", category: "kitchen", size: { w: 60, d: 2, h: 55 }, layer: "wall", mountY: 90, wallSnap: true, blocksWalk: false, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "white", slots: ["accent", "ceramic"], triBudget: 200, rooms: ["kitchen", "bathroom"] },
+    { id: "mirror-cabinet", label: "Mirror cabinet", category: "bath", size: { w: 60, d: 15, h: 70 }, layer: "high", mountY: 110, wallSnap: true, blocksWalk: false, light: { y: 0, color: "#fff3dc", intensity: 0.5 }, finishSlot: "wood", finishes: ["oak", "walnut", "white", "black", "teak"], defaultFinish: "white", slots: ["wood", "glass", "glow"], triBudget: 300, rooms: ["bathroom"] },
+    { id: "cushions", label: "Cushions", category: "decor", size: { w: 110, d: 22, h: 40 }, layer: "decor", wallSnap: false, blocksWalk: false, finishSlot: "fabric", finishes: ["sage", "oat", "terracotta", "navy", "charcoal", "mustard", "blush", "peacock", "maroon"], defaultFinish: "mustard", slots: ["fabric", "accent", "linen"], triBudget: 500, rooms: ["living", "bedroom"] },
+    { id: "vase-books", label: "Vase & books", category: "decor", size: { w: 40, d: 25, h: 38 }, layer: "decor", wallSnap: false, blocksWalk: false, finishSlot: "accent", finishes: ["sage", "terracotta", "navy", "white", "charcoal", "mustard", "peacock", "maroon"], defaultFinish: "terracotta", slots: ["accent", "ceramic", "linen", "leaf"], triBudget: 350, rooms: ["living", "bedroom", "dining", "utility"] }
   ]
 };
 
@@ -343,6 +367,191 @@ function registerReconciler(reconcile) {
   if (!reconcilers.includes(reconcile)) reconcilers.push(reconcile);
 }
 
+// src/domain/circulationGrid.ts
+var CELL = 10;
+var CLEAR = 3;
+var APPROACH_DEPTH = 80;
+var BLOCKED = -2;
+var FREE = -1;
+var cache = /* @__PURE__ */ new WeakMap();
+function gridKey(floor) {
+  return JSON.stringify([
+    floor.footprint,
+    floor.rooms.map((r) => r.bounds),
+    floor.voids.map((v) => v.bounds),
+    floor.unitAreas.map((a) => [a.unitId, a.bounds])
+  ]);
+}
+function floorGrid(floor) {
+  const key = gridKey(floor);
+  const hit = cache.get(floor.rooms);
+  if (hit && hit.key === key) return hit.grid;
+  const grid = buildGrid(floor);
+  cache.set(floor.rooms, { key, grid });
+  return grid;
+}
+function buildGrid(floor) {
+  const fp = floor.footprint;
+  const nx = Math.max(1, Math.ceil(fp.w / CELL)), nz = Math.max(1, Math.ceil(fp.d / CELL));
+  const n = nx * nz;
+  const owner = new Int16Array(n).fill(FREE);
+  const label = new Int16Array(n).fill(-1);
+  const paint = (r, value, into) => {
+    const i0 = Math.max(0, Math.floor((r.x - fp.x) / CELL)), i1 = Math.min(nx, Math.ceil((r.x + r.w - fp.x) / CELL)), j0 = Math.max(0, Math.floor((r.z - fp.z) / CELL)), j1 = Math.min(nz, Math.ceil((r.z + r.d - fp.z) / CELL));
+    for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) into[j * nx + i] = value;
+  };
+  floor.voids.forEach((v) => paint(v.bounds, BLOCKED, owner));
+  floor.rooms.forEach((r, k) => paint(r.bounds, k, owner));
+  for (let c = 0; c < n; c++) if (owner[c] === FREE) label[c] = 0;
+  floor.unitAreas.forEach((a, k) => {
+    const lab = new Int16Array(n).fill(-1);
+    paint(a.bounds, k + 1, lab);
+    for (let c = 0; c < n; c++) if (owner[c] === FREE && lab[c] > 0) label[c] = lab[c];
+  });
+  const row = new Uint8Array(n);
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      const c = j * nx + i;
+      if (label[c] < 0) continue;
+      let ok = i - CLEAR >= 0 && i + CLEAR < nx;
+      for (let k = -CLEAR; ok && k <= CLEAR; k++) ok = label[c + k] === label[c];
+      row[c] = ok ? 1 : 0;
+    }
+  const walk = new Uint8Array(n);
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      const c = j * nx + i;
+      if (!row[c]) continue;
+      let ok = j - CLEAR >= 0 && j + CLEAR < nz;
+      for (let k = -CLEAR; ok && k <= CLEAR; k++) ok = row[c + k * nx] === 1 && label[c + k * nx] === label[c];
+      walk[c] = ok ? 1 : 0;
+    }
+  const reach = new Uint8Array(n);
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      if (!walk[j * nx + i]) continue;
+      for (let dj = -CLEAR; dj <= CLEAR; dj++)
+        for (let di = -CLEAR; di <= CLEAR; di++) reach[(j + dj) * nx + (i + di)] = 1;
+    }
+  const comp = new Int32Array(n).fill(-1);
+  const compSize = [];
+  const queue = new Int32Array(n);
+  for (let s = 0; s < n; s++) {
+    if (!reach[s] || comp[s] >= 0) continue;
+    const id = compSize.length;
+    let head = 0, tail = 0, size = 0;
+    queue[tail++] = s;
+    comp[s] = id;
+    while (head < tail) {
+      const c = queue[head++];
+      size++;
+      const i = c % nx, j = (c - i) / nx;
+      const next = [i > 0 ? c - 1 : -1, i < nx - 1 ? c + 1 : -1, j > 0 ? c - nx : -1, j < nz - 1 ? c + nx : -1];
+      for (const m of next)
+        if (m >= 0 && reach[m] && comp[m] < 0 && label[m] === label[c]) {
+          comp[m] = id;
+          queue[tail++] = m;
+        }
+    }
+    compSize.push(size);
+  }
+  return { x0: fp.x, z0: fp.z, nx, nz, owner, label, comp, compSize };
+}
+function sideOf(grid, o, side, depth = APPROACH_DEPTH) {
+  const half = Math.min(o.width, 90) / 2;
+  const along0 = o.center - half, along1 = o.center + half;
+  const across0 = side > 0 ? o.line : o.line - depth, across1 = side > 0 ? o.line + depth : o.line;
+  const [x0, x1, z0, z1] = o.axis === "x" ? [along0, along1, across0, across1] : [across0, across1, along0, along1];
+  const i0 = Math.floor((x0 - grid.x0) / CELL), i1 = Math.ceil((x1 - grid.x0) / CELL), j0 = Math.floor((z0 - grid.z0) / CELL), j1 = Math.ceil((z1 - grid.z0) / CELL);
+  if (i1 <= 0 || j1 <= 0 || i0 >= grid.nx || j0 >= grid.nz) return { kind: "outside" };
+  if (i0 < 0 || j0 < 0 || i1 > grid.nx || j1 > grid.nz) return { kind: "blocked" };
+  let room = -3, comp = -1;
+  for (let j = j0; j < j1; j++)
+    for (let i = i0; i < i1; i++) {
+      const c = j * grid.nx + i;
+      const o2 = grid.owner[c];
+      if (o2 === BLOCKED) return { kind: "blocked" };
+      if (room === -3) room = o2;
+      else if (room !== o2) return { kind: "blocked" };
+      if (o2 === FREE) {
+        if (grid.comp[c] < 0) return { kind: "blocked" };
+        if (comp < 0) comp = grid.comp[c];
+        else if (comp !== grid.comp[c]) return { kind: "blocked" };
+      }
+    }
+  if (room >= 0) return { kind: "room", room };
+  return { kind: "open", comp, size: grid.compSize[comp] ?? 0 };
+}
+var sideNode = (s) => s.kind === "room" ? `r${s.room}` : s.kind === "open" ? `o${s.comp}` : s.kind === "outside" ? "out" : null;
+var PASSABLE = /* @__PURE__ */ new Set(["door", "french-door", "sliding-door", "archway"]);
+function doorGraph(grid, openings) {
+  const adj = /* @__PURE__ */ new Map();
+  const link = (a, b) => {
+    if (!adj.has(a)) adj.set(a, /* @__PURE__ */ new Set());
+    if (!adj.has(b)) adj.set(b, /* @__PURE__ */ new Set());
+    adj.get(a).add(b);
+    adj.get(b).add(a);
+  };
+  for (const o of openings) {
+    if (!PASSABLE.has(o.kind)) continue;
+    const a = sideNode(sideOf(grid, o, 1)), b = sideNode(sideOf(grid, o, -1));
+    if (a && b && a !== b) link(a, b);
+  }
+  return adj;
+}
+function connectedNodes(grid, openings, from) {
+  const adj = doorGraph(grid, openings);
+  const seen = /* @__PURE__ */ new Set([from]);
+  const queue = [from];
+  while (queue.length)
+    for (const m of adj.get(queue.pop()) ?? [])
+      if (m !== "out" && !seen.has(m)) {
+        seen.add(m);
+        queue.push(m);
+      }
+  return seen;
+}
+function reachableNodes(floor, grid, openings) {
+  const adj = doorGraph(grid, openings);
+  const start = [];
+  if (floor.elevation === 0) {
+    for (const n of adj.get("out") ?? []) start.push(n);
+  }
+  for (const v of floor.voids) {
+    if (v.kind !== "stairs" || floor.elevation === 0) continue;
+    const b = v.bounds;
+    const ring = [
+      { x: b.x, z: b.z - CELL, w: b.w, d: CELL },
+      { x: b.x, z: b.z + b.d, w: b.w, d: CELL },
+      { x: b.x - CELL, z: b.z, w: CELL, d: b.d },
+      { x: b.x + b.w, z: b.z, w: CELL, d: b.d }
+    ];
+    for (const r of ring)
+      for (let z = r.z; z < r.z + r.d; z += CELL)
+        for (let x = r.x; x < r.x + r.w; x += CELL) {
+          const i = Math.floor((x - grid.x0) / CELL), j = Math.floor((z - grid.z0) / CELL);
+          if (i < 0 || j < 0 || i >= grid.nx || j >= grid.nz) continue;
+          const c = j * grid.nx + i;
+          const own = grid.owner[c];
+          if (own >= 0) start.push(`r${own}`);
+          else if (grid.comp[c] >= 0) start.push(`o${grid.comp[c]}`);
+        }
+  }
+  const hasWayIn = floor.elevation === 0 || floor.voids.some((v) => v.kind === "stairs");
+  if (!start.length) return hasWayIn ? /* @__PURE__ */ new Set() : null;
+  const seen = new Set(start);
+  const queue = [...start];
+  while (queue.length) {
+    const n = queue.pop();
+    for (const m of adj.get(n) ?? []) {
+      if (m === "out" || seen.has(m)) continue;
+      seen.add(m);
+      queue.push(m);
+    }
+  }
+  return seen;
+}
+
 // src/domain/walls.ts
 function edges(r, exterior) {
   return [
@@ -467,24 +676,30 @@ function autoOpenings(floor, road, segments = deriveWallSegments(floor)) {
   ).length;
   const rank = (a, b) => roomOwners(a) - roomOwners(b) || b.length - a.length || a.id.localeCompare(b.id);
   const doorWall = doorWallFilter(floor);
+  const grid = floorGrid(floor);
+  const roomDoor = { kind: "door", width: 90, sill: 0, height: 215 };
+  const candidates = (room) => segments.filter(
+    (w) => !w.exterior && !privateBoundary(w) && !blocked(w) && w.length >= 120 && touches(w, room.bounds) && doorWall(room, w)
+  );
   for (const room of floor.rooms) {
-    const options = segments.filter(
-      (w) => !w.exterior && !privateBoundary(w) && !blocked(w) && w.length >= 120 && touches(w, room.bounds) && doorWall(room, w)
-    );
-    options.sort(rank);
-    if (options[0])
-      chosen.set(options[0].id, {
-        kind: "door",
-        width: 90,
-        sill: 0,
-        height: 215
-      });
+    const options = candidates(room);
+    const best = bestDoor(grid, floor.rooms, floor.rooms.indexOf(room), options, rank);
+    if (best) chosen.set(best.wall.id, { ...roomDoor, center: best.center });
+    else {
+      options.sort(rank);
+      if (options[0]) chosen.set(options[0].id, roomDoor);
+    }
   }
   for (const area of floor.unitAreas) {
     const options = segments.filter(
       (w) => !w.exterior && !privateBoundary(w) && !blocked(w) && w.length >= 140 && touches(w, area.bounds) && doorWall(null, w)
     );
     options.sort(rank);
+    const clear = options.filter((w) => {
+      const o = { axis: w.axis, line: wallLine(w), center: wallStart(w) + w.length / 2, width: 100 };
+      return sideOf(grid, o, 1).kind !== "blocked" && sideOf(grid, o, -1).kind !== "blocked";
+    });
+    if (clear[0]) options.unshift(clear[0]);
     if (options[0])
       chosen.set(options[0].id, {
         kind: "door",
@@ -520,7 +735,7 @@ function autoOpenings(floor, road, segments = deriveWallSegments(floor)) {
   };
   if (floor.elevation === 0) entrance(road);
   for (const balcony of floor.balconies) entrance(balcony.edge, balcony);
-  return segments.filter((w) => chosen.has(w.id)).map((w) => ({
+  const placed = () => segments.filter((w) => chosen.has(w.id)).map((w) => ({
     id: `auto:${w.id}`,
     wallId: w.id,
     axis: w.axis,
@@ -528,6 +743,92 @@ function autoOpenings(floor, road, segments = deriveWallSegments(floor)) {
     center: wallStart(w) + w.length / 2,
     ...chosen.get(w.id)
   }));
+  for (let pass = 0; pass < floor.rooms.length; pass++) {
+    const reached = reachableNodes(floor, grid, placed());
+    if (!reached) break;
+    const stranded = floor.rooms.findIndex((_, k) => !reached.has(`r${k}`));
+    if (stranded < 0) break;
+    let added = false;
+    for (let k = stranded; k < floor.rooms.length && !added; k++) {
+      if (reached.has(`r${k}`)) continue;
+      const room = floor.rooms[k];
+      const options = candidates(room).filter((w) => !chosen.has(w.id));
+      const best = bestDoor(grid, floor.rooms, k, options, rank, (node) => reached.has(node)) ?? bridgeDoor(floor, grid, segments, placed(), reached, k, (w) => !privateBoundary(w) && !blocked(w));
+      if (best && !chosen.has(best.wall.id)) {
+        chosen.set(best.wall.id, { ...roomDoor, center: best.center });
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return placed();
+}
+var THROUGH_RANK = {
+  living: 1,
+  dining: 1,
+  kitchen: 2,
+  utility: 2,
+  shop: 2,
+  bathroom: 3,
+  bedroom: 3
+};
+function bridgeDoor(floor, grid, segments, openings, reached, strandedRoom, allowed = () => true) {
+  const part = connectedNodes(grid, openings, `r${strandedRoom}`);
+  const taken = new Set(
+    openings.flatMap((o) => {
+      const w = segmentAt([...segments], o.axis, o.line, o.center);
+      return w ? [w.id] : [];
+    })
+  );
+  const rankNode = (n) => n.startsWith("o") ? 0 : THROUGH_RANK[floor.rooms[Number(n.slice(1))]?.kind ?? "bedroom"];
+  let best = null;
+  for (const w of segments) {
+    if (w.exterior || w.length < 120 || taken.has(w.id) || !allowed(w)) continue;
+    for (const center of doorCenters(w)) {
+      const o = { axis: w.axis, line: wallLine(w), center, width: 90 };
+      const a = sideNode(sideOf(grid, o, 1)), b = sideNode(sideOf(grid, o, -1));
+      if (!a || !b || a === "out" || b === "out") continue;
+      const [inner, outer] = part.has(a) && reached.has(b) ? [a, b] : part.has(b) && reached.has(a) ? [b, a] : [null, null];
+      if (!inner || !outer) continue;
+      const viaEnsuite = [inner, outer].some((n) => n.startsWith("r") && floor.rooms[Number(n.slice(1))]?.attachedTo);
+      if (viaEnsuite) continue;
+      const score = rankNode(inner) * 10 + rankNode(outer);
+      if (!best || score < best.score || score === best.score && w.length > best.wall.length)
+        best = { wall: w, center, score };
+      break;
+    }
+  }
+  return best ? { wall: best.wall, center: best.center } : null;
+}
+function doorCenters(w, width = 90) {
+  const start = wallStart(w);
+  return [.../* @__PURE__ */ new Set([start + w.length / 2, start + 60, start + w.length - 60])].filter(
+    (c) => c - width / 2 >= start + 15 && c + width / 2 <= start + w.length - 15
+  );
+}
+function doorScore(grid, rooms, roomIndex, w, center, accept = () => true) {
+  const room = rooms[roomIndex];
+  const line = wallLine(w);
+  const own = (w.axis === "x" ? room.bounds.z : room.bounds.x) === line ? 1 : -1;
+  const o = { axis: w.axis, line, center, width: 90 };
+  const mine = sideOf(grid, o, own), far = sideOf(grid, o, own === 1 ? -1 : 1);
+  if (mine.kind !== "room" || mine.room !== roomIndex) return null;
+  if (far.kind !== "room" && far.kind !== "open") return null;
+  const node = sideNode(far);
+  if (!node || !accept(node)) return null;
+  return far.kind === "open" ? 0 : THROUGH_RANK[rooms[far.room].kind];
+}
+function bestDoor(grid, rooms, roomIndex, options, rank, accept) {
+  let best = null;
+  for (const w of options)
+    for (const center of doorCenters(w)) {
+      const score = doorScore(grid, rooms, roomIndex, w, center, accept);
+      if (score === null) continue;
+      if (!best || score < best.score || score === best.score && rank(w, best.wall) < 0)
+        best = { wall: w, center, score };
+      break;
+    }
+  return best ? { wall: best.wall, center: best.center } : null;
 }
 function resolveFloorOpenings(floor, road, segments = deriveWallSegments(floor)) {
   if (floor.openings) return floor.openings.map((o) => ({ ...o, auto: false }));
@@ -617,8 +918,17 @@ var GOES_ANYWHERE = /* @__PURE__ */ new Set([
   "pendant-light",
   "mirror",
   "bookshelf",
-  "side-table"
+  "side-table",
+  "wall-art",
+  "curtains",
+  "cushions",
+  "vase-books",
+  "ceiling-fan"
 ]);
+function isAccessory(catalogId) {
+  const entry = CATALOG.get(catalogId);
+  return !entry || GOES_ANYWHERE.has(catalogId) || entry.category === "decor" || entry.category === "lighting";
+}
 function furnitureFitsRoom(catalogId, kind) {
   const entry = CATALOG.get(catalogId);
   if (!entry) return false;
@@ -728,12 +1038,13 @@ function kitchenCounter(e, ox, oz, w, d, appliances) {
   e.ellipse("cooking pot", ox + hobX + 4, oz + 10, 22, 22, 92, 16, "steel");
   e.ellipse("pot lid", ox + hobX + 3, oz + 9, 24, 24, 108, 2, "dark");
   if (w >= 145) {
-    e.box("sink rim", ox + 10, oz + 8, 48, 42, 89, 2, "steel", true);
-    e.box("sink bowl", ox + 14, oz + 12, 40, 34, 90, 1, "dark", true);
-    e.box("sink bottom", ox + 18, oz + 16, 32, 26, 91, 1, "water", true);
-    e.box("tap", ox + 29, oz + 5, 4, 4, 91, 22, "steel");
-    e.box("tap spout", ox + 29, oz + 5, 4, 17, 111, 3, "steel");
-    e.box("chopping board", ox + 67, oz + 15, 27, 34, 89, 2, "oak", true);
+    const sx = ox + Math.max(10, Math.min(w / 2 - 24, hobX - 120));
+    e.box("sink rim", sx, oz + 8, 48, 42, 89, 2, "steel", true);
+    e.box("sink bowl", sx + 4, oz + 12, 40, 34, 90, 1, "dark", true);
+    e.box("sink bottom", sx + 8, oz + 16, 32, 26, 91, 1, "water", true);
+    e.box("tap", sx + 19, oz + 5, 4, 4, 91, 22, "steel");
+    e.box("tap spout", sx + 19, oz + 5, 4, 17, 111, 3, "steel");
+    e.box("chopping board", sx + 57, oz + 15, 27, 34, 89, 2, "oak", true);
   }
 }
 function diningTop(e, ox, oz, w, d) {
@@ -985,6 +1296,97 @@ var pendantLight = (e, ox, oz, w, d) => {
   e.box("pendant cord", ox + w / 2 - 1, oz + d / 2 - 1, 2, 2, 225, 60, "dark");
   e.ellipse("pendant shade", ox, oz, w, d, 200, 25, "glow", true);
 };
+var curtains = (e, ox, oz, w, d) => {
+  const panel = Math.min(45, w * 0.24);
+  e.box("curtain rod", ox, oz + 2, w, 4, 238, 4, "steel");
+  for (const x of [0, w - panel]) {
+    e.box("drape", ox + x, oz + 3, panel, d - 3, 0, 238, "fabric", true, true);
+    e.box("tie-back", ox + x + panel / 2 - 3, oz + d - 2, 6, 2, 100, 6, "steel");
+  }
+};
+var wallArt = (e, ox, oz, w, d) => {
+  e.box("picture frame", ox, oz, w, d - 1, 135, 60, "timber");
+  e.box("print", ox + 6, oz + d - 1, w - 12, 1, 141, 48, "linen");
+  e.box("print motif", ox + w * 0.28, oz + d - 1, w * 0.44, 1, 143, 34, "clay", false, true);
+  e.ellipse("print sun", ox + w * 0.68, oz + d - 1, 10, 1, 170, 10, "clay");
+};
+var tvPanel = (e, ox, oz, w, d) => {
+  e.box("fluted panel", ox, oz, w, 6, 0, 200, "timber", false, true);
+  e.box("tv console", ox + w * 0.08, oz + 6, w * 0.84, d - 6, 15, 30, "oak", false, true);
+  e.box("tv screen", ox + w / 2 - 60, oz + 6, 120, 4, 85, 70, "dark");
+};
+var ceilingFan = (e, ox, oz, w, d) => {
+  e.box("fan downrod", ox + w / 2 - 1.5, oz + d / 2 - 1.5, 3, 3, 258, 22, "steel");
+  e.ellipse("fan motor", ox + w / 2 - 12, oz + d / 2 - 12, 24, 24, 248, 10, "steel");
+  e.box("fan blade", ox, oz + d / 2 - 7, w, 14, 251, 2, "oak", false, true);
+  e.box("fan blade", ox + w / 2 - 7, oz, 14, d, 251, 2, "oak", false, true);
+};
+var wallLight = (e, ox, oz, w, d) => {
+  e.box("sconce plate", ox + w / 2 - 5, oz, 10, 3, 163, 18, "steel");
+  e.ellipse("sconce shade", ox + 2, oz + 3, w - 4, d - 3, 170, 16, "glow");
+};
+var tableLamp = (e, ox, oz, w, d) => {
+  e.ellipse("lamp base", ox + w / 2 - 8, oz + d / 2 - 8, 16, 16, 0, 24, "clay", true);
+  e.ellipse("lamp shade", ox, oz, w, d, 28, 24, "glow");
+};
+var jhula = (e, ox, oz, w, d) => {
+  for (const x of [0, w - 8]) e.box("swing post", ox + x, oz, 8, d, 0, 200, "timber", false, true);
+  e.box("swing beam", ox, oz + d / 2 - 5, w, 10, 200, 10, "timber", false, true);
+  const sw = Math.min(130, w - 30);
+  for (const x of [6, sw - 8])
+    e.box("swing chain", ox + (w - sw) / 2 + x, oz + d / 2 - 1, 2, 2, 50, 150, "steel");
+  e.box("swing seat", ox + (w - sw) / 2, oz + d / 2 - 27, sw, 55, 42, 8, "oak", false, true);
+  e.box("swing cushion", ox + (w - sw) / 2 + 6, oz + d / 2 - 22, sw - 12, 45, 50, 6, "fabric", true);
+};
+var diwan = (e, ox, oz, w, d) => {
+  e.box("diwan base", ox, oz, w, d, 10, 18, "timber");
+  legs(e, ox, oz, w, d, 10);
+  e.box("diwan mattress", ox + 2, oz + 2, w - 4, d - 4, 28, 12, "fabric", true, true);
+  e.box("back cushion", ox + 18, oz, w - 36, 18, 40, 22, "cushion", true);
+  for (const x of [0, w - 16]) e.box("bolster", ox + x, oz + 6, 16, d - 12, 40, 16, "linen", true);
+};
+var shoeRack = (e, ox, oz, w, d) => {
+  e.box("shoe rack", ox, oz, w, d, 30, 65, "oak", false, true);
+  e.box("shoe shelf", ox, oz, w, d, 0, 6, "oak", false, true);
+  for (const x of [8, w / 2 + 4]) e.box("shoes", ox + x, oz + 6, w / 2 - 14, d - 10, 6, 10, "clay", true);
+};
+var sideboard = (e, ox, oz, w, d) => {
+  e.box("sideboard", ox, oz, w, d, 14, 71, "oak", false, true);
+  legs(e, ox, oz, w, d, 14, true);
+  e.ellipse("crockery jar", ox + 8, oz + d / 2 - 8, 16, 16, 85, 18, "ceramic");
+};
+var consoleTable = (e, ox, oz, w, d) => {
+  e.box("console top", ox, oz, w, d, 74, 6, "oak", false, true);
+  legs(e, ox, oz, w, d, 74, true);
+  e.box("console shelf", ox + 4, oz + 4, w - 8, d - 8, 18, 3, "oak", false, true);
+};
+var ottoman = (e, ox, oz, w, d) => e.ellipse("pouf", ox, oz, w, d, 0, 42, "fabric", true);
+var bedPanel = (e, ox, oz, w, d) => {
+  e.box("headboard panel", ox, oz, w, d, 0, 115, "fabric", true, true);
+  e.box("panel trim", ox, oz, w, d - 2, 112, 3, "oak");
+};
+var chimney = (e, ox, oz, w, d) => {
+  e.box("chimney hood", ox, oz, w, d, 165, 26, "dark", false, true);
+  e.box("chimney duct", ox + w / 2 - 14, oz, 28, 25, 191, 84, "dark", false, true);
+};
+var backsplash = (e, ox, oz, w, d) => e.box("backsplash tiles", ox, oz, w, d, 90, 55, "ceramic", false, true);
+var mirrorCabinet = (e, ox, oz, w, d) => {
+  e.box("mirror cabinet", ox, oz, w, d - 2, 110, 70, "oak", false, true);
+  e.box("mirror glass", ox + 3, oz + d - 2, w - 6, 2, 113, 64, "water");
+  e.box("cabinet light", ox + 5, oz + d - 4, w - 10, 2, 109, 1, "glow");
+};
+var cushionSet = (e, ox, oz, w, d) => {
+  const side = Math.min(38, w / 3);
+  e.box("cushion", ox, oz, side, d, 0, 38, "fabric", true, true);
+  e.box("cushion", ox + w - side, oz, side, d, 0, 38, "fabric", true, true);
+  e.box("accent cushion", ox + w / 2 - side * 0.45, oz + 2, side * 0.9, d - 2, 0, 32, "cushion", true);
+};
+var vaseBooks = (e, ox, oz, w, d) => {
+  e.box("books", ox, oz + 4, w * 0.55, d - 8, 0, 8, "linen");
+  e.box("books", ox + 2, oz + 6, w * 0.5, d - 12, 8, 5, "clay", false, true);
+  e.ellipse("vase", ox + w - 18, oz + d / 2 - 8, 16, 16, 0, 22, "ceramic");
+  e.ellipse("sprig", ox + w - 20, oz + d / 2 - 10, 20, 20, 22, 16, "leaf");
+};
 var GENERATORS = {
   "bed-double": bed,
   "bed-single": bed,
@@ -1004,8 +1406,8 @@ var GENERATORS = {
   desk,
   bookshelf,
   "media-unit": mediaUnit,
-  // Short runs read as plain cabinets (the automatic L-return is 120 cm).
-  "kitchen-counter": (e, ox, oz, w, d) => kitchenCounter(e, ox, oz, w, d, w >= 130),
+  // Like the tiled GLB run: a sink and a hob only from 2 m, else plain cabinets.
+  "kitchen-counter": (e, ox, oz, w, d) => kitchenCounter(e, ox, oz, w, d, w >= 200),
   "kitchen-base": (e, ox, oz, w, d) => kitchenCounter(e, ox, oz, w, d, false),
   "kitchen-sink": kitchenSink,
   "kitchen-stove": kitchenStove,
@@ -1030,7 +1432,801 @@ var GENERATORS = {
   "plant-floor": plant(28, 35),
   "plant-small": plant(18, 18),
   "floor-lamp": floorLamp,
-  "pendant-light": pendantLight
+  "pendant-light": pendantLight,
+  curtains,
+  "wall-art": wallArt,
+  "tv-panel": tvPanel,
+  "ceiling-fan": ceilingFan,
+  "wall-light": wallLight,
+  "table-lamp": tableLamp,
+  jhula,
+  diwan,
+  "shoe-rack": shoeRack,
+  sideboard,
+  "console-table": consoleTable,
+  ottoman,
+  "bed-panel": bedPanel,
+  "kitchen-chimney": chimney,
+  backsplash,
+  "backsplash-module": backsplash,
+  "mirror-cabinet": mirrorCabinet,
+  cushions: cushionSet,
+  "vase-books": vaseBooks
+};
+function tileModules(entry, width) {
+  const tile = entry.tile;
+  if (!tile) return [];
+  const module = String(tile.module);
+  const mw = Number(tile.moduleWidth ?? 60);
+  let seq = [];
+  const sink = tile.sink ? String(tile.sink) : null, end = tile.end ? String(tile.end) : null;
+  const sw = Number(tile.sinkWidth ?? 80), ew = Number(tile.endWidth ?? 60);
+  if (sink && end && width >= sw + ew + mw) {
+    const n = Math.max(0, Math.round((width - sw - ew) / mw));
+    const a = Math.floor(n / 2);
+    seq = [
+      ...Array.from({ length: a }, () => ({ model: module, w: mw })),
+      { model: sink, w: sw },
+      ...Array.from({ length: n - a }, () => ({ model: module, w: mw })),
+      { model: end, w: ew }
+    ];
+  } else {
+    const n = Math.max(1, Math.round(width / mw));
+    seq = Array.from({ length: n }, () => ({ model: module, w: mw }));
+  }
+  const total = seq.reduce((s, m) => s + m.w, 0);
+  const scale = width / total;
+  let cursor = -width / 2;
+  return seq.map((m) => {
+    const x = cursor + m.w * scale / 2;
+    cursor += m.w * scale;
+    return { model: m.model, x, scale };
+  });
+}
+var AUTO_WALKWAY = 80;
+var SNUG = 10;
+var LAYER_GAP = 5;
+var SIDES2 = ["north", "east", "south", "west"];
+var clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+function footprintGap(a, b) {
+  const dx = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w));
+  const dz = Math.max(0, Math.max(a.z, b.z) - Math.min(a.z + a.d, b.z + b.d));
+  return dx && dz ? Math.hypot(dx, dz) : dx + dz;
+}
+var grow = (r, m) => ({ x: r.x - m, z: r.z - m, w: r.w + 2 * m, d: r.d + 2 * m });
+var hung = (p) => p.entry.layer === "high" || p.entry.layer === "wall";
+var FRONT_ACCESS = /* @__PURE__ */ new Set([
+  "wardrobe",
+  "dresser",
+  "bookshelf",
+  "sideboard",
+  "shoe-rack",
+  "console-table",
+  "tv-panel",
+  "media-unit",
+  "kitchen-counter",
+  "fridge",
+  "washing-machine",
+  "laundry-counter",
+  "vanity",
+  "toilet",
+  "display-shelf"
+]);
+var FRONT_CLEAR = 70;
+function frontZone(p) {
+  if (!FRONT_ACCESS.has(p.catalogId)) return null;
+  const r = p.rect, f = FRONT_CLEAR;
+  switch (p.rotation) {
+    case 0:
+      return { x: r.x + 10, z: r.z + r.d, w: r.w - 20, d: f };
+    case 180:
+      return { x: r.x + 10, z: r.z - f, w: r.w - 20, d: f };
+    case 90:
+      return { x: r.x - f, z: r.z + 10, w: f, d: r.d - 20 };
+    case 270:
+      return { x: r.x + r.w, z: r.z + 10, w: f, d: r.d - 20 };
+  }
+}
+var major = (p) => p.entry.layer === "standard" && p.entry.blocksWalk && p.group !== "accent";
+var AXES = {
+  0: { x: [1, 0], z: [0, 1] },
+  90: { x: [0, 1], z: [-1, 0] },
+  180: { x: [-1, 0], z: [0, -1] },
+  270: { x: [0, -1], z: [1, 0] }
+};
+var SIDE_TURN = { north: 0, east: 90, south: 180, west: 270 };
+function centresAlong(length, size, prefer, step = 10) {
+  const lo = size / 2, hi = length - size / 2;
+  if (hi < lo - 0.01) return [];
+  const out = [];
+  const add = (v) => {
+    const c = clamp(v, lo, hi);
+    if (!out.some((o) => Math.abs(o - c) < 0.5)) out.push(c);
+  };
+  add(prefer);
+  for (let k = step; k <= length; k += step) {
+    add(prefer - k);
+    add(prefer + k);
+  }
+  return out;
+}
+function designer(W, D, ctx, room = { name: "" }) {
+  const placed = [];
+  let score = 0;
+  const len = (side) => side === "north" || side === "south" ? W : D;
+  const spanOf = (r, side) => side === "north" || side === "south" ? [r.x, r.x + r.w] : [r.z, r.z + r.d];
+  const surfaceAt = (x, z) => {
+    let y = 0;
+    for (const o of placed) {
+      const s = o.entry.surface;
+      if (s === void 0 || o.entry.layer !== "standard") continue;
+      const r = o.rect;
+      if (x > r.x && x < r.x + r.w && z > r.z && z < r.z + r.d) y = Math.max(y, s);
+    }
+    return y;
+  };
+  const fits = (p) => {
+    const r = p.rect, layer = p.entry.layer;
+    if (!(r.w > 0 && r.d > 0)) return false;
+    if (r.x < -0.01 || r.z < -0.01 || r.x + r.w > W + 0.01 || r.z + r.d > D + 0.01) return false;
+    if ((layer === "standard" || layer === "decor") && ctx.doors.some((d) => overlaps(d, r)))
+      return false;
+    if (p.side) {
+      const [a, b2] = spanOf(r, p.side);
+      const wall = ctx.walls[p.side];
+      const across = (s, margin) => a < s.b + margin && b2 > s.a - margin;
+      if (wall.doors.some((s) => across(s, 8) && p.base < s.y1)) return false;
+      if (p.catalogId !== "curtains" && wall.windows.some((s) => across(s, 0) && p.top > s.y0 + 15 && p.base < s.y1))
+        return false;
+    }
+    for (const o of placed) {
+      const ol = o.entry.layer;
+      if (ol === layer && overlaps(grow(o.rect, LAYER_GAP / 2), grow(r, LAYER_GAP / 2)))
+        return false;
+      if (hung(p) && ol === "standard" && o.top > p.base + 5 && overlaps(o.rect, r)) return false;
+      if (layer === "standard" && hung(o) && p.top > o.base + 5 && overlaps(o.rect, r)) return false;
+      if (major(p) && major(o) && o.group !== p.group) {
+        const g = footprintGap(o.rect, r);
+        if (g > SNUG && g < AUTO_WALKWAY) return false;
+        if (g <= SNUG && !(p.side && o.side)) return false;
+        const pf = frontZone(p), of = frontZone(o);
+        if (pf && overlaps(pf, o.rect) || of && overlaps(of, r)) return false;
+      }
+    }
+    return true;
+  };
+  const b = {
+    W,
+    D,
+    ctx,
+    room,
+    placed,
+    len,
+    /** Places a piece with this footprint; null (and nothing changes) if it doesn't fit. */
+    at(catalogId, rect2, rotation, opts = {}) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const turned = rotation % 180 !== 0;
+      const w = Math.round(opts.w ?? (turned ? rect2.d : rect2.w)), d = Math.round(opts.d ?? (turned ? rect2.w : rect2.d));
+      const ok = (key, v) => {
+        const range = entry.stretch?.[key];
+        return range ? v >= range[0] && v <= range[1] : v === entry.size[key];
+      };
+      if (!ok("w", w) || !ok("d", d)) return null;
+      const fw = turned ? d : w, fd = turned ? w : d;
+      const r = {
+        x: rect2.x + (rect2.w - fw) / 2,
+        z: rect2.z + (rect2.d - fd) / 2,
+        w: fw,
+        d: fd
+      };
+      const base = entry.layer === "decor" ? surfaceAt(r.x + r.w / 2, r.z + r.d / 2) : entry.mountY ?? 0;
+      const p = {
+        catalogId,
+        rect: r,
+        w,
+        d,
+        rotation,
+        group: opts.group ?? "accent",
+        entry,
+        side: opts.side ?? null,
+        base,
+        top: base + entry.size.h
+      };
+      if (!fits(p)) return null;
+      placed.push(p);
+      score += opts.weight ?? 1;
+      return p;
+    },
+    /** Places a piece with its back to a wall, centred `center` along it. */
+    wall(catalogId, side, center, opts = {}) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const w = Math.round(opts.w ?? entry.size.w), d = Math.round(opts.d ?? entry.size.d), off = opts.off ?? 0;
+      const rect2 = side === "north" ? { x: center - w / 2, z: off, w, d } : side === "south" ? { x: center - w / 2, z: D - off - d, w, d } : side === "west" ? { x: off, z: center - w / 2, w: d, d: w } : { x: W - off - d, z: center - w / 2, w: d, d: w };
+      return b.at(catalogId, rect2, SIDE_TURN[side], {
+        ...opts,
+        w,
+        d,
+        side: opts.side === void 0 ? side : opts.side
+      });
+    },
+    /** First centre along a wall where the piece fits. */
+    wallScan(catalogId, side, prefer, opts = {}) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const w = opts.w ?? entry.size.w;
+      for (const c of centresAlong(len(side), w, prefer)) {
+        if (opts.reach !== void 0 && Math.abs(c - prefer) > opts.reach) continue;
+        const p = b.wall(catalogId, side, c, opts);
+        if (p) return p;
+      }
+      return null;
+    },
+    /** A decor piece on a host, at local offsets from the host's centre (+z toward its front). */
+    on(catalogId, host, along = 0, front = 0, opts = {}) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const ax = AXES[host.rotation];
+      const cx = host.rect.x + host.rect.w / 2 + ax.x[0] * along + ax.z[0] * front, cz = host.rect.z + host.rect.d / 2 + ax.x[1] * along + ax.z[1] * front;
+      const turned = host.rotation % 180 !== 0;
+      const fw = turned ? entry.size.d : entry.size.w, fd = turned ? entry.size.w : entry.size.d;
+      return b.at(catalogId, { x: cx - fw / 2, z: cz - fd / 2, w: fw, d: fd }, host.rotation, {
+        group: host.group,
+        ...opts
+      });
+    },
+    /** A rug trimmed clear of other groups' furniture; null when too small. */
+    rug(catalogId, rect2, group, weight = 1) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      let x0 = Math.max(0, rect2.x), z0 = Math.max(0, rect2.z), x1 = Math.min(W, rect2.x + rect2.w), z1 = Math.min(D, rect2.z + rect2.d);
+      for (let k = 0; k < 16; k++) {
+        const cur = { x: x0, z: z0, w: x1 - x0, d: z1 - z0 };
+        const hit = placed.find(
+          (o2) => o2.entry.layer === "standard" && o2.group !== group && overlaps(grow(o2.rect, 10), cur) || o2.entry.layer === "floor" && overlaps(grow(o2.rect, LAYER_GAP), cur)
+        );
+        if (!hit) break;
+        const o = grow(hit.rect, 10);
+        const options = [
+          [x0, z0, x1, Math.min(z1, o.z)],
+          [x0, Math.max(z0, o.z + o.d), x1, z1],
+          [x0, z0, Math.min(x1, o.x), z1],
+          [Math.max(x0, o.x + o.w), z0, x1, z1]
+        ];
+        const area = (q) => Math.max(0, q[2] - q[0]) * Math.max(0, q[3] - q[1]);
+        const best = options.reduce((m, q) => area(q) > area(m) ? q : m);
+        [x0, z0, x1, z1] = best;
+      }
+      const sw = entry.stretch?.w ?? [entry.size.w, entry.size.w], sd = entry.stretch?.d ?? [entry.size.d, entry.size.d];
+      let w = Math.floor(Math.min(x1 - x0, sw[1])), d = Math.floor(Math.min(z1 - z0, sd[1]));
+      if (w < sw[0] || d < sd[0]) return null;
+      w -= w % 10;
+      d -= d % 10;
+      if (w < sw[0] || d < sd[0]) return null;
+      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+      return b.at(catalogId, { x: cx - w / 2, z: cz - d / 2, w, d }, 0, { group, weight });
+    },
+    /** A small piece in the first free corner (corners away from the main wall first). */
+    corner(catalogId, weight = 1, group = "accent") {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const w = entry.size.w, d = entry.size.d;
+      for (const [x, z] of [
+        [W - w, D - d],
+        [0, D - d],
+        [W - w, 0],
+        [0, 0]
+      ]) {
+        const p = b.at(catalogId, { x, z, w, d }, 0, { group, weight });
+        if (p) return p;
+      }
+      return null;
+    },
+    bonus(n) {
+      score += n;
+    },
+    checkpoint: () => ({ n: placed.length, score }),
+    restore(cp) {
+      placed.length = cp.n;
+      score = cp.score;
+    },
+    done: () => ({
+      items: placed.map(({ catalogId, rect: rect2, w, d, rotation, group }) => ({
+        catalogId,
+        rect: rect2,
+        w,
+        d,
+        rotation,
+        group
+      })),
+      score
+    })
+  };
+  return b;
+}
+function curtainsOnWindows(b, max = 2) {
+  let n = 0;
+  for (const side of SIDES2)
+    for (const s of b.ctx.walls[side].windows) {
+      if (n >= max) return;
+      const a = Math.max(0, s.a - 25), z = Math.min(b.len(side), s.b + 25);
+      const w = Math.round(clamp(z - a, 100, 400));
+      if (w > b.len(side)) continue;
+      if (b.wall("curtains", side, (a + z) / 2, { w, weight: 3, group: "accent" })) n++;
+    }
+}
+function fanOver(b, x, z) {
+  if (Math.min(b.W, b.D) < 220) return null;
+  return b.at("ceiling-fan", { x: x - 60, z: z - 60, w: 120, d: 120 }, 0, { weight: 2 });
+}
+var doorOn = (ctx, side) => ctx.walls[side].doors.length > 0;
+var BEDS = [
+  ["bed-double", 160, 210, 100],
+  ["bed-double", 140, 200, 96],
+  ["bed-single", 100, 200, 90],
+  ["bed-single", 90, 190, 88]
+];
+function furnishBedroom(b, [id, w, d, weight]) {
+  const { W, D, ctx } = b;
+  let bed2 = null;
+  if (w <= W && d + 10 <= D)
+    for (const c of centresAlong(W, w, W / 2)) {
+      bed2 = b.wall(id, "north", c, { w, d, off: 10, group: "sleep", weight });
+      if (bed2) {
+        b.bonus(-Math.abs(c - W / 2) / 20);
+        break;
+      }
+    }
+  if (!bed2) {
+    const w2 = Math.min(76, W), d2 = Math.min(115, D);
+    if (w2 >= 40 && d2 >= 40) {
+      for (const c of centresAlong(W, w2, W / 2))
+        if (b.wall("sleeping-mat", "north", c, { w: w2, d: d2, group: "sleep", weight: 40, side: null })) break;
+    }
+    return;
+  }
+  const cx = bed2.rect.x + bed2.rect.w / 2, bw = bed2.rect.w;
+  if (doorOn(ctx, "north")) b.bonus(-15);
+  if (doorOn(ctx, "south")) b.bonus(8);
+  else if (doorOn(ctx, "east") || doorOn(ctx, "west")) b.bonus(4);
+  if (ctx.walls.north.windows.some((s) => s.a < bed2.rect.x + bw && s.b > bed2.rect.x)) b.bonus(-3);
+  const panelW = Math.round(Math.min(bw + 110, W, 360));
+  if (panelW >= 140) b.wall("bed-panel", "north", cx, { w: panelW, group: "sleep", weight: 6 });
+  for (const x of [bed2.rect.x - 5 - 45, bed2.rect.x + bw + 5]) {
+    const table = b.at("bedside-table", { x, z: 10, w: 45, d: 40 }, 0, {
+      group: "sleep",
+      weight: 10,
+      side: "north"
+    });
+    if (table) b.on("table-lamp", table, 0, -2, { weight: 2 });
+  }
+  b.wall("wall-art", "north", cx, { group: "sleep", weight: 4 });
+  if (bed2.catalogId === "bed-double") b.on("cushions", bed2, 0, -bed2.d / 2 + 63, { weight: 2 });
+  const sideSpots = [
+    ["east", (w2) => D - w2 / 2],
+    ["west", (w2) => D - w2 / 2],
+    ["east", (w2) => w2 / 2],
+    ["west", (w2) => w2 / 2]
+  ];
+  const endSpots = [
+    ["south", (w2) => W - w2 / 2],
+    ["south", (w2) => w2 / 2],
+    ["south", () => W / 2]
+  ];
+  wardrobe: for (const spots of [sideSpots, endSpots])
+    for (const w2 of [150, 120, 100, 80])
+      for (const [side, at] of spots)
+        if (b.wall("wardrobe", side, at(w2), { w: w2, group: "store", weight: 25 })) break wardrobe;
+  if (W >= 360 && D >= 380)
+    for (const x of [W - 85, 0]) {
+      const chair2 = b.at("armchair", { x, z: D - 85, w: 85, d: 85 }, 180, { group: "read", weight: 6 });
+      if (chair2) {
+        b.at("floor-lamp", { x: x === 0 ? 90 : W - 135, z: D - 45, w: 40, d: 40 }, 0, { weight: 2 });
+        break;
+      }
+    }
+  b.rug(
+    "rug-rect",
+    { x: cx - (bw + 100) / 2, z: bed2.rect.z + 75, w: bw + 100, d: Math.min(180, D - bed2.rect.z - 75) },
+    "sleep",
+    4
+  );
+  curtainsOnWindows(b);
+  fanOver(b, W / 2, Math.max(D / 2, bed2.rect.z + bed2.rect.d * 0.6));
+  b.corner("plant-floor", 2);
+}
+var SOFAS = [
+  ["sofa-3", 240, 90],
+  ["sofa-3", 220, 90],
+  ["sofa-3", 180, 85],
+  ["sofa-2", 160, 85],
+  ["sofa-2", 130, 80],
+  ["sofa-2", 100, 75]
+];
+function furnishLiving(b, [id, w, d]) {
+  const { W, D, ctx } = b;
+  let sofa2 = null;
+  if (w <= Math.max(W * 0.72, 100) && d <= D)
+    for (const c of centresAlong(W, w, W / 2)) {
+      sofa2 = b.wall(id, "north", c, { w, d, group: "seat", weight: 90 + w / 20 });
+      if (sofa2) {
+        b.bonus(-Math.abs(c - W / 2) / 20);
+        break;
+      }
+    }
+  if (!sofa2) {
+    b.corner("plant-floor", 2);
+    return;
+  }
+  if (doorOn(ctx, "north")) b.bonus(-6);
+  const cx = sofa2.rect.x + sofa2.rect.w / 2, sw = sofa2.rect.w, sd = sofa2.rect.d;
+  let tv = null;
+  if (D - sd - 40 >= 170)
+    for (const w2 of [200, 170]) {
+      tv = b.wallScan("tv-panel", "south", cx, { w: w2, group: "media", weight: 30, reach: 60 });
+      if (tv) break;
+    }
+  const tw = Math.round(clamp(Math.round(sw * 0.55 / 10) * 10, 60, 140)), td = D - sd >= 250 ? 60 : 50, tz = sd + 40;
+  const room = tv ? tv.rect.z - 60 : D - 30;
+  const table = tz + td <= room ? b.at("coffee-table", { x: cx - tw / 2, z: tz, w: tw, d: td }, 0, { group: "seat", weight: 12 }) : null;
+  if (table) {
+    for (const [x, rot] of [
+      [table.rect.x + tw + 45, 90],
+      [table.rect.x - 45 - 85, 270]
+    ])
+      if (b.at("armchair", { x, z: tz + td / 2 - 42.5, w: 85, d: 85 }, rot, { group: "seat", weight: 8 }))
+        break;
+  }
+  const ends = [sofa2.rect.x + sw + 5, sofa2.rect.x - 50];
+  let lit = null;
+  for (const x of ends) {
+    const t = b.at("side-table", { x, z: 5, w: 45, d: 45 }, 0, { group: "seat", weight: 3, side: "north" });
+    if (t) {
+      b.on("table-lamp", t, 0, 0, { weight: 2 });
+      lit = x;
+      break;
+    }
+  }
+  for (const x of ends)
+    if (x !== lit && b.at("floor-lamp", { x: x + 2.5, z: 5, w: 40, d: 40 }, 0, { weight: 3, side: "north" }))
+      break;
+  if (sw >= 160) b.on("cushions", sofa2, 0, -sd / 2 + 31, { weight: 2 });
+  if (sw >= 215) {
+    b.wall("wall-art", "north", cx - 55, { group: "seat", weight: 3 });
+    b.wall("wall-art", "north", cx + 55, { group: "seat", weight: 2 });
+  } else b.wall("wall-art", "north", cx, { group: "seat", weight: 4 });
+  b.rug(
+    "rug-rect",
+    {
+      x: cx - (sw + 60) / 2,
+      z: sd - 25,
+      w: sw + 60,
+      d: (table ? table.rect.z + table.rect.d + 50 : sd + 150) - (sd - 25)
+    },
+    "seat",
+    5
+  );
+  const named = /dining/i.test(b.room.name);
+  if (named) diningSet(b, { x: cx, z: sd + 80 }, 30, false);
+  if (W >= 420 && D >= 380) {
+    for (const [x, z, rot] of [
+      [20, D / 2 - 95, 270],
+      [W - 130, D / 2 - 95, 90],
+      [20, D - 190, 270],
+      [W - 130, D - 190, 90]
+    ])
+      if (b.at("jhula", { x, z, w: 110, d: 190 }, rot, { group: "swing", weight: 8 })) break;
+  }
+  if (!named && W * D >= 22e4) diningSet(b, { x: cx, z: sd + 80 }, 8, false);
+  if (W >= 300 && D >= 300)
+    for (const side of ["east", "west"]) {
+      const c = b.wall("console-table", side, D / 2, { group: "console", weight: 3 });
+      if (c) {
+        b.on("vase-books", c, 20, 0, { weight: 2 });
+        b.wall("wall-art", side, D / 2, { group: "console", weight: 2 });
+        break;
+      }
+    }
+  shoeRackByDoor(b);
+  if (tv) b.bonus(-Math.max(0, tv.rect.z - sd - 400) / 40);
+  curtainsOnWindows(b);
+  fanOver(b, cx, (sd + (tv ? tv.rect.z : D)) / 2);
+  b.corner("plant-floor", 2);
+}
+function diningSet(b, away, weight, rug) {
+  const { W, D } = b;
+  const spots = [];
+  for (let x = 0; x <= W; x += 20)
+    for (let z = 0; z <= D; z += 20) spots.push({ x, z, far: Math.hypot(x - away.x, z - away.z) });
+  spots.sort((p, q) => q.far - p.far || p.x - q.x || p.z - q.z);
+  for (const [tw, td, n] of [
+    [150, 90, 2],
+    [120, 80, 2],
+    [90, 70, 1]
+  ])
+    for (const s of spots) {
+      const tz = s.z - td / 2, tx = s.x - tw / 2;
+      if (tx < 0 || tz - 55 < 0 || tx + tw > W || tz + td + 55 > D) continue;
+      const cp = b.checkpoint();
+      const table = b.at("dining-table", { x: tx, z: tz, w: tw, d: td }, 0, { group: "dine", weight });
+      if (!table) continue;
+      let chairs = 0;
+      for (let i = 0; i < n; i++) {
+        const x = tx + tw * (i + 1) / (n + 1) - 22.5;
+        if (b.at("dining-chair", { x, z: tz - 55, w: 45, d: 50 }, 0, { group: "dine", weight: 3 })) chairs++;
+        if (b.at("dining-chair", { x, z: tz + td + 5, w: 45, d: 50 }, 180, { group: "dine", weight: 3 })) chairs++;
+      }
+      if (chairs < 2) {
+        b.restore(cp);
+        continue;
+      }
+      b.at("pendant-light", { x: tx + tw / 2 - 22.5, z: tz + td / 2 - 22.5, w: 45, d: 45 }, 0, { weight: 2 });
+      if (rug) b.rug("rug-rect", { x: tx - 60, z: tz - 75, w: tw + 120, d: td + 150 }, "dine", 2);
+      return table;
+    }
+  return null;
+}
+function shoeRackByDoor(b) {
+  for (const side of SIDES2)
+    for (const s of b.ctx.walls[side].doors)
+      for (const c of [s.b + 20 + 45, s.a - 20 - 45])
+        if (b.wall("shoe-rack", side, c, { group: "accent", weight: 2 })) return;
+}
+function furnishKitchen(b, fridgeBay) {
+  const { W, D, ctx } = b;
+  let fridge2 = null;
+  if (fridgeBay) {
+    fridge2 = b.wall("fridge", "north", 35, { group: "fridge", weight: 20 });
+    if (!fridge2) return;
+  }
+  const from = fridge2 ? 75 : 0;
+  let run = null;
+  for (let w = Math.min(Math.floor((W - from) / 10) * 10, 480); w >= 60 && !run; w -= 10)
+    run = b.wallScan("kitchen-counter", "north", from + w / 2, {
+      w,
+      d: 60,
+      group: "cook",
+      weight: 60 + (w >= 200 ? 40 : 0) + w / 20
+    });
+  if (!run) return;
+  const entry = CATALOG.get("kitchen-counter");
+  const stove = tileModules(entry, run.w).find((m) => m.model === "kitchen-stove");
+  const stoveX = stove ? run.rect.x + run.rect.w / 2 + stove.x : null;
+  if (stoveX !== null)
+    b.wall("kitchen-chimney", "north", clamp(stoveX, 37.5, W - 37.5), { group: "cook", weight: 8 });
+  let uppers = 0;
+  for (let x = run.rect.x; x + 60 <= run.rect.x + run.rect.w + 0.01 && uppers < 6; x += 65) {
+    if (stoveX !== null && Math.abs(x + 30 - stoveX) < 60) continue;
+    if (b.wall("kitchen-upper", "north", x + 30, { group: "cook", weight: 1 })) uppers++;
+  }
+  const windows = ctx.walls.north.windows.filter((s) => s.y0 < 145).map((s) => [s.a, s.b]).sort((p, q) => p[0] - q[0]);
+  let start = run.rect.x;
+  for (const [a, z] of [...windows, [Infinity, Infinity]]) {
+    const end = Math.min(a, run.rect.x + run.rect.w);
+    const w = Math.floor((end - start) / 10) * 10;
+    if (w >= 60) b.wall("backsplash", "north", start + w / 2, { w: Math.min(w, 480), group: "cook", weight: 2 });
+    start = Math.max(start, z);
+    if (start >= run.rect.x + run.rect.w) break;
+  }
+  let ret = null, retSide = "west";
+  if (W >= 150)
+    for (const side of ["west", "east"]) {
+      for (let l = Math.min(180, Math.floor((D - 65 - 75) / 10) * 10); l >= 60 && !ret; l -= 10)
+        ret = b.wall("kitchen-counter", side, 65 + l / 2, { w: l, d: 60, group: "cook", weight: 20 + l / 20 });
+      if (ret) {
+        retSide = side;
+        break;
+      }
+    }
+  const fridgeSpots = [
+    ...ret ? [[retSide, ret.rect.z + ret.rect.d + 5 + 35]] : [],
+    ["west", D - 35],
+    ["east", D - 35],
+    ["east", 100],
+    ["west", 100],
+    ["south", 35],
+    ["south", W - 35]
+  ];
+  if (!fridge2) {
+    for (const [side, c] of fridgeSpots) if (b.wall("fridge", side, c, { group: "fridge", weight: 20 })) break;
+  }
+  if (!ret && D >= 220) {
+    for (let w = Math.min(Math.floor(W / 10) * 10, 190); w >= 90; w -= 10)
+      if (b.wallScan("kitchen-counter", "south", W / 2, { w, d: 60, group: "galley", weight: 15 })) break;
+  }
+}
+function furnishDining(b) {
+  const { W, D } = b;
+  const TABLES = [
+    [180, 90, 3],
+    [150, 90, 2],
+    [120, 80, 2],
+    [90, 70, 1],
+    [80, 60, 0]
+  ];
+  let table = null, board = null, seats = 0;
+  for (const withBoard of [true, false]) {
+    const cp = b.checkpoint();
+    board = null;
+    if (withBoard)
+      for (const w of [150, 120, 100]) {
+        board = b.wallScan("sideboard", "north", W / 2, { w, group: "store", weight: 15, reach: 40 });
+        if (board) break;
+      }
+    if (withBoard && !board) continue;
+    const top = board ? board.rect.z + board.rect.d + AUTO_WALKWAY : 0;
+    for (const [tw2, td2, n] of TABLES) {
+      const chairs = n ? 110 : 0;
+      if (tw2 > W || top + td2 + chairs > D) continue;
+      const tz2 = top + (D - top - td2 - chairs) / 2 + chairs / 2;
+      for (const c of centresAlong(W, tw2, W / 2).slice(0, 7)) {
+        table = b.at("dining-table", { x: c - tw2 / 2, z: tz2, w: tw2, d: td2 }, 0, {
+          group: "dine",
+          weight: 100 + tw2 / 10
+        });
+        if (table) break;
+      }
+      if (table) {
+        seats = n;
+        break;
+      }
+    }
+    if (table) break;
+    b.restore(cp);
+  }
+  if (!table) return;
+  const { x: tx, z: tz, w: tw, d: td } = table.rect;
+  for (let i = 0; i < seats; i++) {
+    const x = tx + tw * (i + 1) / (seats + 1) - 22.5;
+    b.at("dining-chair", { x, z: tz - 55, w: 45, d: 50 }, 0, { group: "dine", weight: 6 });
+    b.at("dining-chair", { x, z: tz + td + 5, w: 45, d: 50 }, 180, { group: "dine", weight: 6 });
+  }
+  b.at("pendant-light", { x: tx + tw / 2 - 22.5, z: tz + td / 2 - 22.5, w: 45, d: 45 }, 0, { weight: 4 });
+  if (!board)
+    for (const side of ["east", "west", "south"]) {
+      for (const w of [150, 120, 100]) {
+        board = b.wallScan("sideboard", side, b.len(side) / 2, { w, group: "store", weight: 12, reach: 60 });
+        if (board) break;
+      }
+      if (board) break;
+    }
+  if (board) {
+    b.on("vase-books", board, board.w * 0.22, 0, { weight: 2 });
+    const side = board.side;
+    const c = side === "north" || side === "south" ? board.rect.x + board.rect.w / 2 : board.rect.z + board.rect.d / 2;
+    b.wall("wall-art", side, c, { group: "store", weight: 3 });
+  }
+  b.rug("rug-rect", { x: tx - 60, z: tz - 75, w: tw + 120, d: td + 150 }, "dine", 4);
+  curtainsOnWindows(b);
+  b.corner("plant-floor", 2);
+}
+function furnishBathroom(b) {
+  const { W, D } = b;
+  let toilet2 = null;
+  for (const c of [21, W - 21, ...centresAlong(W, 42, 21)]) {
+    toilet2 = b.wall("toilet", "north", c, { group: "wet", weight: 100 });
+    if (toilet2) break;
+  }
+  if (!toilet2) return;
+  const west = toilet2.rect.x < W / 2;
+  let vanity2 = null;
+  for (const w of [80, 60, 50]) {
+    const spots = [
+      ["north", west ? W - w / 2 : w / 2],
+      [west ? "east" : "west", w / 2],
+      ["east", D - w / 2],
+      ["west", D - w / 2],
+      ["south", W / 2]
+    ];
+    for (const [side, c] of spots) {
+      vanity2 = b.wall("vanity", side, c, { w, group: "wet", weight: 30 });
+      if (vanity2) break;
+    }
+    if (vanity2) break;
+  }
+  if (vanity2) {
+    const side = vanity2.side;
+    const c = side === "north" || side === "south" ? vanity2.rect.x + vanity2.rect.w / 2 : vanity2.rect.z + vanity2.rect.d / 2;
+    b.wall("mirror-cabinet", side, c, { group: "wet", weight: 4 });
+  }
+  if (W >= 150 && D >= 175)
+    for (const s of [90, 80]) {
+      const shower2 = b.at("shower", { x: W - s, z: D - s, w: s, d: s }, 180, { w: s, d: s, group: "wet", weight: 20, side: "south" }) ?? b.at("shower", { x: 0, z: D - s, w: s, d: s }, 180, { w: s, d: s, group: "wet", weight: 20, side: "south" });
+      if (shower2) break;
+    }
+  b.corner("plant-small", 1);
+}
+function furnishPrayer(b) {
+  const shrine = b.wallScan("prayer-shrine", "north", b.W / 2, { group: "pooja", weight: 100 });
+  if (!shrine) return;
+  if (doorOn(b.ctx, "south")) b.bonus(6);
+  else if (!doorOn(b.ctx, "north")) b.bonus(2);
+  const cx = shrine.rect.x + shrine.rect.w / 2;
+  const mat = b.D >= 125 ? b.at("prayer-mat", { x: cx - 32.5, z: 62, w: 65, d: 56 }, 0, { group: "pooja", weight: 10 }) : null;
+  const dz = mat ? 84 : 56;
+  for (const x of [cx - 32.5 - 22, cx + 32.5 + 6])
+    b.at("diya", { x, z: dz, w: 16, d: 12 }, 0, { group: "pooja", weight: 2 });
+  for (const x of [cx - 40 - 8 - 30, cx + 40 + 8])
+    b.at("plant-small", { x, z: 0, w: 30, d: 30 }, 0, { weight: 2, side: "north" });
+  b.wall("wall-light", "north", cx, { group: "pooja", weight: 2 });
+}
+function furnishStudy(b) {
+  const { W, D } = b;
+  let desk2 = null;
+  for (const w of [130, 110, 90, 70]) {
+    if (w > W) continue;
+    desk2 = b.wallScan("desk", "north", W / 2, { w, d: 60, group: "work", weight: 100 });
+    if (desk2) break;
+  }
+  if (!desk2) return;
+  const cx = desk2.rect.x + desk2.rect.w / 2;
+  b.at("office-chair", { x: cx - 30, z: 65, w: 60, d: 60 }, 180, { group: "work", weight: 20 });
+  b.on("table-lamp", desk2, -(desk2.w / 2 - 20), -10, { weight: 2 });
+  const spots = [
+    ["north", desk2.rect.x + desk2.rect.w + 10 + 45],
+    ["north", desk2.rect.x - 10 - 45],
+    ["east", D - 45],
+    ["west", D - 45],
+    ["south", W / 2]
+  ];
+  for (const [side, c] of spots) if (b.wall("bookshelf", side, c, { group: "store", weight: 15 })) break;
+  b.wall("wall-art", "north", cx, { group: "work", weight: 2 });
+  curtainsOnWindows(b);
+  fanOver(b, W / 2, D / 2);
+  b.corner("plant-floor", 2);
+}
+function furnishUtility(b) {
+  const { W } = b;
+  let washer = null;
+  for (const c of [30, W - 30, ...centresAlong(W, 60, 30)]) {
+    washer = b.wall("washing-machine", "north", c, { group: "laundry", weight: 100 });
+    if (washer) break;
+  }
+  if (washer)
+    for (const dir of [1, -1]) {
+      const room = dir > 0 ? W - (washer.rect.x + 65) : washer.rect.x - 5;
+      const w = Math.floor(Math.min(110, room) / 10) * 10;
+      if (w < 40) continue;
+      const c = dir > 0 ? washer.rect.x + 65 + w / 2 : washer.rect.x - 5 - w / 2;
+      if (b.wall("laundry-counter", "north", c, { w, group: "laundry", weight: 20 })) break;
+    }
+  for (const side of ["east", "west", "south"])
+    if (b.wallScan("shoe-rack", side, b.len(side) / 2, { group: "store", weight: 10 })) break;
+}
+function furnishShop(b) {
+  const { W, D } = b;
+  for (let w = Math.min(Math.floor(W / 10) * 10, 300); w >= 60; w -= 20)
+    if (b.wallScan("display-shelf", "north", w / 2, { w, group: "retail", weight: 100 })) break;
+  if (D >= 220) {
+    const w = Math.min(140, Math.floor(W / 10) * 10);
+    if (w >= 60) b.at("shop-counter", { x: W - w, z: D - 60, w, d: 60 }, 0, { group: "till", weight: 20 });
+  }
+  b.corner("plant-floor", 2);
+}
+var recipe = (...variants) => (room, W, D, ctx) => {
+  let best = null;
+  for (const furnish of variants) {
+    const b = designer(W, D, ctx, room);
+    furnish(b);
+    const layout = b.done();
+    if (!best || layout.score > best.score + 1e-6) best = layout;
+  }
+  return best;
+};
+var AUTO_LAYOUTS = {
+  bedroom: recipe(...BEDS.map((bed2) => (b) => furnishBedroom(b, bed2))),
+  living: recipe(...SOFAS.map((sofa2) => (b) => furnishLiving(b, sofa2))),
+  kitchen: recipe(
+    (b) => furnishKitchen(b, false),
+    (b) => furnishKitchen(b, true)
+  ),
+  dining: recipe(furnishDining),
+  bathroom: recipe(furnishBathroom),
+  prayer: recipe(furnishPrayer),
+  study: recipe(furnishStudy),
+  utility: recipe(furnishUtility),
+  shop: recipe(furnishShop)
 };
 function itemSize(item) {
   const entry = CATALOG.get(item.catalogId);
@@ -1279,7 +2475,7 @@ function reconcileFurniture(before, after, notices) {
             )
           );
         source = source.filter((item) => furnitureFitsRoom(item.catalogId, room.kind));
-        if (!source.length) {
+        if (!source.some((item) => !isAccessory(item.catalogId))) {
           changed = true;
           const { furniture: _gone, ...rest } = room;
           void _gone;
@@ -1550,6 +2746,11 @@ var isRoofMaterial = (id) => typeof id === "string" && id in ROOF_MATERIALS;
 var isTrim = (id) => typeof id === "string" && id in TRIM_COLORS;
 var isDoorColor = (id) => typeof id === "string" && id in DOOR_COLORS;
 var isGround = (id) => typeof id === "string" && id in GROUND_STYLES;
+function roomAccentWall(room) {
+  const a = room.accentWall;
+  return a && EDGE_SIDES.includes(a.edge) && isWallPaint(a.color) ? { edge: a.edge, color: a.color } : null;
+}
+var EDGE_SIDES = ["north", "east", "south", "west"];
 var STYLE_PRESET_INFO = {
   "indian-modern": {
     label: "Indian modern",
@@ -1588,7 +2789,7 @@ registerValidation((p, issue) => {
     if (p.site.fence !== void 0 && !isFence(p.site.fence)) bad();
   }
   const room = (r, source, floorIds) => {
-    if (r.floorMaterial !== void 0 && !isFloorMaterial(r.floorMaterial) || r.wallColor !== void 0 && !isWallPaint(r.wallColor))
+    if (r.floorMaterial !== void 0 && !isFloorMaterial(r.floorMaterial) || r.wallColor !== void 0 && !isWallPaint(r.wallColor) || r.accentWall !== void 0 && !roomAccentWall(r))
       bad(source, floorIds);
   };
   for (const f of p.floors)
@@ -1609,6 +2810,10 @@ var NOT_EXTRAS = /* @__PURE__ */ new Set([
   "kitchen-counter",
   "kitchen-sink",
   "kitchen-stove",
+  "kitchen-chimney",
+  "backsplash",
+  "backsplash-module",
+  "bed-panel",
   "toilet",
   "shower",
   "bathtub",
@@ -1644,7 +2849,9 @@ var palette = {
   floor: oneOf(ENUMS.floor),
   fabric: oneOf(ENUMS.fabric),
   wood: oneOf(ENUMS.wood),
-  accent: oneOf(ENUMS.accent)
+  accent: oneOf(ENUMS.accent),
+  /** A feature wall behind the bed or sofa, or "none". */
+  accentWall: oneOf([...ENUMS.paint, "none"])
 };
 var HOME_PLAN_SCHEMA = object({
   name: str,
@@ -1697,19 +2904,22 @@ var NAMES = {
 };
 var notes = (raw) => (Array.isArray(raw) ? raw : []).map((n) => text(n, 140, "")).filter(Boolean).slice(0, 5);
 var extras = (raw) => [...new Set((Array.isArray(raw) ? raw : []).filter((x) => EXTRA_IDS.includes(x)))].slice(0, 4);
+var accentWall = (raw, paint) => typeof raw === "string" && ENUMS.paint.includes(raw) && raw !== paint ? { accentWall: raw } : {};
 function sanitizeRoom(raw) {
   if (!raw || !ROOM_USES.includes(raw.use)) return null;
   const use = raw.use;
+  const paint = pick(raw.paint, ENUMS.paint, "warm-white");
   return {
     use,
     name: text(raw.name, 24, NAMES[use]),
     zone: pick(raw.zone, ZONES, "any"),
-    paint: pick(raw.paint, ENUMS.paint, "warm-white"),
+    paint,
     floor: pick(raw.floor, ENUMS.floor, "light-tile"),
     fabric: pick(raw.fabric, ENUMS.fabric, "oat"),
     wood: pick(raw.wood, ENUMS.wood, "oak"),
     accent: pick(raw.accent, ENUMS.accent, "sage"),
-    extras: extras(raw.extras)
+    extras: extras(raw.extras),
+    ...accentWall(raw.accentWall, paint)
   };
 }
 var isBedroomUse = (use) => use.endsWith("bedroom");
@@ -1753,14 +2963,16 @@ function sanitizeHomePlan(raw) {
 }
 function sanitizeRoomPlan(raw) {
   const p = raw ?? {};
+  const paint = pick(p.paint, ENUMS.paint, "warm-white");
   return {
-    paint: pick(p.paint, ENUMS.paint, "warm-white"),
+    paint,
     floor: pick(p.floor, ENUMS.floor, "oak"),
     fabric: pick(p.fabric, ENUMS.fabric, "oat"),
     wood: pick(p.wood, ENUMS.wood, "oak"),
     accent: pick(p.accent, ENUMS.accent, "sage"),
     layout: p.layout === "keep" ? "keep" : "fresh",
     extras: extras(p.extras),
+    ...accentWall(p.accentWall, paint),
     notes: notes(p.notes).slice(0, 3)
   };
 }
@@ -1769,17 +2981,19 @@ function sanitizeRoomPlan(raw) {
 var labels = (o) => Object.entries(o).map(([id, v]) => `${id} (${v.label})`).join(", ");
 var furniture = furniture_default.items.filter((i) => EXTRA_IDS.includes(i.id)).map((i) => `${i.id}: ${i.label}, ${i.size.w}\xD7${i.size.d} cm, rooms: ${i.rooms.join("/")}`).join("\n");
 var garden = landscape_default.items.filter((i) => GARDEN_IDS.includes(i.id)).map((i) => `${i.id}: ${i.label}`).join(", ");
+var finishes2 = (slot) => Object.keys(furniture_default.finishes[slot]).join(", ");
 var SHARED = `You are the in-house architect and interior designer of Dream Home, a 3D home-design app used mostly by families in India, many of them on phones.
 Your designs must feel warm, practical and believably Indian: good cross-ventilation, daylight in every bedroom, a proper kitchen, storage, and colours that look good in strong sunlight.
 
 How the app works:
-- You propose; the app's layout engine builds. It places rooms on the plot, keeps doors, windows and stairs valid, and gives every room a standard furniture layout (beds, wardrobes, sofas, kitchen counters, bathroom fittings).
-- You choose names, uses, compass zones, paints, floors, furniture colours and a few extra pieces per room. Extras are added on top of the standard layout, so pick 1\u20133 that add character (a rug, a plant, a reading chair), never a second bed or sofa.
+- You propose; the app's layout engine builds. It places rooms on the plot, keeps doors, windows and stairs valid, and gives every room a designer furniture layout: a bed with a headboard panel, bedside lamps, wardrobe, rug, art and curtains; a sofa facing a TV wall with a coffee table, rug and lamps; a kitchen with a chimney, wall cabinets and a backsplash; ceiling fans; and so on.
+- You choose names, uses, compass zones, paints, floors, furniture colours, an optional accent wall and a few extra pieces per room. Extras are added on top of that layout, so pick 1\u20133 that add character (a pouf, a wall light, a jhula in a big living room), never a second bed or sofa.
 - Only use ids from the lists below. Anything else is ignored.
 
 Wall paints: ${labels(WALL_PAINTS)}
 Floors: ${labels(FLOOR_MATERIALS)}
-Furniture colours: fabric = sage, oat, terracotta, navy, charcoal, mustard, blush; wood = oak, walnut, white, black; accent = sage, terracotta, navy, white, charcoal, mustard.
+Furniture colours: fabric = ${finishes2("fabric")}; wood = ${finishes2("wood")}; accent = ${finishes2("accent")}.
+accentWall: a wall paint for the feature wall behind the room's bed or sofa, or "none".
 Exterior finishes: ${labels(EXTERIOR_FINISHES)}
 Extra furniture you may add:
 ${furniture}
@@ -1787,6 +3001,8 @@ Garden pieces: ${garden}
 
 Taste rules:
 - One clear idea per home (for example "cool marble and sage for a hot city"), echoed across rooms; vary bedroom colours so each feels personal.
+- Design each room like an interior designer: a focal wall (the bed or sofa wall, maybe an accent wall in a deeper shade of the room's paint), layered lighting (fan or pendant, plus lamps and wall lights), a rug that anchors the seating or the bed, curtains on windows, and art at eye level.
+- One accent colour per room: the "accent" finish repeats in cushions, lamps and art; keep fabrics and wood calm around it.
 - Wet rooms (kitchen, bathrooms) get tile, terrazzo, stone or concrete floors, never carpet or wood.
 - Bedrooms for children can be brighter; grandparents' rooms calm, near the entrance and on the ground floor.
 - Every home gets an Indian flat roof with a parapet, chhajja sunshades, a rooftop water tank and a compound wall with a gate. You choose the facade, trim and door colours: bright or warm plaster (peach, saffron, ochre, mint, sky, two-tone) with teak or peacock doors suits most Indian homes; keep "roof" flat.

@@ -5,7 +5,7 @@ export type FitIntent = {
   floorId?: string;
   roomId?: string;
   /** Undefined: keep angles for home/plot, focus pose (polar 50°) for floor/room. */
-  view?: "hero" | "top" | "front" | "keep";
+  view?: "hero" | "top" | "front" | "keep" | "room" | "return";
 };
 
 /** Imperative camera surface used by keyboard, commands and the debug bridge. */

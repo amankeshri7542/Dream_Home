@@ -45,8 +45,8 @@ caps total spend per day. After changing `server/` or `src/ai/`, run
 1. **Design with AI** — *Design my home with AI* asks four one-thumb questions
    (plot and facing, who lives here, must-haves such as an attached bathroom,
    pooja room, parking or Vastu, and a style) and returns a complete, furnished,
-   styled home with short design notes, *Try another* and *Keep it*. In
-   Decorate, *Make it nice* restyles one room. 3 free home designs and 10 room
+   styled home with short design notes, *Try another* and *Keep it*. Inside
+   a room, *Make it nice* restyles just that room. 3 free home designs and 10 room
    makeovers per device; after that (or offline) the built-in planner steps in.
    The AI only proposes; the app's own layout engine builds, so the result is
    always a valid, editable home.
@@ -57,25 +57,39 @@ caps total spend per day. After changing `server/` or `src/ai/`, run
    previews and simple steppers. *Start with my plot* opens the detailed
    wizard for measured plots, 1–8 floors and apartments or shops. A short
    construction reveal and a three-step tour follow (replay it from More).
-3. **Build** — tap any room in 3D (or pick it from Rooms) to see a compact
-   card and an action bar: Move, Edit in 2D (drag to move, pull a dot to resize), Rotate, Duplicate, Set aside, and for bedrooms *Add attached bathroom*. Press
-   **Move** and drag the room right in 3D (grab the floor or its name label;
-   with a mouse, just drag the selected room): a ghost shows where it lands,
-   dropping it on another room swaps them, and dropping it on the Tray sets it
-   aside. *Show details* reveals sizes, finishes, position and use. *Add space* adds rooms,
-   balconies, courtyards and stairs; when the house is full it offers
-   **Grow house & add** in one tap. The **tray** keeps set-aside rooms safe until
-   you place them back. Floors are an elevator on the right.
-4. **Doors & windows** — every room lists its doors and windows. Add doors,
-   French and sliding doors, archways, windows and picture windows; slide them
-   along the wall, resize them, move them to another wall, flip which way a door
-   opens, or make the whole floor automatic again.
-5. **Decorate** — tap a room and the camera glides inside it. About forty
-   pieces of chunky, rounded furniture with real thumbnails: add them to a
-   room (they find a free spot), tap a piece and drag it around — even into
-   another room — or nudge, turn, copy and recolour it. Paint the walls and choose the floor
-   (oak, walnut, herringbone, tile, terrazzo, marble, stone, slate, concrete,
-   carpet). *Auto-furnish* and *Empty the room* are one tap.
+3. **Home** — the 3D home is the hero, with four big actions: **Add room**,
+   **Outside**, **Explore** and **✨ AI design**. Add room is one sheet with
+   three sides: *Add new* (rooms, balconies, courtyards and stairs; when the
+   house is full it offers **Grow house & add** in one tap), *Your rooms* and
+   *Set aside* (rooms waiting to be placed back). The floor plan, view presets
+   and *Fit home* sit at the right edge; phones pinch to zoom.
+4. **Step into a room** — tap any room, or its name in the picture, and it
+   becomes the hero: the camera flies in, the walls around it drop to low
+   plinths, its neighbours fade and it glows. ‹ › (or a swipe on its header)
+   steps to the next room; the house button goes back home. Its tray has four
+   tabs:
+   - **Furniture** — about sixty pieces of chunky, rounded furniture with real
+     thumbnails, *Make it nice*, *Auto-furnish* and *Empty the room*. Tap a
+     piece to nudge, turn, copy, recolour or move it to another room, or drag
+     it — even into another room.
+   - **Colours** — wall paint, an accent wall and the floor (oak, walnut,
+     herringbone, tile, terrazzo, marble, stone, slate, concrete, carpet).
+   - **Layout** — Move (drag the room right in 3D; drop it on another room to
+     swap, or on *Set aside*), Edit in 2D (drag to move, pull a dot to resize),
+     Rotate, Duplicate, Set aside and More (*Add attached bathroom*, Remove),
+     plus exact sizes, position and use.
+   - **Doors** — every door and window: add doors, French and sliding doors,
+     archways, windows and picture windows; slide, resize, move or flip them,
+     or make the floor automatic again. Every door is checked to open into a
+     room or a real passage, and every room can be reached from the front
+     door or the stairs.
+5. **Designer interiors** — new and automatically furnished rooms come
+   designed: a bed against a feature wall with a headboard panel, bedside
+   lamps, a wardrobe, a rug and curtains; a sofa facing a TV on a fluted
+   panel with a coffee table, armchair and dining set; a kitchen with wall
+   cabinets, a backsplash and a chimney; a pooja shrine with a diya and mat.
+   Colours are coordinated with the home's look, and lamps really light the
+   rooms at night.
 6. **Outside** — choose the outside walls (plaster, brick, sandstone, stucco,
    render, timber, stone, concrete, charcoal), a flat, gable, hip or shed roof
    with material and steepness, trim and front-door colours. One-tap **Looks**

@@ -165,6 +165,8 @@ export type PlannedRoom = Palette & {
   floor: string;
   /** Extra catalog pieces on top of the room's standard layout. */
   extras: string[];
+  /** A feature wall behind the room's main piece (bed, sofa) in this paint id. */
+  accentWall?: string;
 };
 export type HomePlan = {
   name: string;
@@ -182,6 +184,8 @@ export type RoomPlan = Palette & {
   /** "fresh" starts from the standard layout; "keep" restyles what's there. */
   layout: "fresh" | "keep";
   extras: string[];
+  /** A feature wall behind the room's main piece (bed, sofa) in this paint id. */
+  accentWall?: string;
   notes: string[];
 };
 

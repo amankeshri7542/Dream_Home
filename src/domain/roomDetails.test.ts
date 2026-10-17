@@ -67,10 +67,10 @@ describe("recognisable room details", () => {
     const east = roomDetails({ ...room, furnishingRotation: 90 }).find(
       (part) => part.role === "bed base",
     )!;
-    expect(north.bounds.w).toBe(155);
-    expect(north.bounds.d).toBe(200);
-    expect(east.bounds.w).toBe(200);
-    expect(east.bounds.d).toBe(155);
+    expect(north.bounds.w).toBe(160);
+    expect(north.bounds.d).toBe(210);
+    expect(east.bounds.w).toBe(210);
+    expect(east.bounds.d).toBe(160);
     expect(east.bounds.x).toBeGreaterThan(north.bounds.x);
   });
 

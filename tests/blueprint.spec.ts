@@ -6,11 +6,16 @@ import { createBlueprint } from "../src/domain/blueprints";
 import {
   chooseFloor,
   controls,
+  dock,
+  enterRoom,
   freshVisit,
   history,
+  homeAction,
   openPlan,
+  roomTab,
   seed as seedProject,
   showDetails,
+  settledInsets,
   stableBox,
 } from "./support/dreamHome";
 
@@ -114,7 +119,8 @@ test("the unequal bedroom and kitchen in the courtyard home exchange uses withou
   const kitchen = floor.rooms.find((room) => room.kind === "kitchen")!;
   expect(bedroom.bounds.w).not.toBe(kitchen.bounds.w);
   await seed(page, project);
-  await tool(page, "Move").click();
+  await enterRoom(page, bedroom.name);
+  await dock(page, "Move").click();
   // Phones move in 3D; this test drags in the floor plan.
   await openPlan(page);
   await dragRect(
@@ -257,6 +263,7 @@ test("a room can move into another flat with its size and use preserved", async 
   await seed(page, project);
   await controls(page, "Rooms").click();
   await page.locator(".room-card").first().click();
+  await roomTab(page, "Layout").click();
   await page.getByText("Use", { exact: true }).click();
   await page
     .getByLabel("Move room to group", { exact: true })
@@ -293,12 +300,11 @@ test("native touch can move a courtyard without panning the page", async ({
       floor.rooms = [];
     });
     await seed(page, project);
-    await tool(page, "Move").tap();
     await page.getByRole("button", { name: "Floor plan", exact: true }).tap();
     const space = project.verticalSpaces.find(
       (item) => item.kind === "courtyard",
     )!;
-    const points = await page
+    const measure = () => page
       .locator(".plan-svg")
       .evaluate((element, bounds) => {
         const matrix = (element as SVGSVGElement).getScreenCTM()!;
@@ -315,15 +321,30 @@ test("native touch can move a courtyard without panning the page", async ({
           end: { x: end.x, y: end.y },
         };
       }, space.bounds);
+    // Tap the courtyard to pick it, then Move from its action bar.
+    const picked = await measure();
+    await page.touchscreen.tap(picked.start.x, picked.start.y);
+    await dock(page, "Move").tap();
+    await expect(page.locator("[data-transform-state=move]")).toBeVisible();
+    // The plan settles as the sheet makes way: measure once the screen's
+    // insets have caught up with the bottom bar.
+    await settledInsets(page);
+    const points = await measure();
     const session = await context.newCDPSession(page);
     await session.send("Input.dispatchTouchEvent", {
       type: "touchStart",
       touchPoints: [points.start],
     });
-    await session.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: [points.end],
-    });
+    for (let i = 1; i <= 6; i++)
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [
+          {
+            x: points.start.x + ((points.end.x - points.start.x) * i) / 6,
+            y: points.start.y + ((points.end.y - points.start.y) * i) / 6,
+          },
+        ],
+      });
     await session.send("Input.dispatchTouchEvent", {
       type: "touchEnd",
       touchPoints: [],
@@ -349,8 +370,8 @@ test("the open-space catalog adds a courtyard and exposes its resize and remove 
   const project = createPreset("compact");
   project.floors[0].rooms = [];
   await seed(page, project);
-  await tool(page, "Add space").click();
-  const dialog = page.getByRole("region", { name: "Add space", exact: true });
+  await homeAction(page, "Add room").click();
+  const dialog = page.getByRole("region", { name: "Add room", exact: true });
   await dialog
     .getByRole("button", { name: "Balconies & open spaces", exact: true })
     .click();

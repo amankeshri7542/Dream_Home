@@ -55,7 +55,7 @@ async function seedHome(page: Page, project: Project, quality = "balanced") {
   await ready(page);
 }
 const explore = (page: Page) =>
-  page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Explore", exact: true });
+  page.getByRole("toolbar", { name: "Home actions" }).getByRole("button", { name: "Explore", exact: true });
 const backToBuilding = (page: Page) => page.getByRole("button", { name: "Back to building" });
 /** Rendered frames over `ms` while nothing is touched. */
 async function framesOver(page: Page, ms: number) {
@@ -83,7 +83,7 @@ test("a chosen boundary renders in 3D (picket fence)", async ({ page }) => {
 test("choosing a Look persists", async ({ page }) => {
   await page.setViewportSize(mobile);
   await seedHome(page, createPreset("compact"));
-  await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Outside", exact: true }).click();
+  await page.getByRole("toolbar", { name: "Home actions" }).getByRole("button", { name: "Outside", exact: true }).click();
   const style = page.getByRole("button", { name: /House style/ });
   if (await style.isVisible()) await style.click();
   const card = page.getByRole("group", { name: "Look" }).getByRole("button", { name: /Indian classic/ });
@@ -100,7 +100,7 @@ test("choosing a Look persists", async ({ page }) => {
   await page.reload();
   await expect.poll(async () => (await stored(page))?.style?.preset).toBe("indian-classic");
   // Detail toggles save too.
-  await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Outside", exact: true }).click();
+  await page.getByRole("toolbar", { name: "Home actions" }).getByRole("button", { name: "Outside", exact: true }).click();
   if (await style.isVisible()) await style.click();
   await page.getByRole("switch", { name: /Water tank/ }).click();
   await expect.poll(async () => (await stored(page))?.style?.details?.waterTank).toBe(false);
@@ -208,7 +208,7 @@ test.describe("screenshots", () => {
     test(`look cards ${vp.width}`, async ({ page }) => {
       await page.setViewportSize(vp);
       await seedHome(page, indianHome());
-      await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Outside", exact: true }).click();
+      await page.getByRole("toolbar", { name: "Home actions" }).getByRole("button", { name: "Outside", exact: true }).click();
       const style = page.getByRole("button", { name: /House style/ });
       if (await style.isVisible()) await style.click();
       await page.getByRole("group", { name: "Look" }).scrollIntoViewIfNeeded();

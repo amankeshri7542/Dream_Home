@@ -23,7 +23,7 @@ function homeVibe(project: Project): Vibe {
   return preset === "indian-classic" ? "indian-classic" : preset === "diorama" ? "minimal" : "indian-modern";
 }
 
-export function MakeItNice({ room, floorId }: { room: Room; floorId: string }) {
+export function MakeItNice({ room, floorId, compact = false }: { room: Room; floorId: string; compact?: boolean }) {
   const editor = useEditor();
   // The design arrives later; apply it to the home as it is then.
   const latest = useRef(editor);
@@ -81,6 +81,37 @@ export function MakeItNice({ room, floorId }: { room: Room; floorId: string }) {
     }
   };
 
+  const done_ = done?.roomId === room.id && (
+    <p className="dh-ai-nice-done" role="status">
+      <Icon.check size={16} aria-hidden />
+      {done.text}
+    </p>
+  );
+  // In the Room Studio: one row, the button and a style picker.
+  if (compact)
+    return (
+      <div className="dh-ai-nice is-compact">
+        <div className="dh-ai-nice-row">
+          <Button variant="primary" disabled={busy} aria-busy={busy} onClick={go}>
+            <Icon.sparkle size={18} aria-hidden />
+            {busy ? "Making it nice…" : "Make it nice"}
+          </Button>
+          <select
+            className="dh-ai-nice-style"
+            aria-label="Makeover style"
+            value={vibe}
+            onChange={(e) => setVibe(e.target.value as Vibe)}
+          >
+            {VIBES.map((v) => (
+              <option key={v} value={v}>
+                {VIBE_LABELS[v]}
+              </option>
+            ))}
+          </select>
+        </div>
+        {done_}
+      </div>
+    );
   return (
     <div className="dh-ai-nice" ref={box} onKeyDown={radioKeys}>
       <p className="dh-ai-nice-hint">New paint, floor, colours and a few finishing touches. Undo any time.</p>

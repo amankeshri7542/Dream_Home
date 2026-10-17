@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PerspectiveCamera, Ray, Vector3 } from "three";
 import { createPreset } from "../domain/model";
-import { editorReducer, initialEditorState, modeView } from "./state";
+import { editorReducer, initialEditorState, modeView, sceneView } from "./state";
 import { DRAG_THRESHOLD, IDLE, stepGesture, type Gesture } from "./gesture";
 import { cmPerPixel, plotToWorld, rayToPlot, worldToPlot } from "./spatial";
 import { previewMove, previewResize, snapCandidates, snapRect } from "./transformPreview";
@@ -106,20 +106,45 @@ describe("transform previews", () => {
 describe("editor reducer", () => {
   const s0 = initialEditorState();
   const room = { kind: "room" as const, floorId: "floor-0", id: "floor-0-kitchen" };
-  it("opens a compact peek for canvas picks and medium details from lists", () => {
-    expect(editorReducer(s0, { type: "select", target: room }).sheet).toBe("peek");
-    expect(editorReducer(s0, { type: "select", target: room, origin: "list" }).sheet).toBe("medium");
+  const s0Rooms = [{ id: "floor-0-kitchen" }, { id: "floor-0-living" }];
+  it("opens a tapped room as the hero, flying the camera in", () => {
+    const s = editorReducer(s0, { type: "select", target: room });
+    expect(s.focus).toEqual({ floorId: room.floorId, roomId: room.id });
+    expect(s.mode).toBe("decorate");
+    expect(s.sheet).toBe("medium");
+    expect(s.view.floor).toBe(room.floorId);
+    expect(s.camera).toMatchObject({ type: "fit", subject: "room", roomId: room.id, view: "room" });
+    expect(sceneView(s).focus).toMatchObject({ roomId: room.id, soft: false });
+    // Undo/redo never flies the camera into a room.
+    expect(editorReducer(s0, { type: "select", target: room, origin: "history" }).focus).toBeNull();
+  });
+  it("switches tabs, rooms and back out", () => {
+    let s = editorReducer(s0, { type: "select", target: room });
+    s = editorReducer(s, { type: "room-tab", tab: "layout" });
+    expect(s.mode).toBe("build");
+    const other = s0Rooms.find((r) => r.id !== room.id)!;
+    s = editorReducer(s, { type: "select", target: { kind: "room", floorId: room.floorId, id: other.id } });
+    expect(s.focus?.roomId).toBe(other.id);
+    expect(s.roomTab).toBe("layout");
+    s = editorReducer(s, { type: "set-mode", mode: "outside" });
+    expect(s.focus).toBeNull();
+    expect(s.mode).toBe("outside");
   });
   it("steps back through layers with Escape", () => {
-    let s = editorReducer(s0, { type: "open-panel", panel: "rooms" });
-    s = editorReducer(s, { type: "select", target: room, origin: "list" });
+    let s = editorReducer(s0, { type: "select", target: room });
+    s = editorReducer(s, { type: "room-tab", tab: "layout" });
     s = editorReducer(s, { type: "set-tool", tool: "move" });
+    expect(sceneView(s).focus?.soft).toBe(true);
     s = editorReducer(s, { type: "escape" });
     expect(s.tool).toBe("select");
+    s = editorReducer(s, { type: "room-tab", tab: "furniture" });
+    s = editorReducer(s, { type: "select", target: { kind: "furniture", floorId: room.floorId, roomId: room.id, id: "f1" } });
     s = editorReducer(s, { type: "escape" });
+    expect(s.selection).toMatchObject({ kind: "room", id: room.id });
+    s = editorReducer(s, { type: "escape" });
+    expect(s.focus).toBeNull();
     expect(s.selection).toBeNull();
-    s = editorReducer(s, { type: "escape" });
-    expect(s.panel).toBeNull();
+    expect(s.camera).toMatchObject({ type: "fit", subject: "home", view: "return" });
   });
   it("keeps selections only where the next mode can pick them, and applies view presets", () => {
     const s = editorReducer(editorReducer(s0, { type: "select", target: room }), {

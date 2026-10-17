@@ -2,6 +2,15 @@
 // footprint and courtyard edges; openings are either automatic (derived) or the
 // floor's explicit `openings` list once the user customises doors and windows.
 import { balconyBounds } from "./core";
+import {
+  connectedNodes,
+  floorGrid,
+  reachableNodes,
+  sideNode,
+  sideOf,
+  type FloorGrid,
+  type GridOpening,
+} from "./circulationGrid";
 import { inside } from "./geometry";
 import type {
   Balcony,
@@ -181,7 +190,7 @@ export function autoOpenings(
 ): (PlacedOpening & { wallId: string })[] {
   const chosen = new Map<
     string,
-    { kind: OpeningKind; width: number; sill: number; height: number }
+    { kind: OpeningKind; width: number; sill: number; height: number; center?: number }
   >();
   const unitsAt = (w: Wall) =>
     wallSamples(w).map(
@@ -205,8 +214,10 @@ export function autoOpenings(
     b.length - a.length ||
     a.id.localeCompare(b.id);
   const doorWall = doorWallFilter(floor);
-  for (const room of floor.rooms) {
-    const options = segments.filter(
+  const grid = floorGrid(floor);
+  const roomDoor = { kind: "door" as const, width: 90, sill: 0, height: 215 };
+  const candidates = (room: Room) =>
+    segments.filter(
       (w) =>
         !w.exterior &&
         !privateBoundary(w) &&
@@ -215,14 +226,16 @@ export function autoOpenings(
         touches(w, room.bounds) &&
         doorWall(room, w),
     );
-    options.sort(rank);
-    if (options[0])
-      chosen.set(options[0].id, {
-        kind: "door",
-        width: 90,
-        sill: 0,
-        height: 215,
-      });
+  for (const room of floor.rooms) {
+    const options = candidates(room);
+    // A door with real floor beyond it (a hall or another room), never one
+    // onto a wall or a gap; the old ranking only when nothing else exists.
+    const best = bestDoor(grid, floor.rooms, floor.rooms.indexOf(room), options, rank);
+    if (best) chosen.set(best.wall.id, { ...roomDoor, center: best.center });
+    else {
+      options.sort(rank);
+      if (options[0]) chosen.set(options[0].id, roomDoor);
+    }
   }
   for (const area of floor.unitAreas) {
     const options = segments.filter(
@@ -235,6 +248,12 @@ export function autoOpenings(
         doorWall(null, w),
     );
     options.sort(rank);
+    // A home's front door needs floor on both sides, not a leftover strip.
+    const clear = options.filter((w) => {
+      const o = { axis: w.axis, line: wallLine(w), center: wallStart(w) + w.length / 2, width: 100 };
+      return sideOf(grid, o, 1).kind !== "blocked" && sideOf(grid, o, -1).kind !== "blocked";
+    });
+    if (clear[0]) options.unshift(clear[0]);
     if (options[0])
       chosen.set(options[0].id, {
         kind: "door",
@@ -285,16 +304,154 @@ export function autoOpenings(
   };
   if (floor.elevation === 0) entrance(road);
   for (const balcony of floor.balconies) entrance(balcony.edge, balcony);
-  return segments
-    .filter((w) => chosen.has(w.id))
-    .map((w) => ({
-      id: `auto:${w.id}`,
-      wallId: w.id,
-      axis: w.axis,
-      line: wallLine(w),
-      center: wallStart(w) + w.length / 2,
-      ...chosen.get(w.id)!,
-    }));
+  const placed = () =>
+    segments
+      .filter((w) => chosen.has(w.id))
+      .map((w) => ({
+        id: `auto:${w.id}`,
+        wallId: w.id,
+        axis: w.axis,
+        line: wallLine(w),
+        center: wallStart(w) + w.length / 2,
+        ...chosen.get(w.id)!,
+      }));
+  // Every room must be reachable: a room whose door leads only to a dead end
+  // gets a second door toward somewhere people can already walk to.
+  for (let pass = 0; pass < floor.rooms.length; pass++) {
+    const reached = reachableNodes(floor, grid, placed());
+    if (!reached) break;
+    const stranded = floor.rooms.findIndex((_, k) => !reached.has(`r${k}`));
+    if (stranded < 0) break;
+    let added = false;
+    for (let k = stranded; k < floor.rooms.length && !added; k++) {
+      if (reached.has(`r${k}`)) continue;
+      const room = floor.rooms[k];
+      const options = candidates(room).filter((w) => !chosen.has(w.id));
+      const best =
+        bestDoor(grid, floor.rooms, k, options, rank, (node) => reached.has(node)) ??
+        bridgeDoor(floor, grid, segments, placed(), reached, k, (w) => !privateBoundary(w) && !blocked(w));
+      if (best && !chosen.has(best.wall.id)) {
+        chosen.set(best.wall.id, { ...roomDoor, center: best.center });
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  return placed();
+}
+
+/** Room kinds that make a good way through (a door into a bedroom is a last resort). */
+const THROUGH_RANK: Record<Room["kind"], number> = {
+  living: 1,
+  dining: 1,
+  kitchen: 2,
+  utility: 2,
+  shop: 2,
+  bathroom: 3,
+  bedroom: 3,
+};
+/**
+ * A doorway joining a stranded part of the floor (a room and the closed-off
+ * hall it opens into) to somewhere already reachable: any interior wall with
+ * the stranded part on one side and reachable floor on the other. A hall on
+ * the stranded side is preferred, then a hall or living room beyond.
+ */
+export function bridgeDoor(
+  floor: GeometryFloor,
+  grid: FloorGrid,
+  segments: readonly Wall[],
+  openings: readonly GridOpening[],
+  reached: Set<string>,
+  strandedRoom: number,
+  allowed: (w: Wall) => boolean = () => true,
+): { wall: Wall; center: number } | null {
+  const part = connectedNodes(grid, openings, `r${strandedRoom}`);
+  const taken = new Set(
+    openings.flatMap((o) => {
+      const w = segmentAt([...segments], o.axis, o.line, o.center);
+      return w ? [w.id] : [];
+    }),
+  );
+  const rankNode = (n: string) =>
+    n.startsWith("o") ? 0 : THROUGH_RANK[floor.rooms[Number(n.slice(1))]?.kind ?? "bedroom"];
+  let best: { wall: Wall; center: number; score: number } | null = null;
+  for (const w of segments) {
+    if (w.exterior || w.length < 120 || taken.has(w.id) || !allowed(w)) continue;
+    for (const center of doorCenters(w)) {
+      const o = { axis: w.axis, line: wallLine(w), center, width: 90 };
+      const a = sideNode(sideOf(grid, o, 1)),
+        b = sideNode(sideOf(grid, o, -1));
+      if (!a || !b || a === "out" || b === "out") continue;
+      const [inner, outer] = part.has(a) && reached.has(b) ? [a, b] : part.has(b) && reached.has(a) ? [b, a] : [null, null];
+      if (!inner || !outer) continue;
+      // Never through an attached bathroom.
+      const viaEnsuite = [inner, outer].some((n) => n.startsWith("r") && floor.rooms[Number(n.slice(1))]?.attachedTo);
+      if (viaEnsuite) continue;
+      const score = rankNode(inner) * 10 + rankNode(outer);
+      if (!best || score < best.score || (score === best.score && w.length > best.wall.length))
+        best = { wall: w, center, score };
+      break;
+    }
+  }
+  return best ? { wall: best.wall, center: best.center } : null;
+}
+
+/** Candidate door centres on a wall: the middle first, then near each end. */
+export function doorCenters(w: Wall, width = 90): number[] {
+  const start = wallStart(w);
+  return [...new Set([start + w.length / 2, start + 60, start + w.length - 60])].filter(
+    (c) => c - width / 2 >= start + 15 && c + width / 2 <= start + w.length - 15,
+  );
+}
+/**
+ * How good a doorway for `room` is at `center` on wall `w` (lower is better),
+ * or null when it would open onto a wall, a gap or anything `accept` refuses:
+ * a hall scores 0, a living room 1, a kitchen 2, a bedroom or bathroom 3.
+ */
+export function doorScore(
+  grid: FloorGrid,
+  rooms: readonly Room[],
+  roomIndex: number,
+  w: Wall,
+  center: number,
+  accept: (node: string) => boolean = () => true,
+): number | null {
+  const room = rooms[roomIndex];
+  const line = wallLine(w);
+  // The room is on the + side when its near edge is the wall line.
+  const own: 1 | -1 = (w.axis === "x" ? room.bounds.z : room.bounds.x) === line ? 1 : -1;
+  const o = { axis: w.axis, line, center, width: 90 };
+  const mine = sideOf(grid, o, own),
+    far = sideOf(grid, o, own === 1 ? -1 : 1);
+  if (mine.kind !== "room" || mine.room !== roomIndex) return null;
+  if (far.kind !== "room" && far.kind !== "open") return null;
+  const node = sideNode(far);
+  if (!node || !accept(node)) return null;
+  return far.kind === "open" ? 0 : THROUGH_RANK[rooms[far.room].kind];
+}
+/**
+ * The best doorway for a room among candidate walls: the far side must be a
+ * room or walkable open floor, a hall beats a room, a living room beats a
+ * bedroom, then the usual wall ranking. `accept` limits where it may lead.
+ */
+function bestDoor(
+  grid: FloorGrid,
+  rooms: readonly Room[],
+  roomIndex: number,
+  options: Wall[],
+  rank: (a: Wall, b: Wall) => number,
+  accept?: (node: string) => boolean,
+): { wall: Wall; center: number } | null {
+  let best: { wall: Wall; center: number; score: number } | null = null;
+  for (const w of options)
+    for (const center of doorCenters(w)) {
+      const score = doorScore(grid, rooms, roomIndex, w, center, accept);
+      if (score === null) continue;
+      if (!best || score < best.score || (score === best.score && rank(w, best.wall) < 0))
+        best = { wall: w, center, score };
+      break;
+    }
+  return best ? { wall: best.wall, center: best.center } : null;
 }
 
 /** The floor's effective openings: explicit when customised, else automatic. */

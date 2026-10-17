@@ -1,5 +1,6 @@
 // Friendly, non-blocking advice: warnings with one-tap fixes, and the "Home
 // checklist" (essentials plus playful quests) derived from project data.
+import { floorCirculation } from "./circulation";
 import { balconyBounds, floorForGeometry } from "./core";
 import { furnitureDoorConflicts, furnitureLabel, furnitureMisfit } from "./furniture";
 import { makeIssue } from "./issues";
@@ -69,6 +70,34 @@ export function projectAdvisories(
           ),
         );
       }
+    }
+    // Doors must lead somewhere, and every room must be reachable on foot.
+    const circulation = floorCirculation(project, floor.id);
+    const nameOf = (id: string) => floor.rooms.find((r) => r.id === id)?.name ?? "A room";
+    const flagged = new Set<string>();
+    for (const blocked of circulation.blockedDoors) {
+      const roomId = blocked.roomIds[0];
+      if (!roomId || flagged.has(roomId)) continue;
+      flagged.add(roomId);
+      out.push(
+        makeIssue("door-blocked", `${nameOf(roomId)}'s door opens onto a wall.`, {
+          severity: "warning",
+          source: { kind: "room", id: roomId, floorId: floor.id },
+          floorIds,
+          fixes: [{ kind: "add-door", floorId: floor.id, roomId }],
+        }),
+      );
+    }
+    for (const roomId of circulation.unreachable) {
+      if (flagged.has(roomId)) continue;
+      out.push(
+        makeIssue("room-unreachable", `Nobody can walk into ${nameOf(roomId)} from the rest of the home.`, {
+          severity: "warning",
+          source: { kind: "room", id: roomId, floorId: floor.id },
+          floorIds,
+          fixes: [{ kind: "add-door", floorId: floor.id, roomId }],
+        }),
+      );
     }
     if (floor.elevation > 0) {
       const fp = floor.footprint;
@@ -188,7 +217,7 @@ export function homeChecks(project: Project): {
     done,
     ...(!done && issue?.fixes[0] ? { fix: issue.fixes[0] } : {}),
   });
-  const noDoor = first("room-no-door");
+  const noDoor = first("room-no-door") ?? first("door-blocked") ?? first("room-unreachable");
   const noWindow = first(
     "room-no-window",
     (i) => kindOf.get(i.source?.id ?? "") === "bedroom",
@@ -202,7 +231,7 @@ export function homeChecks(project: Project): {
       ),
   );
   const essentials: HomeCheck[] = [
-    check("doors", "Every room has a door", !noDoor, noDoor),
+    check("doors", "Every room has a door you can walk through", !noDoor, noDoor),
     ...(commercial
       ? []
       : [check("windows", "Every bedroom has a window", !noWindow, noWindow)]),

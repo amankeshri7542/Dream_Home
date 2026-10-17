@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createPreset } from "../src/domain/model";
 import type { Project, Rect } from "../src/domain/types";
-import { mobile, seed, stored, undo } from "./support/dreamHome";
+import { dock, enterRoom, mobile, roomTab, seed, stored, undo } from "./support/dreamHome";
 
 type Point = { x: number; y: number };
 type Bridge = {
@@ -34,10 +34,11 @@ const room = (p: Project, kind: string) => p.floors[0].rooms.find((r) => r.kind 
 
 async function armMove(page: Page, project: Project, kind: string) {
   const r = room(project, kind);
-  await page.locator(".scene-room-label").filter({ hasText: r.name }).click();
-  await page.getByRole("toolbar", { name: `${r.name} actions` }).getByRole("button", { name: "Move", exact: true }).click();
-  // The hint grows the bottom bar; let the camera re-frame before grabbing.
+  await enterRoom(page, r.name);
+  await dock(page, "Move").click();
+  // The camera widens to the whole floor; let it settle before grabbing.
   await expect(page.getByRole("note")).toBeVisible();
+  await dh(page, (b) => b.waitForIdle());
   await page.waitForTimeout(300);
   return r;
 }
@@ -125,6 +126,7 @@ test("on a desktop the selected room can be dragged with the mouse directly", as
   await seed(page, project);
   const living = room(project, "living");
   await page.locator(".scene-room-label").filter({ hasText: living.name }).click();
+  await roomTab(page, "Layout").click();
   await expect(page.getByRole("toolbar", { name: `${living.name} actions` })).toBeVisible();
   const from = await screen(page, project, centre(living.bounds));
   const to = await screen(page, project, { x: centre(living.bounds).x + 100, z: centre(living.bounds).z });
@@ -142,6 +144,7 @@ test("a finger drag moves the room on a touch phone", async ({ browser }) => {
     await seed(page, project);
     const living = room(project, "living");
     await page.locator(".scene-room-label").filter({ hasText: living.name }).tap();
+    await roomTab(page, "Layout").tap();
     await page.getByRole("toolbar", { name: `${living.name} actions` }).getByRole("button", { name: "Move", exact: true }).tap();
     await expect(page.getByRole("note")).toBeVisible();
     await page.waitForTimeout(300);
@@ -170,11 +173,13 @@ test("dragging a room from 3D onto the Tray sets it aside", async ({ page }) => 
   const project = createPreset("compact");
   await seed(page, project);
   const bedroom = room(project, "bedroom");
-  await page.getByRole("toolbar", { name: "Building tools" }).getByRole("button", { name: "Move", exact: true }).click();
+  await enterRoom(page, bedroom.name);
+  await dock(page, "Move").click();
   await expect(page.getByRole("note")).toBeVisible();
+  await dh(page, (b) => b.waitForIdle());
   await page.waitForTimeout(300);
   const from = await screen(page, project, centre(bedroom.bounds));
-  const tray = (await page.getByRole("button", { name: /^Room tray/ }).boundingBox())!;
+  const tray = (await dock(page, "Set aside").locator.boundingBox())!;
   await drag(page, from, { x: tray.x + tray.width / 2, y: tray.y + tray.height / 2 }, false);
   await expect(page.locator(".scene-ghost-badge")).toContainText(`Put ${bedroom.name} in the tray`);
   await page.mouse.up();

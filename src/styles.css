@@ -537,7 +537,8 @@ button:hover:not(:disabled) {
 }
 .big-field > div span {
   font-size: 12px;
-  color: #8a997e;
+  /* 4.5:1 on the field's paper background. */
+  color: #5e6b55;
   padding: 0 13px 0 5px;
 }
 .big-field .input-error {

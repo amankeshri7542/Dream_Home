@@ -117,7 +117,10 @@ export type Room = {
   furniture?: FurnitureItem[];
   /** An attached (en-suite) bathroom: the id of the bedroom it opens into. */
   attachedTo?: string;
+  /** One wall painted in a contrasting colour (a `WALL_PAINTS` id), seen from inside. */
+  accentWall?: AccentWall;
 };
+export type AccentWall = { edge: EdgeSide; color: string };
 export type StagedRoom = { room: Room; sourceFloorId: string };
 export type Void = { id: string; kind: "courtyard" | "stairs"; bounds: Rect };
 export type Balcony = {

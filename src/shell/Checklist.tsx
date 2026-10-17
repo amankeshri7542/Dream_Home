@@ -19,7 +19,7 @@ const QUEST_MODE: Record<string, EditorMode> = {
 };
 
 /** A gentle, friendly checklist — "friendly checks, not building-code checks". */
-export function ChecklistPill() {
+export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
   const editor = useEditor();
   const { project, dispatch, run } = editor;
   const checks = useMemo(() => homeChecks(project), [project]);
@@ -131,7 +131,7 @@ export function ChecklistPill() {
     } else if (QUEST_MODE[check.id]) dispatch({ type: "set-mode", mode: QUEST_MODE[check.id] });
   };
   return (
-    <div className="dh-checklist" ref={ref} data-chrome="checklist">
+    <div className="dh-checklist" ref={ref} data-chrome="checklist" style={hidden ? { display: "none" } : undefined}>
       {celebrate &&
         // Above every other surface: portalled to the app root, outside the
         // checklist's own layer.

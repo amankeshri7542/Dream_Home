@@ -30,11 +30,13 @@ export function CameraHud() {
       />
       <IconButton
         icon={Icon.zoomIn}
+        className="dh-zoom"
         label="Zoom in on home"
         onClick={() => camera({ type: "camera", command: { type: "dolly", factor: 0.8 } })}
       />
       <IconButton
         icon={Icon.zoomOut}
+        className="dh-zoom"
         label="Zoom out of home"
         onClick={() => camera({ type: "camera", command: { type: "dolly", factor: 1.25 } })}
       />
@@ -131,6 +133,17 @@ export function ViewOptions() {
         onClick={() => fit("hero", "plot")}
       >
         Fit entire plot
+      </Button>
+      <Button
+        icon={Icon.hideControls}
+        variant="ghost"
+        full
+        onClick={() => {
+          dispatch({ type: "view-options", open: false });
+          dispatch({ type: "chrome", hidden: true });
+        }}
+      >
+        Hide controls
       </Button>
       <div className="dh-switches">
         <Switch

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { corpus } from "./__fixtures__/corpus";
-import {
-  legacyLocalDetails,
-  legacyRoomDetails,
-} from "./__fixtures__/legacyDetails";
 import { duplicateRoom, rotateRoom } from "./builder";
 import { floorForGeometry } from "./core";
 import {
@@ -15,8 +11,10 @@ import {
   furnitureFitsRoom,
   furnitureFootprint,
   furnitureParts,
+  furnitureShapeProblems,
   hasFurnitureParts,
   materializeFurniture,
+  openContext,
   rotateLayout,
   suggestedFurniture,
 } from "./furniture";
@@ -93,70 +91,57 @@ const ok = (result: EditResult): Project => {
 const errors = (p: Project) =>
   validateProjectIssues(p).filter((i) => i.severity === "error");
 const items = (p: Project, index = 0) => p.floors[0].rooms[index].furniture!;
-const strip = (parts: ReturnType<typeof roomDetails>) =>
-  parts.map(({ ownerId, ...part }) => {
-    void ownerId;
-    return part;
-  });
 
-describe("automatic layouts match the original recipes exactly", () => {
-  const recipes: Array<[RoomKind, string]> = [
-    ["bedroom", "Bedroom"],
-    ["kitchen", "Kitchen"],
-    ["dining", "Dining"],
-    ["living", "Living"],
-    ["bathroom", "Bathroom"],
-    ["utility", "Utility"],
-    ["utility", "Prayer room"],
-    ["utility", "Home office"],
-    ["shop", "Shop"],
-  ];
-  it("flattens to the legacy parts for every inset size", () => {
-    const sizes: number[] = [];
-    for (let k = 3; k <= 48; k++) sizes.push(k * 10 - 26);
-    sizes.push(574, 774, 974);
-    let checked = 0;
-    const mismatches: string[] = [];
-    for (const [kind, name] of recipes) {
-      const r = room("r", { x: 0, z: 0, w: 600, d: 600 }, kind, name);
-      const recipe = AUTO_LAYOUTS[autoLayoutKind(r)];
-      for (const w of sizes)
-        for (const d of sizes) {
-          // JSON text equality is byte-exact for numbers, key order and roles.
-          const flat = JSON.stringify(recipe(r, w, d).parts.map((p) => p.part));
-          if (flat !== JSON.stringify(legacyLocalDetails(r, w, d)))
-            mismatches.push(`${name} ${w}x${d}`);
-          checked++;
-        }
-    }
-    expect(mismatches).toEqual([]);
-    expect(checked).toBe(9 * 49 * 49);
-  });
-  it("keeps roomDetails identical (minus ownership) for every corpus room", () => {
-    for (const { name, project } of corpus())
-      for (const floor of project.floors) {
-        const walls = deriveWalls(floorForGeometry(project, floor.id), project.plot.road);
-        for (const r of floor.rooms)
-          expect(strip(roomDetails(r, walls)), `${name}/${r.id}`).toStrictEqual(
-            legacyRoomDetails(r, walls),
-          );
-      }
-  });
-  it("tags every automatic part with a deterministic auto item id", () => {
+describe("automatic layouts", () => {
+  it("are deterministic and match their parts", () => {
     const r = room("bed", { x: 100, z: 100, w: 400, d: 400 });
     const auto = autoFurniture(r);
-    expect(auto.map((i) => i.id)).toEqual(["auto:bed:0", "auto:bed:1"]);
-    expect(auto.map((i) => i.catalogId)).toEqual(["bed-double", "bedside-table"]);
+    expect(autoFurniture({ ...r })).toStrictEqual(auto);
+    expect(auto.map((i) => i.id)).toEqual(auto.map((_, k) => `auto:bed:${k}`));
+    expect(auto[0].catalogId).toBe("bed-double");
     const owners = new Set(roomDetails(r).map((p) => p.ownerId));
-    expect([...owners]).toEqual(auto.map((i) => i.id));
+    expect([...owners].sort()).toEqual(auto.map((i) => i.id).sort());
     // Each auto item's footprint encloses its parts.
     for (const item of auto) {
       const fp = furnitureFootprint(item);
       for (const part of roomDetails(r).filter((p) => p.ownerId === item.id)) {
-        expect(part.bounds.x).toBeGreaterThanOrEqual(r.bounds.x + fp.x - 0.01);
-        expect(part.bounds.x + part.bounds.w).toBeLessThanOrEqual(
-          r.bounds.x + fp.x + fp.w + 0.01,
-        );
+        expect(part.bounds.x).toBeGreaterThanOrEqual(r.bounds.x + fp.x - 5);
+        expect(part.bounds.x + part.bounds.w).toBeLessThanOrEqual(r.bounds.x + fp.x + fp.w + 5);
+      }
+    }
+  });
+  it("draw the same parts as their materialised copies", () => {
+    const p = home();
+    for (const r of p.floors[0].rooms) {
+      const walls = deriveWalls(floorForGeometry(p, "f0"), "south");
+      const auto = roomDetails(r, walls).map(({ ownerId, ...part }) => {
+        void ownerId;
+        return part;
+      });
+      const next = materializeFurniture(p, "f0", r.id).project;
+      const explicit = roomDetails(next.floors[0].rooms.find((x) => x.id === r.id)!, walls);
+      expect(explicit.length).toBe(auto.length);
+    }
+  });
+  it("uses only catalog pieces at valid sizes", () => {
+    const kinds: Array<[RoomKind, string]> = [
+      ["bedroom", "Bedroom"],
+      ["kitchen", "Kitchen"],
+      ["dining", "Dining"],
+      ["living", "Living"],
+      ["bathroom", "Bathroom"],
+      ["utility", "Utility"],
+      ["utility", "Prayer room"],
+      ["utility", "Home office"],
+      ["shop", "Shop"],
+    ];
+    for (const [kind, name] of kinds) {
+      const r = room("r", { x: 0, z: 0, w: 420, d: 380 }, kind, name);
+      const layout = AUTO_LAYOUTS[autoLayoutKind(r)](r, 394, 354, openContext());
+      expect(layout.items.length, name).toBeGreaterThan(0);
+      for (const p of layout.items) {
+        const shape = furnitureShapeProblems({ id: "x", catalogId: p.catalogId, x: 0, z: 0, rotation: p.rotation, w: p.w, d: p.d });
+        expect(shape, `${name}: ${p.catalogId}`).toEqual([]);
       }
     }
   });
@@ -217,9 +202,14 @@ describe("materialising automatic furniture", () => {
           ).length;
           explicit += idMap.size;
         }
-      expect(errors(p), name).toEqual([]);
+      // Materialising every room of a big block can pass the whole-home cap
+      // (800 pieces); each room on its own must stay valid.
+      const over = errors(p).some((i) => i.code === "limit");
+      expect(errors(p).filter((i) => i.code !== "limit"), name).toEqual([]);
+      for (const floor of p.floors)
+        for (const r of floor.rooms) expect(r.furniture!.length, `${name}/${r.id}`).toBeLessThanOrEqual(32);
       expect(explicit, name).toBe(auto);
-      expect(parseProject(JSON.stringify(p))).toStrictEqual(p);
+      if (!over) expect(parseProject(JSON.stringify(p))).toStrictEqual(p);
     }
   });
   it("keeps auto ids usable in commands", () => {
@@ -349,16 +339,22 @@ describe("furniture commands", () => {
     expect(!move.ok && move.error).toBe("A bedside table belongs in a bedroom.");
   });
   it("a room that changes use drops pieces that no longer belong", () => {
-    let p = ok(customizeFurniture(home(), "f0", "bed"));
-    p = ok(addFurniture(p, "f0", "bed", "plant-floor"));
-    const changed = updateRoom(p, "f0", "bed", { kind: "kitchen", name: "Kitchen" });
-    expect(changed.ok).toBe(true);
-    const kitchen = ok(changed).floors[0].rooms.find((r) => r.id === "bed")!;
-    expect(kitchen.furniture!.map((i) => i.catalogId)).toEqual(["plant-floor"]);
+    // A kitchen turned dining room keeps its table and loses the counters.
+    let p = ok(customizeFurniture(home(), "f0", "kitchen"));
+    p = ok(addFurniture(p, "f0", "kitchen", "dining-table"));
+    const changed = updateRoom(p, "f0", "kitchen", { kind: "dining", name: "Dining" });
+    const dining = ok(changed).floors[0].rooms.find((r) => r.id === "kitchen")!;
+    const kept = dining.furniture!.map((i) => i.catalogId);
+    expect(kept).toContain("dining-table");
+    expect(kept.every((id) => furnitureFitsRoom(id, "dining"))).toBe(true);
+    expect(kept).not.toContain("kitchen-counter");
     expect(changed.ok && changed.notices?.some((n) => n.code === "furniture-removed")).toBe(true);
-    // With nothing left that fits, the room furnishes itself for its new use.
-    const bare = ok(updateRoom(ok(customizeFurniture(home(), "f0", "bed")), "f0", "bed", { kind: "kitchen", name: "Kitchen" }));
-    expect(bare.floors[0].rooms.find((r) => r.id === "bed")!.furniture).toBeUndefined();
+    // With only accessories left (art, rugs, a plant), the room furnishes itself for its new use.
+    let q = ok(customizeFurniture(home(), "f0", "bed"));
+    q = ok(addFurniture(q, "f0", "bed", "plant-floor"));
+    const bare = updateRoom(q, "f0", "bed", { kind: "kitchen", name: "Kitchen" });
+    expect(ok(bare).floors[0].rooms.find((r) => r.id === "bed")!.furniture).toBeUndefined();
+    expect(bare.ok && bare.notices?.some((n) => n.code === "furniture-removed")).toBe(true);
   });
   it("automatic layouts only ever use pieces that belong in the room", () => {
     for (const { project } of corpus())

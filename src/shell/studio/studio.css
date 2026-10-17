@@ -1,0 +1,161 @@
+@layer components {
+  /* ------------------------------------------------------------------ */
+  /* Room Studio: the hero room's tray (phone) or panel (desktop)        */
+  /* ------------------------------------------------------------------ */
+  /* A shorter tray than other sheets, so the room stays the hero above it. */
+  .dh-inspector.dh-studio.is-sheet[data-snap="medium"] {
+    height: min(40dvh, 360px);
+  }
+  .dh-inspector.dh-studio.is-sheet[data-snap="peek"] {
+    max-height: 96px;
+  }
+  .dh-studio-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 8px 6px;
+    touch-action: pan-y;
+  }
+  .dh-studio-head .dh-icon-btn {
+    width: 44px;
+    height: 44px;
+    flex: none;
+  }
+  .dh-studio-head .dh-chip-icon {
+    margin: 0 4px;
+  }
+  .dh-studio-title {
+    flex: 1;
+    min-width: 0;
+  }
+  /* One line each, so the tray keeps its room for tools on small phones. */
+  .dh-studio-title h2,
+  .dh-studio-title p {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .dh-studio-title h2 {
+    font-size: 19px;
+    line-height: 1.2;
+  }
+  .dh-studio-title p {
+    color: var(--dh-ink-muted);
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .dh-studio .dh-inspector-scroll {
+    padding-top: 0;
+    /* Whatever scrolls into view lands below the sticky tabs. */
+    scroll-padding-top: 72px;
+  }
+  .dh-studio-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin: 0 -16px 10px;
+    padding: 4px 12px 8px;
+    background: var(--dh-glass-solid, var(--dh-paper-0));
+    border-bottom: 1px solid var(--dh-line);
+  }
+  .dh-studio-tabs [role="tab"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 48px;
+    padding: 4px 2px;
+    border: 0;
+    border-radius: var(--dh-radius-md);
+    background: transparent;
+    color: var(--dh-ink-soft);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    transition: background var(--dh-dur-fast), color var(--dh-dur-fast);
+  }
+  .dh-studio-tabs [role="tab"][aria-selected="true"] {
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+    box-shadow: inset 0 -3px 0 var(--dh-terracotta-600);
+  }
+  /* The Layout tab's action bar sits in the flow of the panel. */
+  .dh-studio-panel .dh-dock-wrap {
+    margin: 0 -8px 4px;
+  }
+  .dh-studio-panel .dh-dock {
+    box-shadow: none;
+    background: var(--dh-paper-2);
+  }
+  /* All six actions fit the panel's width without a sideways scroll. */
+  .dh-studio-panel .dh-dock > .dh-tool,
+  .dh-studio-panel .dh-dock-more {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 0;
+  }
+  .dh-studio-panel .dh-dock .dh-tool-label {
+    font-size: 11.5px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  /* In the panel the bar sits at the top, so its More menu opens downward. */
+  .dh-studio-panel .dh-dock-wrap {
+    position: relative;
+  }
+  .dh-studio-panel .dh-menu {
+    top: calc(100% + 6px);
+    bottom: auto;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Home bar                                                            */
+  /* ------------------------------------------------------------------ */
+  .dh-app.is-compact .dh-homebar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .dh-app.is-compact .dh-homebar.is-outside {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .dh-app.is-compact .dh-homebar .dh-tool {
+    min-height: 60px;
+  }
+  .dh-tool-ai .dh-tool-icon {
+    color: var(--dh-terracotta-600);
+  }
+  /* Desktop: the bar sits in the top bar where the mode bar used to be. */
+  .dh-topbar .dh-homebar {
+    flex: none;
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    background: var(--dh-paper-2);
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    border-radius: var(--dh-radius-pill);
+  }
+  .dh-topbar .dh-homebar .dh-tool {
+    flex-direction: row;
+    min-height: 40px;
+    padding: 0 14px;
+    gap: 7px;
+    border-radius: var(--dh-radius-pill);
+  }
+  .dh-topbar .dh-homebar .dh-tool-label {
+    font-size: 14.5px;
+  }
+  .dh-topbar .dh-homebar .dh-tool[aria-pressed="true"] {
+    background: var(--dh-paper-0);
+    color: var(--dh-terracotta-700);
+    box-shadow: var(--dh-shadow-1);
+  }
+  .dh-space-tabs {
+    margin: 0 0 10px;
+  }
+}

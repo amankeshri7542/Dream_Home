@@ -6,6 +6,9 @@ import {
   closeDetails,
   controls,
   dock,
+  enterRoom,
+  homeAction,
+  roomTab,
   openPlan,
   seed as seedProject,
   showDetails,
@@ -19,10 +22,11 @@ const saved = (page: Page): Promise<Project> =>
 async function inspectFirst(page: Page) {
   await openPlan(page);
   await page.locator(".plan-room").first().locator("rect").first().click();
-  await expect(dock(page, "Set aside")).toBeVisible();
+  await roomTab(page, "Layout").click();
+  await expect(dock(page, "Set aside").locator).toBeVisible();
 }
-const trayButton = (page: Page) =>
-  page.getByRole("toolbar").getByRole("button", { name: /Room tray/ });
+// "Add room" opens the tray when rooms are waiting; "Set aside" is the drop target while moving.
+const trayButton = (page: Page) => homeAction(page, "Add room");
 async function planPoint(page: Page, x: number, z: number) {
   return page.locator(".plan-svg").evaluate(
     (el, { x, z }) => {
@@ -44,10 +48,10 @@ test("mobile hero keeps a full-bleed canvas with optional labels, furnishings an
   expect(canvas.height).toBeGreaterThan(800);
   await controls(page, "View").click();
   await page.getByRole("button", { name: "Top view of home" }).click();
-  await closeDetails(page);
-  await page.getByRole("button", { name: "Hide controls" }).click();
+  // On phones "Hide controls" lives in View options (still open).
+  await page.getByRole("dialog", { name: "View options" }).getByRole("button", { name: "Hide controls" }).click();
   await expect(page.locator(".dh-app")).toHaveAttribute("data-chrome-hidden", "true");
-  await expect(page.getByRole("toolbar", { name: "Building tools" })).toHaveCount(0);
+  await expect(page.getByRole("toolbar", { name: "Home actions" })).toHaveCount(0);
   expect(await page.locator(".model-canvas").boundingBox()).toEqual(canvas);
   await page.keyboard.press("Escape");
   await expect(page.locator(".dh-app")).not.toHaveAttribute("data-chrome-hidden", "true");
@@ -164,17 +168,15 @@ test("room drag to tray and drag back commit only completed gestures", async ({
 }) => {
   const project = await seed(page);
   const room = project.floors[0].rooms[0];
-  await page
-    .getByRole("toolbar", { name: "Building tools" })
-    .getByRole("button", { name: "Move", exact: true })
-    .click();
+  await enterRoom(page, room.name);
+  await dock(page, "Move").click();
   await openPlan(page);
   const start = await planPoint(
     page,
     room.bounds.x + room.bounds.w / 2,
     room.bounds.z + room.bounds.d / 2,
   );
-  const button = await trayButton(page).boundingBox();
+  const button = await dock(page, "Set aside").locator.boundingBox();
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(

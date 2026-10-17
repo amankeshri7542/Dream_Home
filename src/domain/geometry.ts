@@ -73,6 +73,60 @@ export function freeRect(
     }
   return undefined;
 }
+/** Gaps narrower than this between a room and a wall can't be walked through. */
+export const SLIVER = 80;
+/**
+ * The best free spot for a w×d rectangle: snug against walls and rooms, never
+ * leaving a strip too narrow to walk (a sliver) beside it; top-left on ties.
+ */
+export function snugRect(
+  envelope: Rect,
+  obstacles: Rect[],
+  w: number,
+  d: number,
+): Rect | undefined {
+  const xs = [
+    ...new Set([
+      envelope.x,
+      envelope.x + envelope.w - w,
+      ...obstacles.flatMap((r) => [r.x + r.w, r.x - w]),
+    ]),
+  ];
+  const zs = [
+    ...new Set([
+      envelope.z,
+      envelope.z + envelope.d - d,
+      ...obstacles.flatMap((r) => [r.z + r.d, r.z - d]),
+    ]),
+  ];
+  const sideGap = (r: Rect, side: "w" | "e" | "n" | "s") => {
+    const horizontal = side === "w" || side === "e";
+    const limits = obstacles
+      .filter((o) =>
+        horizontal
+          ? o.z < r.z + r.d && o.z + o.d > r.z && (side === "w" ? o.x + o.w <= r.x : o.x >= r.x + r.w)
+          : o.x < r.x + r.w && o.x + o.w > r.x && (side === "n" ? o.z + o.d <= r.z : o.z >= r.z + r.d),
+      )
+      .map((o) => (side === "w" ? r.x - (o.x + o.w) : side === "e" ? o.x - (r.x + r.w) : side === "n" ? r.z - (o.z + o.d) : o.z - (r.z + r.d)));
+    const wall =
+      side === "w" ? r.x - envelope.x : side === "e" ? envelope.x + envelope.w - (r.x + r.w) : side === "n" ? r.z - envelope.z : envelope.z + envelope.d - (r.z + r.d);
+    return Math.min(wall, ...limits);
+  };
+  let best: { r: Rect; score: number } | undefined;
+  for (const z of zs)
+    for (const x of xs) {
+      const r = { x, z, w, d };
+      if (!contains(envelope, r) || obstacles.some((o) => overlaps(o, r))) continue;
+      let score = 0;
+      for (const side of ["w", "e", "n", "s"] as const) {
+        const gap = sideGap(r, side);
+        score += gap === 0 ? -2 : gap < SLIVER ? 5 : 0;
+      }
+      if (!best || score < best.score || (score === best.score && (z < best.r.z || (z === best.r.z && x < best.r.x))))
+        best = { r, score };
+    }
+  return best?.r;
+}
 /** Counts every component id in the project (for uniqueness checks). */
 export function idCounts(project: Project): Map<string, number> {
   const counts = new Map<string, number>();

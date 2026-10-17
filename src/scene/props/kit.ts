@@ -118,7 +118,7 @@ function parseKit(name: AssetKit, root: Object3D): Kit {
           glowMaterials.add(m);
         }
         // Interior furniture is cut with the section; garden models never are.
-        if (name === "interior") patchMaterial(m, { clip: true, poche: true });
+        if (name === "interior") patchMaterial(m, { clip: true, poche: true, focus: "fade" });
         materials.set(slot, m);
       }
     });

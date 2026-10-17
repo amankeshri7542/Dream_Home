@@ -64,7 +64,6 @@
   .dh-topbar,
   .dh-palette,
   .dh-dock,
-  .dh-modebar,
   .dh-floors,
   .dh-inspector,
   .dh-lens,
@@ -267,44 +266,6 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* Mode bar                                                            */
-  /* ------------------------------------------------------------------ */
-  .dh-modebar {
-    display: flex;
-    justify-content: space-around;
-    gap: 2px;
-    padding: 4px;
-    border-radius: var(--dh-radius-lg);
-  }
-  .dh-modebar-top {
-    flex: none;
-    background: var(--dh-paper-2);
-    border: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    border-radius: var(--dh-radius-pill);
-  }
-  .dh-modebar-top .dh-tool {
-    flex-direction: row;
-    min-height: 40px;
-    padding: 0 14px;
-    gap: 7px;
-    border-radius: var(--dh-radius-pill);
-  }
-  .dh-modebar-top .dh-tool-label {
-    font-size: 14.5px;
-  }
-  .dh-modebar .dh-tool[aria-current="page"] {
-    background: var(--dh-paper-0);
-    color: var(--dh-terracotta-700);
-    box-shadow: var(--dh-shadow-1);
-  }
-  .dh-modebar-bottom .dh-tool {
-    flex: 1;
-    min-width: 0;
-  }
-
-  /* ------------------------------------------------------------------ */
   /* Bottom stack (phones): sheet + dock/palette + mode bar              */
   /* ------------------------------------------------------------------ */
   .dh-bottom {
@@ -375,23 +336,6 @@
     border-radius: var(--dh-radius-pill);
     background: var(--dh-sage-600);
     color: var(--dh-paper-0);
-  }
-  .dh-palette-rail {
-    position: absolute;
-    top: calc(var(--dh-topbar-h) + 16px);
-    left: calc(16px + var(--dh-safe-left));
-    z-index: var(--dh-z-chrome);
-    flex-direction: column;
-    justify-content: flex-start;
-    padding: 6px;
-    gap: 4px;
-    border-radius: var(--dh-radius-xl);
-    overflow: visible;
-  }
-  .dh-palette-rail .dh-tool {
-    flex: none;
-    width: 64px;
-    min-height: 62px;
   }
   .dh-dock {
     animation: dh-rise var(--dh-dur-base) var(--dh-ease-pop);
@@ -901,6 +845,12 @@
     left: calc(8px + var(--dh-safe-left));
     right: calc(8px + var(--dh-safe-right));
   }
+  /* Phones pinch to zoom, and "Hide controls" lives in View options: fewer
+     buttons around the home. */
+  .dh-app.is-compact .dh-camera-hud .dh-zoom,
+  .dh-app.is-compact .dh-hide-chrome {
+    display: none;
+  }
   .dh-app.is-compact[data-lens="open"] .dh-camera-hud,
   .dh-app.is-compact[data-lens="open"] .dh-floors,
   .dh-app.is-compact[data-lens="open"] .dh-hide-chrome,
@@ -926,7 +876,7 @@
   .dh-lens.is-docked {
     top: calc(var(--dh-topbar-h) + 16px);
     bottom: 16px;
-    left: calc(16px + 76px + 12px + var(--dh-safe-left));
+    left: calc(16px + var(--dh-safe-left));
     width: min(46vw, 640px);
   }
   /* With the details panel open too, the plan narrows so the 3D view keeps
@@ -1177,9 +1127,6 @@
   .dh-app.is-desktop .dh-floors {
     top: calc(var(--dh-topbar-h) + 16px);
     right: calc(var(--dh-inset-right) + 16px);
-  }
-  .dh-app.is-desktop .dh-lens.is-docked ~ .dh-palette-rail {
-    box-shadow: var(--dh-shadow-3);
   }
 
   /* Focused chrome-hidden view */

@@ -17,8 +17,8 @@ import { DialogHost, ProjectFileInput } from "./Dialogs";
 import { ConfirmDialog, Notifications } from "./Feedback";
 import { CameraHud, FloorSwitcher, ViewOptions } from "./Hud";
 import { Inspector } from "./Inspector";
-import { ModeBar } from "./ModeBar";
-import { ActionDock, ModeHint, ToolPalette } from "./Palette";
+import { HomeBar } from "./HomeBar";
+import { ActionDock, ModeHint } from "./Palette";
 import { ChecklistPill } from "./Checklist";
 import { SelectionAnnouncer } from "./Announcer";
 import { useBackButton } from "./useBackButton";
@@ -26,6 +26,7 @@ import { PlanLens } from "./PlanLens";
 import { SceneHost } from "./SceneHost";
 import { TopBar } from "./TopBar";
 import "./shell.css";
+import "./studio/studio.css";
 
 /** The construction reveal: five steps, then "Ta-da!" for a moment. */
 const REVEAL_MS = 5 * 520 + 1800;
@@ -143,12 +144,16 @@ export function AppShell() {
         !!state.overlay ||
         state.tool !== "select" ||
         state.chromeHidden ||
+        state.mode === "outside" ||
         explore));
   useBackButton(layerOpen, () => {
     if (screen === "gallery" || screen === "ai") setScreen("title");
     else if (state.overlay) dispatch({ type: "overlay", overlay: null });
     else if (explore && state.explore !== "walk")
       dispatch({ type: "set-mode", mode: state.lastEditMode });
+    // Back from Outside (nothing open there) returns to the house.
+    else if (state.mode === "outside" && !state.panel && !state.selection && !state.viewOptions)
+      dispatch({ type: "set-mode", mode: "build" });
     else dispatch({ type: "escape" });
   });
   const inspector = (
@@ -158,8 +163,10 @@ export function AppShell() {
       onTrayDrop={(pointer) => setTrayDrop({ ...pointer, key: Date.now() })}
     />
   );
-  // Build mode has spatial actions; other modes keep everything in the panel.
-  const showDock = !!selected && state.mode === "build";
+  // Balconies and stairs at Home keep the action bar; inside a room it lives
+  // in the Layout tab, and stands alone only while moving or resizing.
+  const showDock = !!selected && state.mode === "build" && (!state.focus || state.tool !== "select");
+  const openAi = () => setScreen("ai");
   return (
     <div
       ref={setRoot}
@@ -170,6 +177,7 @@ export function AppShell() {
       data-selection={selected?.target.kind ?? undefined}
       data-dock={showDock || undefined}
       data-tool={state.tool}
+      data-level={state.focus ? "room" : "home"}
     >
       <SceneHost
         insets={insets}
@@ -300,15 +308,16 @@ export function AppShell() {
         <>
           <TopBar
             desktop={desktop}
+            onAi={openAi}
             onHome={() => {
               saveSession({ titleDismissed: false });
               setScreen("title");
             }}
           />
-          {desktop && <ToolPalette rail />}
           {desktop && inspector}
-          {!design && <ChecklistPill />}
-          {!explore && <FloorSwitcher />}
+          {/* Hidden in a room, but still mounted so finishing the home celebrates. */}
+          {!design && <ChecklistPill hidden={!!state.focus} />}
+          {!explore && !state.focus && <FloorSwitcher />}
           <CameraHud />
           {!explore && (
             <IconButton
@@ -329,8 +338,7 @@ export function AppShell() {
             <div className="dh-bottom" data-inset="bottom" data-chrome="bottom">
               {state.tool === "select" && inspector}
               <ModeHint />
-              {showDock ? <ActionDock /> : <ToolPalette rail={false} />}
-              {!showDock && <ModeBar placement="bottom" />}
+              {showDock ? <ActionDock /> : !state.focus && <HomeBar onAi={openAi} />}
             </div>
           )}
         </>

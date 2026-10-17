@@ -36,6 +36,7 @@ export function buildFloor(model: FloorModel): FloorBuild {
       chhajja: model.style.chhajja,
       band: model.style.band,
       entranceId: model.entrance?.openingId ?? null,
+      look: model.style.look,
     };
     const shell = wallShell(ctx, model.walls);
     emitShell(ctx, shell, buckets);
@@ -49,7 +50,7 @@ export function buildFloor(model: FloorModel): FloorBuild {
   if (stage >= 4) {
     if (model.interior) {
       emitHallFloor(floor, base, model.stairsArrive.length > 0, buckets);
-      emitRoomFloors(floor, base, buckets);
+      emitRoomFloors(floor, base, buckets, model.style.look);
       if (model.stairsArrive.length) {
         const segments = deriveWallSegments(floor);
         const hasWall = (edge: [number, number, number, number]) => wallAlong(segments, edge);

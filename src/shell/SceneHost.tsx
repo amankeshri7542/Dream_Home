@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useEditor } from "../editor/EditorProvider";
 import type { GhostPreview, Insets, SelectionTarget } from "../editor/types";
 import type { Project } from "../domain/types";
-import { DEFAULT_VIEW, GOLDEN_HOUR } from "../editor/state";
+import { DEFAULT_VIEW, sceneView, GOLDEN_HOUR } from "../editor/state";
 import { BrandMark } from "./TopBar";
 import { useReducedMotion } from "../editor/hooks";
 import { setAsideRoom } from "../domain/tray";
@@ -117,7 +117,7 @@ export function SceneHost({
                       walkFloorId: walkFloor ?? activeFloor.id,
                       streetLife: state.view.streetLife,
                     }
-                  : state.view
+                  : sceneView(state)
             }
             mode={showcase ? "explore" : state.mode}
             selection={showcase ? null : (selected?.target ?? null)}

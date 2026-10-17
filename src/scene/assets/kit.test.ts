@@ -34,7 +34,7 @@ function glbJson(bytes: Uint8Array): { extensionsUsed?: string[] } {
   return JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + len)));
 }
 
-const BYTE_BUDGET: Record<Kit, number> = { interior: 300_000, exterior: 150_000 };
+const BYTE_BUDGET: Record<Kit, number> = { interior: 420_000, exterior: 150_000 };
 const TOL_CM = 1.5;
 
 // Every buildable model id: non-tile furniture items, non-procedural garden

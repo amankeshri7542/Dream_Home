@@ -16,7 +16,7 @@ const bridge = <T,>(page: Page, read: (dh: Bridge) => T | Promise<T>) =>
   ) as Promise<T>;
 
 const explore = (page: Page) =>
-  page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Explore", exact: true });
+  page.getByRole("toolbar", { name: "Home actions" }).getByRole("button", { name: "Explore", exact: true });
 
 test("explore: time of day, turntable and back to building keep one canvas", async ({ page }) => {
   await seed(page, createPreset("compact"));
@@ -38,7 +38,7 @@ test("explore: time of day, turntable and back to building keep one canvas", asy
   await page.getByRole("radio", { name: /Turntable/ }).click();
   await expect(page.getByRole("radio", { name: /Turntable/ })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Back to building" }).click();
-  await expect(page.getByRole("toolbar", { name: "Building tools" })).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Home actions" }).first()).toBeVisible();
   expect(await bridge(page, (dh) => dh.canvasMounts)).toBe(1);
 });
 

@@ -484,6 +484,27 @@
       animation: none;
     }
   }
+  .dh-ai-nice.is-compact {
+    padding: 8px;
+  }
+  .dh-ai-nice-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .dh-ai-nice-row .dh-btn {
+    flex: 1;
+  }
+  .dh-ai-nice-style {
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--dh-line-strong);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink);
+    font: inherit;
+    font-weight: 650;
+  }
   .dh-ai-nice-hint {
     color: var(--dh-ink-soft);
     font-size: 13.5px;

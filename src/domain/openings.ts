@@ -27,8 +27,12 @@ import type {
   Wall,
 } from "./types";
 import { registerValidation } from "./validate";
+import { floorGrid, reachableNodes, sideOf } from "./circulationGrid";
 import {
   autoOpenings,
+  bridgeDoor,
+  doorCenters,
+  doorScore,
   deriveWallSegments,
   deriveWalls,
   doorWallFilter,
@@ -434,36 +438,33 @@ export const roomHasPassage = (
 ) =>
   openings.some((o) => isPassable(o.kind) && openingSide(o, room.bounds));
 /**
- * A 90 cm door for a room, scored like the automatic doors (interior walls
- * shared with the fewest rooms, longest first); falls back to an exterior
- * wall on the ground floor.
+ * A 90 cm door for a room, scored like the automatic doors: it must open onto
+ * real floor (a hall or another room, a hall first), clear of other openings;
+ * `accept` can insist it leads somewhere already reachable. Falls back to the
+ * old wall ranking, then to an exterior wall on the ground floor.
  */
 export function findRoomDoor(
   floor: GeometryFloor,
   segments: readonly Wall[],
   room: Room,
   openings: readonly PlacedOpening[],
+  accept?: (node: string) => boolean,
 ): Omit<PlacedOpening, "id"> | undefined {
   const { privateBoundary, blocked, rank } = wallHelpers(floor);
   const spec = OPENING_SPECS.door;
+  const door = (w: Wall, center: number) => ({
+    kind: "door" as const,
+    axis: w.axis,
+    line: wallLine(w),
+    center,
+    width: spec.width.def,
+    height: spec.height.def,
+    sill: 0,
+  });
   const pick = (options: Wall[]) => {
     for (const w of options.sort(rank)) {
-      const center = freeCenter(
-        w,
-        wallStart(w) + w.length / 2,
-        spec.width.def,
-        openings,
-      );
-      if (center !== undefined)
-        return {
-          kind: "door" as const,
-          axis: w.axis,
-          line: wallLine(w),
-          center,
-          width: spec.width.def,
-          height: spec.height.def,
-          sill: 0,
-        };
+      const center = freeCenter(w, wallStart(w) + w.length / 2, spec.width.def, openings);
+      if (center !== undefined) return door(w, center);
     }
     return undefined;
   };
@@ -471,13 +472,101 @@ export function findRoomDoor(
   const near = segments.filter(
     (w) => touches(w, room.bounds) && !blocked(w) && doorWall(room, w),
   );
+  const interior = near.filter((w) => !w.exterior && !privateBoundary(w) && w.length >= 120);
+  // Best doorway with real floor beyond it.
+  const grid = floorGrid(floor);
+  const index = floor.rooms.findIndex((r) => r.id === room.id);
+  let best: { w: Wall; center: number; score: number } | null = null;
+  if (index >= 0)
+    for (const w of interior)
+      for (const desired of doorCenters(w, spec.width.def)) {
+        const center = freeCenter(w, desired, spec.width.def, openings);
+        if (center === undefined) continue;
+        const score = doorScore(grid, floor.rooms, index, w, center, accept);
+        if (score === null) continue;
+        if (!best || score < best.score || (score === best.score && rank(w, best.w) < 0))
+          best = { w, center, score };
+        break;
+      }
+  if (best) return door(best.w, best.center);
+  if (accept) return undefined;
   return (
-    pick(near.filter((w) => !w.exterior && !privateBoundary(w) && w.length >= 120)) ??
+    pick(interior) ??
     // An attached bathroom never gets its own front door.
     (floor.elevation === 0 && !ensuiteHost(floor.rooms, room)
       ? pick(near.filter((w) => w.exterior && w.length >= 120))
       : undefined)
   );
+}
+
+/**
+ * After a structural edit, doors must still lead somewhere: a door now facing
+ * a wall or a gap moves to its room's best wall, and a room nobody can reach
+ * gets a door toward the rest of the house.
+ */
+export function repairCirculation(
+  floor: GeometryFloor,
+  segments: readonly Wall[],
+  openings: PlacedOpening[],
+  used: Set<string>,
+  notices: EditIssue[],
+): PlacedOpening[] {
+  const grid = floorGrid(floor);
+  let next = [...openings];
+  const roomAt = (o: PlacedOpening) =>
+    floor.rooms.filter((r) => openingSide(o, r.bounds) !== null);
+  for (const o of openings) {
+    if (!isPassable(o.kind)) continue;
+    const wall = segmentAt(segments as Wall[], o.axis, o.line, o.center);
+    if (!wall || wall.exterior) continue;
+    if (sideOf(grid, o, 1).kind !== "blocked" && sideOf(grid, o, -1).kind !== "blocked") continue;
+    const rooms = roomAt(o);
+    const without = next.filter((x) => x !== o);
+    const moved: PlacedOpening[] = [];
+    for (const room of rooms) {
+      if (roomHasPassage(room, [...without, ...moved])) continue;
+      const door = findRoomDoor(floor, segments, room, [...without, ...moved]);
+      if (door) moved.push({ id: o.id, ...door, ...(o.style ? { style: o.style } : {}) });
+    }
+    if (!moved.length && rooms.some((room) => !roomHasPassage(room, without))) continue;
+    next = [...without, ...moved];
+    if (rooms[0])
+      notices.push(
+        makeIssue("door-moved", `Moved the door of ${rooms[0].name} so it opens onto open floor, not a wall.`, {
+          severity: "notice",
+          source: { kind: "room", id: rooms[0].id, floorId: floor.id },
+          floorIds: [floor.id],
+        }),
+      );
+  }
+  for (let pass = 0; pass < floor.rooms.length; pass++) {
+    const reached = reachableNodes(floor, grid, next);
+    if (!reached) break;
+    const k = floor.rooms.findIndex((_, i) => !reached.has(`r${i}`));
+    if (k < 0) break;
+    const stranded = floor.rooms[k];
+    let door = findRoomDoor(floor, segments, stranded, next, (node) => reached.has(node));
+    if (!door) {
+      const { privateBoundary, blocked } = wallHelpers(floor);
+      const bridge = bridgeDoor(floor, grid, segments, next, reached, k, (w) => !privateBoundary(w) && !blocked(w));
+      if (bridge) {
+        const center = freeCenter(bridge.wall, bridge.center, OPENING_SPECS.door.width.def, next);
+        if (center !== undefined)
+          door = {
+            kind: "door",
+            axis: bridge.wall.axis,
+            line: wallLine(bridge.wall),
+            center,
+            width: OPENING_SPECS.door.width.def,
+            height: OPENING_SPECS.door.height.def,
+            sill: 0,
+          };
+      }
+    }
+    if (!door) break;
+    next = [...next, { id: allocateId("opening", used), ...door }];
+  }
+  return next;
 }
 
 // ---------------------------------------------------------------------------
@@ -680,7 +769,7 @@ function reconcileFloor(
     const door = findRoomDoor(after, segsAfter, room, next);
     if (door) next.push({ id: allocateId("opening", used), ...door });
   }
-  return next;
+  return repairCirculation(after, segsAfter, next, used, notices);
 }
 
 /**

@@ -3,7 +3,7 @@ import { length, unitLabel } from "../domain/display";
 import { useEditor } from "../editor/EditorProvider";
 import { Icon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
-import { ModeBar } from "./ModeBar";
+import { HomeBar } from "./HomeBar";
 
 export function BrandMark({ size = 34 }: { size?: number }) {
   return (
@@ -25,9 +25,11 @@ export function BrandMark({ size = 34 }: { size?: number }) {
 export function TopBar({
   desktop,
   onHome,
+  onAi,
 }: {
   desktop: boolean;
   onHome: () => void;
+  onAi: () => void;
 }) {
   const editor = useEditor();
   const { project, unit, state, dispatch } = editor;
@@ -68,7 +70,7 @@ export function TopBar({
           </p>
         </div>
       </div>
-      {desktop && state.mode !== "explore" && <ModeBar placement="top" />}
+      {desktop && state.mode !== "explore" && <HomeBar onAi={onAi} />}
       <div className="dh-topbar-actions">
         <div className="dh-history" role="toolbar" aria-label="History">
           <IconButton

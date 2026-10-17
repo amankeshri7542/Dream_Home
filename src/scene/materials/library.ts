@@ -64,11 +64,11 @@ export class MaterialLibrary {
   }
 
   facade(id: ExteriorFinishId) {
-    return this.standard(`facade:${id}`, () => this.textured(FACADE_LOOKS[id], { clip: true, poche: true, rise: true }));
+    return this.standard(`facade:${id}`, () => this.textured(FACADE_LOOKS[id], { clip: true, poche: true, rise: true, focus: "cut" }));
   }
   /** Interior paint: vertex colours (per room) × subtle plaster texture. */
   paint() {
-    return this.standard("paint", () => this.textured(NEUTRAL_LOOKS.paint, { clip: true, poche: true, rise: true }, true));
+    return this.standard("paint", () => this.textured(NEUTRAL_LOOKS.paint, { clip: true, poche: true, rise: true, focus: "cut" }, true));
   }
   joinery() {
     return this.standard("joinery", () =>
@@ -76,14 +76,15 @@ export class MaterialLibrary {
         clip: true,
         poche: true,
         rise: true,
+        focus: "cut",
       }),
     );
   }
   stone() {
-    return this.standard("stone", () => this.textured(NEUTRAL_LOOKS.stone, { clip: true, poche: true, rise: true }, true));
+    return this.standard("stone", () => this.textured(NEUTRAL_LOOKS.stone, { clip: true, poche: true, rise: true, focus: "cut" }, true));
   }
   slab() {
-    return this.standard("slab", () => this.textured(NEUTRAL_LOOKS.slab, { clip: true, poche: true, rise: true }, true));
+    return this.standard("slab", () => this.textured(NEUTRAL_LOOKS.slab, { clip: true, poche: true, rise: true, focus: "fade" }, true));
   }
   glass() {
     return this.standard("glass", () =>
@@ -100,12 +101,12 @@ export class MaterialLibrary {
           emissive: new Color("#ffcf8a"),
           emissiveIntensity: 0,
         }),
-        { clip: true },
+        { clip: true, focus: "cut" },
       ),
     );
   }
   floor(id: FloorMaterialId) {
-    return this.standard(`floor:${id}`, () => this.textured(FLOOR_LOOKS[id], { clip: true }));
+    return this.standard(`floor:${id}`, () => this.textured(FLOOR_LOOKS[id], { clip: true, focus: "fade" }));
   }
   roof(id: RoofMaterialId) {
     return this.standard(`roof:${id}`, () => this.textured(ROOF_LOOKS[id], {}, true));
@@ -131,7 +132,7 @@ export class MaterialLibrary {
           roughness: 0.85,
           metalness: 0,
         }),
-        { clip: true },
+        { clip: true, focus: "cut" },
       ),
     );
   }
@@ -156,6 +157,7 @@ export class MaterialLibrary {
         clip: true,
         poche: true,
         pop: true,
+        focus: "fade",
       }),
     );
   }
@@ -164,12 +166,13 @@ export class MaterialLibrary {
       patchMaterial(new MeshStandardMaterial({ color: "#ffffff", roughness: 0.5, metalness: 0, vertexColors: true }), {
         clip: true,
         poche: true,
+        focus: "cut",
       }),
     );
   }
   handle() {
     return this.standard("door:handle", () =>
-      patchMaterial(new MeshStandardMaterial({ color: "#c9c2b5", roughness: 0.28, metalness: 0.85 }), { clip: true }),
+      patchMaterial(new MeshStandardMaterial({ color: "#c9c2b5", roughness: 0.28, metalness: 0.85 }), { clip: true, focus: "cut" }),
     );
   }
   /** Warm lamp bodies (porch sconces); emissive driven by the time of day. */
@@ -193,7 +196,7 @@ export class MaterialLibrary {
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
       });
-      patchMaterial(m, { clip: true });
+      patchMaterial(m, { clip: true, focus: "cut" });
       m.name = "ao";
       this.cache.set("ao", m);
     }

@@ -1,14 +1,27 @@
 // GLB furniture for the visible interior floor: one BatchedMesh per material
 // slot (interior.glb, meshopt). Stretch items scale to their w/d, tile items
-// (kitchen counter runs, display shelving) repeat their module models, tintable
-// slots take the finish colour from furniture.json. While the kit loads — or if
-// it fails — the procedural furniture renders instead; catalog items without a
+// (kitchen counter runs, display shelving, backsplashes) repeat their module
+// models, tintable slots take the piece's finish — or, in a home with a Look,
+// the room's coordinated palette. Decor rests on the surface below it and
+// wall-hung pieces sit flush on the wall face. While the kit loads — or if it
+// fails — the procedural furniture renders instead; catalog items without a
 // model always fall back to their procedural parts.
 import { Component, Suspense, use, useEffect, useMemo, type ReactNode } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Color, Matrix4, Vector3, type Material } from "three";
-import { finishColor, furnitureCatalogItem, itemSize, resolveFurniture, type FurnitureCatalogItem } from "../../domain/furniture";
+import {
+  finishColor,
+  furnitureBaseY,
+  furnitureCatalogItem,
+  furnitureFootprint,
+  itemSize,
+  resolveFurniture,
+  tileModules,
+  type FinishSlot,
+} from "../../domain/furniture";
+import { autoPalette, paletteFinish, paletteTint, type RoomPalette } from "../../domain/materials";
 import type { FurnitureItem, GeometryFloor, Room, Wall } from "../../domain/types";
+import { wallThickness } from "../building/geometry/junctions";
 import { ASSET_ITEMS } from "../assets/assetManifest";
 import { FLOOR_SURFACE } from "../coords";
 import type { MaterialLibrary } from "../materials/library";
@@ -16,6 +29,7 @@ import { popUniforms } from "../materials/patches";
 import { buildBatches, disposeBatches, type Placement } from "./batched";
 import { loadKit, type Kit } from "./kit";
 import { ProceduralFurniture } from "./ProceduralFurniture";
+import { useInterior } from "./interior";
 
 type Props = {
   floor: GeometryFloor;
@@ -52,50 +66,69 @@ export function Furniture(props: Props) {
 
 const hasModel = (id: string) => ASSET_ITEMS[id]?.kit === "interior";
 
-/** Module sequence for tiled items (local x offsets in cm, centred). */
-export function tileModules(entry: FurnitureCatalogItem, width: number): { model: string; x: number; scale: number }[] {
-  const tile = entry.tile as Record<string, string | number> | undefined;
-  if (!tile) return [];
-  const module = String(tile.module);
-  const mw = Number(tile.moduleWidth ?? 60);
-  let seq: { model: string; w: number }[] = [];
-  const sink = tile.sink ? String(tile.sink) : null,
-    end = tile.end ? String(tile.end) : null;
-  const sw = Number(tile.sinkWidth ?? 80),
-    ew = Number(tile.endWidth ?? 60);
-  if (sink && end && width >= sw + ew + mw) {
-    const n = Math.max(0, Math.round((width - sw - ew) / mw));
-    const a = Math.floor(n / 2);
-    seq = [
-      ...Array.from({ length: a }, () => ({ model: module, w: mw })),
-      { model: sink, w: sw },
-      ...Array.from({ length: n - a }, () => ({ model: module, w: mw })),
-      { model: end, w: ew },
-    ];
-  } else {
-    const n = Math.max(1, Math.round(width / mw));
-    seq = Array.from({ length: n }, () => ({ model: module, w: mw }));
-  }
-  const total = seq.reduce((s, m) => s + m.w, 0);
-  const scale = width / total;
-  let cursor = -width / 2;
-  return seq.map((m) => {
-    const x = cursor + (m.w * scale) / 2;
-    cursor += m.w * scale;
-    return { model: m.model, x, scale };
-  });
-}
+export { tileModules };
 
 const up = new Vector3(0, 1, 0);
 
+const TINTABLE: readonly FinishSlot[] = ["fabric", "wood", "accent"];
+/** Per-slot tint colours: the piece's finish, else its room palette, else the catalog default. */
+export function itemTints(item: FurnitureItem, palette: RoomPalette | null): Record<string, Color | undefined> {
+  const entry = furnitureCatalogItem(item.catalogId);
+  const tints: Record<string, Color | undefined> = {};
+  if (!entry) return tints;
+  const chosen = finishColor(entry, item.finish ?? paletteFinish(palette, item.catalogId) ?? entry.defaultFinish);
+  if (chosen && entry.finishSlot) tints[entry.finishSlot] = new Color(chosen);
+  if (palette)
+    for (const slot of TINTABLE) {
+      if (slot === entry.finishSlot || !entry.slots.includes(slot)) continue;
+      const hex = paletteTint(palette, slot);
+      if (hex) tints[slot] = new Color(hex);
+    }
+  return tints;
+}
+
+const BACK: Record<number, "north" | "east" | "south" | "west"> = { 0: "north", 90: "east", 180: "south", 270: "west" };
+/**
+ * How far (cm) a wall-hung piece moves back so it sits flush on the wall's
+ * inside face (room bounds run along wall centrelines); 0 when it isn't near one.
+ */
+export function wallFlush(room: Room, item: FurnitureItem, walls: readonly Wall[]): number {
+  const entry = furnitureCatalogItem(item.catalogId);
+  if (!entry?.wallSnap || (entry.layer !== "high" && entry.layer !== "wall")) return 0;
+  const fp = furnitureFootprint(item),
+    b = room.bounds,
+    side = BACK[item.rotation];
+  const gap = side === "north" ? fp.z : side === "south" ? b.d - fp.z - fp.d : side === "west" ? fp.x : b.w - fp.x - fp.w;
+  const along: [number, number] =
+    side === "north" || side === "south" ? [b.x + fp.x, b.x + fp.x + fp.w] : [b.z + fp.z, b.z + fp.z + fp.d];
+  const line = side === "north" ? b.z : side === "south" ? b.z + b.d : side === "west" ? b.x : b.x + b.w;
+  const axis = side === "north" || side === "south" ? "x" : "z";
+  const wall = walls.find((w) => {
+    if (w.axis !== axis || (axis === "x" ? w.z : w.x) !== line) return false;
+    const s = axis === "x" ? w.x : w.z;
+    return s < along[1] && s + w.length > along[0];
+  });
+  if (!wall) return 0;
+  const shift = gap - (wallThickness(wall) * 100) / 2 - 0.3;
+  return shift > 0 && shift < 25 ? shift : 0;
+}
+
 /** Placement matrices for one item (several for tiled items); null → procedural. */
-export function itemPlacements(room: Room, item: FurnitureItem, floorY: number): Omit<Placement, "owner" | "tints">[] | null {
+export function itemPlacements(
+  room: Room,
+  item: FurnitureItem,
+  floorY: number,
+  opts: { baseY?: number; flush?: number } = {},
+): Omit<Placement, "owner" | "tints">[] | null {
   const entry = furnitureCatalogItem(item.catalogId);
   if (!entry) return null;
   const { w, d } = itemSize(item);
-  const x = (room.bounds.x + item.x) / 100,
-    z = (room.bounds.z + item.z) / 100;
-  const y = floorY + (entry.mountY ?? 0) / 100;
+  // Back faces north at rotation 0: moving "back" is −z turned by the rotation.
+  const flush = opts.flush ?? 0;
+  const yaw = (item.rotation * Math.PI) / 180;
+  const x = (room.bounds.x + item.x + Math.sin(yaw) * flush) / 100,
+    z = (room.bounds.z + item.z - Math.cos(yaw) * flush) / 100;
+  const y = floorY + (opts.baseY ?? entry.mountY ?? 0) / 100;
   // Back faces north at rotation 0; models face +z (front) → yaw = −rotation.
   const itemMatrix = new Matrix4().makeRotationAxis(up, (-item.rotation * Math.PI) / 180).setPosition(x, y, z);
   if (entry.tile) {
@@ -115,27 +148,31 @@ export function itemPlacements(room: Room, item: FurnitureItem, floorY: number):
 
 function GlbFurniture({ floor, walls, base, library, onPick, onHover }: Props) {
   const kit: Kit = use(loadKit("interior"));
+  const style = useInterior().project?.style;
   const { batches, procedural } = useMemo(() => {
     const placements: Placement[] = [];
     const procedural = new Set<string>();
     const y = base + FLOOR_SURFACE;
-    for (const room of floor.rooms)
-      for (const item of resolveFurniture(room, walls)) {
-        const ps = itemPlacements(room, item, y);
+    for (const room of floor.rooms) {
+      const items = resolveFurniture(room, walls);
+      const palette = autoPalette({ style }, room);
+      for (const item of items) {
+        const ps = itemPlacements(room, item, y, {
+          baseY: furnitureBaseY(item, items),
+          flush: wallFlush(room, item, walls),
+        });
         if (!ps) {
           procedural.add(item.id);
           continue;
         }
-        const entry = furnitureCatalogItem(item.catalogId)!;
-        const tints: Record<string, Color | undefined> = {};
-        const chosen = finishColor(entry, item.finish ?? entry.defaultFinish);
-        if (chosen && entry.finishSlot) tints[entry.finishSlot] = new Color(chosen);
+        const tints = itemTints(item, palette);
         for (const p of ps) placements.push({ ...p, tints, owner: `${room.id}|${item.id}` });
       }
+    }
     const materialFor = (slot: string): Material =>
       slot === "glass" ? library.glass() : (kit.materials.get(slot) ?? library.joinery());
     return { batches: buildBatches(kit, placements, materialFor), procedural };
-  }, [kit, floor.rooms, walls, base, library]);
+  }, [kit, floor.rooms, walls, base, library, style]);
   useEffect(() => () => disposeBatches(batches), [batches]);
 
   // Pop animation: scale instances inside the active pop rect on the CPU.

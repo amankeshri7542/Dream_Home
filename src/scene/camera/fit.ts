@@ -77,11 +77,17 @@ export function fitBox(input: FitInput): FitResult {
   const margin = input.margin ?? 0.08;
   const W = Math.max(1, width),
     H = Math.max(1, height);
-  // Keep at least 20% of the viewport usable even with extreme insets.
-  const l = Math.min(insets.left, W * 0.4),
-    r = Math.min(insets.right, W * 0.4),
-    t = Math.min(insets.top, H * 0.4),
-    b = Math.min(insets.bottom, H * 0.4);
+  // Honour each panel fully (a tall phone sheet may cover 60% of the screen),
+  // but keep at least 24% of the viewport usable: when opposite insets
+  // together exceed 76%, shrink both proportionally.
+  const squeeze = (a: number, b: number, size: number) => {
+    const total = Math.max(0, a) + Math.max(0, b),
+      cap = size * 0.76;
+    const k = total > cap ? cap / total : 1;
+    return [Math.max(0, a) * k, Math.max(0, b) * k];
+  };
+  const [l, r] = squeeze(insets.left, insets.right, W),
+    [t, b] = squeeze(insets.top, insets.bottom, H);
   const target: Vec3 = [
     (min[0] + max[0]) / 2,
     (min[1] + max[1]) / 2,

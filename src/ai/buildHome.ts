@@ -4,7 +4,7 @@
 // a project the editor accepts.
 import { homeChecks } from "../domain/advice";
 import { createBlueprint } from "../domain/blueprints";
-import { addCatalogRoom, resizeBuilding } from "../domain/builder";
+import { ROOM_CATALOG, addCatalogRoom, resizeBuilding } from "../domain/builder";
 import { addAttachedBathroom } from "../domain/ensuite";
 import { ensuiteHost } from "../domain/walls";
 import { furnitureCatalogItem, furnitureFitsRoom } from "../domain/furniture";
@@ -199,16 +199,22 @@ function addRoom(p: Project, use: RoomUse, preferUpper: boolean): { project: Pro
       const r = addCatalogRoom(p, floor.id, spec.catalog, size);
       if (r.ok && failing(r.project) <= failing(p)) return { project: r.project, id: added(r.project)! };
     }
-  // Grow the ground floor by up to 3 m (keeping the garden), then try once more.
+  // Grow the ground floor by exactly the room's depth (keeping the garden) and
+  // set the room flush in the new strip, so no thin gap is left behind it.
   const fp = p.floors[0].footprint;
   const maxD = Math.floor((p.plot.depth - p.plot.setback - fp.z) / 10) * 10;
-  for (const grow of [150, 300]) {
-    const d = Math.min(fp.d + grow, maxD);
-    if (d <= fp.d) break;
+  const item = ROOM_CATALOG.find((r) => r.id === spec.catalog)!;
+  for (const size of ["regular", "small"] as const) {
+    const scale = size === "small" ? 0.8 : 1;
+    const depth = Math.round((item.depth * scale) / 10) * 10;
+    const d = fp.d + depth;
+    if (d > maxD) continue;
     const grown = resizeBuilding(p, p.floors[0].id, { w: fp.w, d });
     if (!grown.ok) continue;
-    const r = addCatalogRoom(grown.project, p.floors[0].id, spec.catalog, "small");
-    if (r.ok && failing(r.project) <= failing(p)) return { project: r.project, id: added(r.project)! };
+    for (const at of [{ x: fp.x, z: fp.z + fp.d }, undefined]) {
+      const r = addCatalogRoom(grown.project, p.floors[0].id, spec.catalog, size, at);
+      if (r.ok && failing(r.project) <= failing(p)) return { project: r.project, id: added(r.project)! };
+    }
   }
   return null;
 }

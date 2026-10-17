@@ -2,6 +2,7 @@
 // bedroom. The link is `Room.attachedTo`; doors follow it (walls.ts), and this
 // module adds one and keeps links honest as the home changes.
 import { growHouse } from "./builder";
+import { projectCirculation } from "./circulation";
 import { deriveFloorVoids } from "./core";
 import { finalizeEdit } from "./edit";
 import { allocateId, componentIds, contains, overlaps } from "./geometry";
@@ -95,6 +96,14 @@ export function addAttachedBathroom(
     unitId: bedroom.unitId,
     attachedTo: bedroom.id,
   });
+  // A new bathroom must not cut anyone off or leave a door facing a wall.
+  const trouble = (p: Project) => {
+    const c = projectCirculation(p);
+    return c.unreachable.length + c.blockedDoors.length;
+  };
+  const baseline = trouble(project);
+  const sound = (r: EditResult): r is Extract<EditResult, { ok: true }> =>
+    r.ok && trouble(r.project) <= baseline;
   const tryOn = (p: Project): EditResult | null => {
     const f = p.floors.find((x) => x.id === floorId)!;
     const host = f.rooms.find((r) => r.id === bedroomId)!;
@@ -106,7 +115,7 @@ export function addAttachedBathroom(
           ...p,
           floors: p.floors.map((x) => (x.id === floorId ? { ...x, rooms: [...x.rooms, bath(spot)] } : x)),
         });
-        if (result.ok) return result;
+        if (sound(result)) return result;
       }
     return null;
   };
@@ -129,7 +138,7 @@ export function addAttachedBathroom(
             : x,
         ),
       });
-      if (result.ok) return { ...result, focusId: bedroomId };
+      if (sound(result)) return { ...result, focusId: bedroomId };
     }
   // Last resort: grow the house into the garden, then try beside again.
   const grown = growHouse(project, floorId);

@@ -6,7 +6,7 @@ export function CatalogPanel() {
   const editor = useEditor();
   const { project, activeFloor, unit, dispatch, commit, state } = editor;
   return (
-    <section className="dh-legacy-skin dh-catalog" aria-label="Add space">
+    <section className="dh-legacy-skin dh-catalog" aria-label="Add room">
       <RoomCatalog
         key={state.catalogPick ?? ""}
         initialPick={state.catalogPick}

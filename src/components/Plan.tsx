@@ -214,7 +214,9 @@ export default function Plan({
     setFeedback(null);
   }, [floor.id, view.resetKey]);
   useEffect(() => {
-    const key = `${floor.id}:${selected ?? ""}:${activeTool}`;
+    // The pane's size is part of the key: a sheet settling beside the plan
+    // changes its scale, and the room must stay framed.
+    const key = `${floor.id}:${selected ?? ""}:${activeTool}:${Math.round(viewport.width)}x${Math.round(viewport.height)}`;
     if (framedSelection.current === key || !viewport.width || !viewport.height)
       return;
     framedSelection.current = key;
@@ -227,8 +229,8 @@ export default function Plan({
     // Eight targets need room around them, and rooms are also moved here: show
     // the whole floor (clear of the hint above and the zoom buttons below)
     // unless the dots would then crowd each other. Reframe only on
-    // selection/tool change, so neither dragging nor an explicit Fit action
-    // causes a camera jump.
+    // selection/tool/size change, so neither dragging nor an explicit Fit
+    // action causes a camera jump.
     const f = displayFloor.footprint;
     const x0 = Math.min(f.x, b.x),
       z0 = Math.min(f.z, b.z);

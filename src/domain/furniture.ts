@@ -1,10 +1,10 @@
 // Furniture: the catalog (catalog/furniture.json), per-item procedural parts,
-// the automatic layouts (an exact port of the original room recipes), and the
-// rules every explicit `Room.furniture` list must satisfy.
+// the designer automatic layouts, and the rules every explicit
+// `Room.furniture` list must satisfy.
 //
-// Part generators take an origin (ox, oz) so the automatic layouts can emit in
-// the room's canonical frame with exactly the arithmetic the original recipes
-// used, while explicit items emit at (0, 0) in their own back-north frame.
+// Part generators take an origin (ox, oz) and emit in the item's own
+// back-north frame; automatic and explicit items share them, so a room's
+// automatic layout and its materialised copy draw identically.
 import catalogJson from "./catalog/furniture.json" with { type: "json" };
 import { floorForGeometry } from "./core";
 import {
@@ -20,6 +20,7 @@ import { makeIssue, type IssueSink } from "./issues";
 import { LIMITS } from "./limits";
 import type {
   ComponentRef,
+  EdgeSide,
   EditIssue,
   FurnitureItem,
   Project,
@@ -30,12 +31,19 @@ import type {
   Wall,
 } from "./types";
 import { registerValidation } from "./validate";
-import { deriveWalls } from "./walls";
+import { deriveWalls, isPassable } from "./walls";
 
 // ---------------------------------------------------------------------------
 // Catalog
 // ---------------------------------------------------------------------------
-export type FurnitureLayer = "floor" | "standard" | "high" | "ceiling";
+/**
+ * Collision layers: pieces only collide with pieces in the same layer.
+ * floor: rugs and mats · standard: free-standing furniture · high: wall-hung
+ * pieces (art, curtains, cabinets) · wall: flat wall coverings (headboard
+ * panels, tiles) · ceiling: fans and pendants · decor: small styling pieces
+ * that rest on whatever surface is below them (lamps, cushions, vases).
+ */
+export type FurnitureLayer = "floor" | "standard" | "high" | "ceiling" | "wall" | "decor";
 export type FinishSlot = "fabric" | "wood" | "accent";
 export type FurnitureCatalogItem = {
   id: string;
@@ -54,7 +62,10 @@ export type FurnitureCatalogItem = {
   slots: string[];
   triBudget: number;
   rooms: RoomKind[];
+  /** A lamp: the bulb height above the item's base (cm), colour and strength. */
   light?: { y: number; color: string; intensity: number };
+  /** Height (cm) of the top surface that decor pieces can rest on. */
+  surface?: number;
 };
 export const FURNITURE_CATALOG: readonly FurnitureCatalogItem[] =
   catalogJson.items as unknown as FurnitureCatalogItem[];
@@ -80,7 +91,22 @@ const GOES_ANYWHERE = new Set([
   "mirror",
   "bookshelf",
   "side-table",
+  "wall-art",
+  "curtains",
+  "cushions",
+  "vase-books",
+  "ceiling-fan",
 ]);
+/** Accessories dress any room (art, rugs, lamps, plants) but don't make one. */
+export function isAccessory(catalogId: string): boolean {
+  const entry = CATALOG.get(catalogId);
+  return (
+    !entry ||
+    GOES_ANYWHERE.has(catalogId) ||
+    entry.category === "decor" ||
+    entry.category === "lighting"
+  );
+}
 /** Friendly names for where a piece belongs ("a bedroom", "a kitchen"). */
 const KIND_PLACE: Record<RoomKind, string> = {
   bedroom: "a bedroom",
@@ -179,11 +205,6 @@ function makeEmit(
       add("ellipse", role, x, z, w, d, y, h, material, true, tint),
   };
 }
-/** The original recipes drop any part that leaves the room's inset frame. */
-const frameKeep =
-  (W: number, D: number): Keep =>
-  (x, z, w, d) =>
-    !(w <= 0 || d <= 0 || x < 0 || z < 0 || x + w > W + 0.01 || z + d > D + 0.01);
 const sizeKeep: Keep = (_x, _z, w, d) => w > 0 && d > 0;
 
 type Gen = (e: Emit, ox: number, oz: number, w: number, d: number) => void;
@@ -319,18 +340,15 @@ function kitchenCounter(
   e.ellipse("cooking pot", ox + hobX + 4, oz + 10, 22, 22, 92, 16, "steel");
   e.ellipse("pot lid", ox + hobX + 3, oz + 9, 24, 24, 108, 2, "dark");
   if (w >= 145) {
-    e.box("sink rim", ox + 10, oz + 8, 48, 42, 89, 2, "steel", true);
-    e.box("sink bowl", ox + 14, oz + 12, 40, 34, 90, 1, "dark", true);
-    e.box("sink bottom", ox + 18, oz + 16, 32, 26, 91, 1, "water", true);
-    e.box("tap", ox + 29, oz + 5, 4, 4, 91, 22, "steel");
-    e.box("tap spout", ox + 29, oz + 5, 4, 17, 111, 3, "steel");
-    e.box("chopping board", ox + 67, oz + 15, 27, 34, 89, 2, "oak", true);
+    // The sink sits mid-run like the tiled GLB counter.
+    const sx = ox + Math.max(10, Math.min(w / 2 - 24, hobX - 120));
+    e.box("sink rim", sx, oz + 8, 48, 42, 89, 2, "steel", true);
+    e.box("sink bowl", sx + 4, oz + 12, 40, 34, 90, 1, "dark", true);
+    e.box("sink bottom", sx + 8, oz + 16, 32, 26, 91, 1, "water", true);
+    e.box("tap", sx + 19, oz + 5, 4, 4, 91, 22, "steel");
+    e.box("tap spout", sx + 19, oz + 5, 4, 17, 111, 3, "steel");
+    e.box("chopping board", sx + 57, oz + 15, 27, 34, 89, 2, "oak", true);
   }
-}
-/** The automatic L-return: plain cabinets in the canonical (west-wall) frame. */
-function counterReturn(e: Emit, ox: number, oz: number, length: number) {
-  e.box("return cabinets", ox, oz, 60, length, 0, 84, "cabinet");
-  e.box("return countertop", ox, oz, 62, length, 84, 5, "stone");
 }
 function diningTop(e: Emit, ox: number, oz: number, w: number, d: number) {
   e.box("dining table", ox, oz, w, d, 73, 5, "oak", true, true);
@@ -595,6 +613,105 @@ const pendantLight: Gen = (e, ox, oz, w, d) => {
   e.ellipse("pendant shade", ox, oz, w, d, 200, 25, "glow", true);
 };
 
+// ---------------------------------------------------------------------------
+// Designer pack (plan view and the fallback while the GLB kit loads). Wall
+// pieces emit absolute heights like the mirror; decor pieces emit from their
+// own base and are lifted onto the surface below them by `furnitureParts`.
+// ---------------------------------------------------------------------------
+const curtains: Gen = (e, ox, oz, w, d) => {
+  const panel = Math.min(45, w * 0.24);
+  e.box("curtain rod", ox, oz + 2, w, 4, 238, 4, "steel");
+  for (const x of [0, w - panel]) {
+    e.box("drape", ox + x, oz + 3, panel, d - 3, 0, 238, "fabric", true, true);
+    e.box("tie-back", ox + x + panel / 2 - 3, oz + d - 2, 6, 2, 100, 6, "steel");
+  }
+};
+const wallArt: Gen = (e, ox, oz, w, d) => {
+  e.box("picture frame", ox, oz, w, d - 1, 135, 60, "timber");
+  e.box("print", ox + 6, oz + d - 1, w - 12, 1, 141, 48, "linen");
+  e.box("print motif", ox + w * 0.28, oz + d - 1, w * 0.44, 1, 143, 34, "clay", false, true);
+  e.ellipse("print sun", ox + w * 0.68, oz + d - 1, 10, 1, 170, 10, "clay");
+};
+const tvPanel: Gen = (e, ox, oz, w, d) => {
+  e.box("fluted panel", ox, oz, w, 6, 0, 200, "timber", false, true);
+  e.box("tv console", ox + w * 0.08, oz + 6, w * 0.84, d - 6, 15, 30, "oak", false, true);
+  e.box("tv screen", ox + w / 2 - 60, oz + 6, 120, 4, 85, 70, "dark");
+};
+const ceilingFan: Gen = (e, ox, oz, w, d) => {
+  e.box("fan downrod", ox + w / 2 - 1.5, oz + d / 2 - 1.5, 3, 3, 258, 22, "steel");
+  e.ellipse("fan motor", ox + w / 2 - 12, oz + d / 2 - 12, 24, 24, 248, 10, "steel");
+  e.box("fan blade", ox, oz + d / 2 - 7, w, 14, 251, 2, "oak", false, true);
+  e.box("fan blade", ox + w / 2 - 7, oz, 14, d, 251, 2, "oak", false, true);
+};
+const wallLight: Gen = (e, ox, oz, w, d) => {
+  e.box("sconce plate", ox + w / 2 - 5, oz, 10, 3, 163, 18, "steel");
+  e.ellipse("sconce shade", ox + 2, oz + 3, w - 4, d - 3, 170, 16, "glow");
+};
+const tableLamp: Gen = (e, ox, oz, w, d) => {
+  e.ellipse("lamp base", ox + w / 2 - 8, oz + d / 2 - 8, 16, 16, 0, 24, "clay", true);
+  e.ellipse("lamp shade", ox, oz, w, d, 28, 24, "glow");
+};
+const jhula: Gen = (e, ox, oz, w, d) => {
+  for (const x of [0, w - 8]) e.box("swing post", ox + x, oz, 8, d, 0, 200, "timber", false, true);
+  e.box("swing beam", ox, oz + d / 2 - 5, w, 10, 200, 10, "timber", false, true);
+  const sw = Math.min(130, w - 30);
+  for (const x of [6, sw - 8])
+    e.box("swing chain", ox + (w - sw) / 2 + x, oz + d / 2 - 1, 2, 2, 50, 150, "steel");
+  e.box("swing seat", ox + (w - sw) / 2, oz + d / 2 - 27, sw, 55, 42, 8, "oak", false, true);
+  e.box("swing cushion", ox + (w - sw) / 2 + 6, oz + d / 2 - 22, sw - 12, 45, 50, 6, "fabric", true);
+};
+const diwan: Gen = (e, ox, oz, w, d) => {
+  e.box("diwan base", ox, oz, w, d, 10, 18, "timber");
+  legs(e, ox, oz, w, d, 10);
+  e.box("diwan mattress", ox + 2, oz + 2, w - 4, d - 4, 28, 12, "fabric", true, true);
+  e.box("back cushion", ox + 18, oz, w - 36, 18, 40, 22, "cushion", true);
+  for (const x of [0, w - 16]) e.box("bolster", ox + x, oz + 6, 16, d - 12, 40, 16, "linen", true);
+};
+const shoeRack: Gen = (e, ox, oz, w, d) => {
+  e.box("shoe rack", ox, oz, w, d, 30, 65, "oak", false, true);
+  e.box("shoe shelf", ox, oz, w, d, 0, 6, "oak", false, true);
+  for (const x of [8, w / 2 + 4]) e.box("shoes", ox + x, oz + 6, w / 2 - 14, d - 10, 6, 10, "clay", true);
+};
+const sideboard: Gen = (e, ox, oz, w, d) => {
+  e.box("sideboard", ox, oz, w, d, 14, 71, "oak", false, true);
+  legs(e, ox, oz, w, d, 14, true);
+  e.ellipse("crockery jar", ox + 8, oz + d / 2 - 8, 16, 16, 85, 18, "ceramic");
+};
+const consoleTable: Gen = (e, ox, oz, w, d) => {
+  e.box("console top", ox, oz, w, d, 74, 6, "oak", false, true);
+  legs(e, ox, oz, w, d, 74, true);
+  e.box("console shelf", ox + 4, oz + 4, w - 8, d - 8, 18, 3, "oak", false, true);
+};
+const ottoman: Gen = (e, ox, oz, w, d) =>
+  e.ellipse("pouf", ox, oz, w, d, 0, 42, "fabric", true);
+const bedPanel: Gen = (e, ox, oz, w, d) => {
+  e.box("headboard panel", ox, oz, w, d, 0, 115, "fabric", true, true);
+  e.box("panel trim", ox, oz, w, d - 2, 112, 3, "oak");
+};
+const chimney: Gen = (e, ox, oz, w, d) => {
+  e.box("chimney hood", ox, oz, w, d, 165, 26, "dark", false, true);
+  e.box("chimney duct", ox + w / 2 - 14, oz, 28, 25, 191, 84, "dark", false, true);
+};
+const backsplash: Gen = (e, ox, oz, w, d) =>
+  e.box("backsplash tiles", ox, oz, w, d, 90, 55, "ceramic", false, true);
+const mirrorCabinet: Gen = (e, ox, oz, w, d) => {
+  e.box("mirror cabinet", ox, oz, w, d - 2, 110, 70, "oak", false, true);
+  e.box("mirror glass", ox + 3, oz + d - 2, w - 6, 2, 113, 64, "water");
+  e.box("cabinet light", ox + 5, oz + d - 4, w - 10, 2, 109, 1, "glow");
+};
+const cushionSet: Gen = (e, ox, oz, w, d) => {
+  const side = Math.min(38, w / 3);
+  e.box("cushion", ox, oz, side, d, 0, 38, "fabric", true, true);
+  e.box("cushion", ox + w - side, oz, side, d, 0, 38, "fabric", true, true);
+  e.box("accent cushion", ox + w / 2 - side * 0.45, oz + 2, side * 0.9, d - 2, 0, 32, "cushion", true);
+};
+const vaseBooks: Gen = (e, ox, oz, w, d) => {
+  e.box("books", ox, oz + 4, w * 0.55, d - 8, 0, 8, "linen");
+  e.box("books", ox + 2, oz + 6, w * 0.5, d - 12, 8, 5, "clay", false, true);
+  e.ellipse("vase", ox + w - 18, oz + d / 2 - 8, 16, 16, 0, 22, "ceramic");
+  e.ellipse("sprig", ox + w - 20, oz + d / 2 - 10, 20, 20, 22, 16, "leaf");
+};
+
 const GENERATORS: Record<string, Gen> = {
   "bed-double": bed,
   "bed-single": bed,
@@ -614,9 +731,9 @@ const GENERATORS: Record<string, Gen> = {
   desk,
   bookshelf,
   "media-unit": mediaUnit,
-  // Short runs read as plain cabinets (the automatic L-return is 120 cm).
+  // Like the tiled GLB run: a sink and a hob only from 2 m, else plain cabinets.
   "kitchen-counter": (e, ox, oz, w, d) =>
-    kitchenCounter(e, ox, oz, w, d, w >= 130),
+    kitchenCounter(e, ox, oz, w, d, w >= 200),
   "kitchen-base": (e, ox, oz, w, d) => kitchenCounter(e, ox, oz, w, d, false),
   "kitchen-sink": kitchenSink,
   "kitchen-stove": kitchenStove,
@@ -642,16 +759,88 @@ const GENERATORS: Record<string, Gen> = {
   "plant-small": plant(18, 18),
   "floor-lamp": floorLamp,
   "pendant-light": pendantLight,
+  curtains,
+  "wall-art": wallArt,
+  "tv-panel": tvPanel,
+  "ceiling-fan": ceilingFan,
+  "wall-light": wallLight,
+  "table-lamp": tableLamp,
+  jhula,
+  diwan,
+  "shoe-rack": shoeRack,
+  sideboard,
+  "console-table": consoleTable,
+  ottoman,
+  "bed-panel": bedPanel,
+  "kitchen-chimney": chimney,
+  backsplash,
+  "backsplash-module": backsplash,
+  "mirror-cabinet": mirrorCabinet,
+  cushions: cushionSet,
+  "vase-books": vaseBooks,
 };
 export const hasFurnitureParts = (catalogId: string) => catalogId in GENERATORS;
 
 // ---------------------------------------------------------------------------
-// Automatic layouts: canonical turn-0 placements inside the 13 cm inset frame
+// Tiled items (kitchen counter runs, display shelving, backsplashes)
 // ---------------------------------------------------------------------------
-export type AutoLayoutKind =
-  | RoomKind
-  | "study"
-  | "prayer";
+/** Module sequence for a tiled item: local x centres (cm) and the scale. */
+export function tileModules(
+  entry: FurnitureCatalogItem,
+  width: number,
+): { model: string; x: number; scale: number }[] {
+  const tile = entry.tile as Record<string, string | number> | undefined;
+  if (!tile) return [];
+  const module = String(tile.module);
+  const mw = Number(tile.moduleWidth ?? 60);
+  let seq: { model: string; w: number }[] = [];
+  const sink = tile.sink ? String(tile.sink) : null,
+    end = tile.end ? String(tile.end) : null;
+  const sw = Number(tile.sinkWidth ?? 80),
+    ew = Number(tile.endWidth ?? 60);
+  if (sink && end && width >= sw + ew + mw) {
+    const n = Math.max(0, Math.round((width - sw - ew) / mw));
+    const a = Math.floor(n / 2);
+    seq = [
+      ...Array.from({ length: a }, () => ({ model: module, w: mw })),
+      { model: sink, w: sw },
+      ...Array.from({ length: n - a }, () => ({ model: module, w: mw })),
+      { model: end, w: ew },
+    ];
+  } else {
+    const n = Math.max(1, Math.round(width / mw));
+    seq = Array.from({ length: n }, () => ({ model: module, w: mw }));
+  }
+  const total = seq.reduce((s, m) => s + m.w, 0);
+  const scale = width / total;
+  let cursor = -width / 2;
+  return seq.map((m) => {
+    const x = cursor + (m.w * scale) / 2;
+    cursor += m.w * scale;
+    return { model: m.model, x, scale };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Automatic layouts: designer recipes in a canonical frame
+// ---------------------------------------------------------------------------
+// A recipe furnishes a W×D frame (the room inset by AUTO_INSET) with its main
+// wall to the north (z = 0); `autoFurnishing` runs it with the room turned a
+// quarter turn at a time and keeps the best score. Pieces go in priority
+// order and each one is kept only when it fits: inside the frame, 5 cm clear
+// of pieces in its layer, out of every door approach, off door openings,
+// tall pieces off windows, wall-hung pieces never behind taller furniture,
+// and either snug (≤ 10 cm) or a full 80 cm walkway away from the major
+// pieces of other groups. Small rooms simply keep fewer optional pieces.
+export type AutoLayoutKind = RoomKind | "study" | "prayer";
+/** An opening along a canonical wall: its span (cm along the wall) and height. */
+export type WallSpan = { a: number; b: number; y0: number; y1: number };
+export type LayoutContext = {
+  /** Door approaches in the canonical frame. */
+  doors: Rect[];
+  /** Door openings and windows along each canonical wall. */
+  walls: Record<EdgeSide, { doors: WallSpan[]; windows: WallSpan[] }>;
+};
 export type AutoPlacement = {
   catalogId: string;
   /** Footprint in the canonical (unturned) inset frame. */
@@ -661,180 +850,896 @@ export type AutoPlacement = {
   d: number;
   /** Direction the item's back faces in the canonical frame. */
   rotation: QuarterTurn;
+  /** Pieces that belong together (a bed and its bedside tables). */
+  group: string;
 };
-export type AutoLayout = {
-  items: AutoPlacement[];
-  /** Parts in recipe order, tagged with the index of their owning item. */
-  parts: Array<{ owner: number; part: RoomDetail }>;
+export type AutoLayout = { items: AutoPlacement[]; score: number };
+type LayoutFn = (room: Room, w: number, d: number, ctx: LayoutContext) => AutoLayout;
+
+/** Clear width kept between groups of furniture. */
+export const AUTO_WALKWAY = 80;
+const SNUG = 10;
+/** Same-layer pieces keep this gap so snapping to the 5 cm grid never overlaps them. */
+const LAYER_GAP = 5;
+const SIDES: readonly EdgeSide[] = ["north", "east", "south", "west"];
+const noWalls = (): LayoutContext["walls"] => ({
+  north: { doors: [], windows: [] },
+  east: { doors: [], windows: [] },
+  south: { doors: [], windows: [] },
+  west: { doors: [], windows: [] },
+});
+/** A room with no doors or windows (tests, rooms in the tray). */
+export const openContext = (): LayoutContext => ({ doors: [], walls: noWalls() });
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+type Placed = AutoPlacement & {
+  entry: FurnitureCatalogItem;
+  side: EdgeSide | null;
+  base: number;
+  top: number;
 };
-function layoutBuilder(W: number, D: number) {
-  const items: AutoPlacement[] = [],
-    parts: AutoLayout["parts"] = [];
-  let owner = -1;
-  const e = makeEmit((part) => parts.push({ owner, part }), frameKeep(W, D));
-  return {
-    e,
-    place(
-      catalogId: string,
-      x: number,
-      z: number,
-      w: number,
-      d: number,
-      rotation: QuarterTurn = 0,
-    ) {
+type PlaceOpts = {
+  group?: string;
+  weight?: number;
+  /** The wall the piece's back is against (door/window rules); null for none. */
+  side?: EdgeSide | null;
+  /** Item-local size (defaults to the catalog size). */
+  w?: number;
+  d?: number;
+};
+/** Edge-to-edge distance between two footprints (0 when touching or overlapping). */
+export function footprintGap(a: Rect, b: Rect) {
+  const dx = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w));
+  const dz = Math.max(0, Math.max(a.z, b.z) - Math.min(a.z + a.d, b.z + b.d));
+  return dx && dz ? Math.hypot(dx, dz) : dx + dz;
+}
+const grow = (r: Rect, m: number): Rect => ({ x: r.x - m, z: r.z - m, w: r.w + 2 * m, d: r.d + 2 * m });
+const hung = (p: Placed) => p.entry.layer === "high" || p.entry.layer === "wall";
+/** Pieces used from the front (doors, drawers, a worktop) keep it clear. */
+const FRONT_ACCESS = new Set([
+  "wardrobe",
+  "dresser",
+  "bookshelf",
+  "sideboard",
+  "shoe-rack",
+  "console-table",
+  "tv-panel",
+  "media-unit",
+  "kitchen-counter",
+  "fridge",
+  "washing-machine",
+  "laundry-counter",
+  "vanity",
+  "toilet",
+  "display-shelf",
+]);
+const FRONT_CLEAR = 70;
+/** The strip in front of a front-access piece (inset 10 cm at the sides). */
+function frontZone(p: Placed): Rect | null {
+  if (!FRONT_ACCESS.has(p.catalogId)) return null;
+  const r = p.rect,
+    f = FRONT_CLEAR;
+  switch (p.rotation) {
+    case 0:
+      return { x: r.x + 10, z: r.z + r.d, w: r.w - 20, d: f };
+    case 180:
+      return { x: r.x + 10, z: r.z - f, w: r.w - 20, d: f };
+    case 90:
+      return { x: r.x - f, z: r.z + 10, w: f, d: r.d - 20 };
+    case 270:
+      return { x: r.x + r.w, z: r.z + 10, w: f, d: r.d - 20 };
+  }
+}
+const major = (p: Placed) =>
+  p.entry.layer === "standard" && p.entry.blocksWalk && p.group !== "accent";
+/** Local +x and +z (front) of an item turned to `rotation`, in frame axes. */
+const AXES: Record<QuarterTurn, { x: [number, number]; z: [number, number] }> = {
+  0: { x: [1, 0], z: [0, 1] },
+  90: { x: [0, 1], z: [-1, 0] },
+  180: { x: [-1, 0], z: [0, -1] },
+  270: { x: [0, -1], z: [1, 0] },
+};
+const SIDE_TURN: Record<EdgeSide, QuarterTurn> = { north: 0, east: 90, south: 180, west: 270 };
+
+/** Centres to try along a wall: the preferred one, then outward in 10 cm steps. */
+function centresAlong(length: number, size: number, prefer: number, step = 10): number[] {
+  const lo = size / 2,
+    hi = length - size / 2;
+  if (hi < lo - 0.01) return [];
+  const out: number[] = [];
+  const add = (v: number) => {
+    const c = clamp(v, lo, hi);
+    if (!out.some((o) => Math.abs(o - c) < 0.5)) out.push(c);
+  };
+  add(prefer);
+  for (let k = step; k <= length; k += step) {
+    add(prefer - k);
+    add(prefer + k);
+  }
+  return out;
+}
+
+function designer(W: number, D: number, ctx: LayoutContext, room: Pick<Room, "name"> = { name: "" }) {
+  const placed: Placed[] = [];
+  let score = 0;
+  const len = (side: EdgeSide) => (side === "north" || side === "south" ? W : D);
+  const spanOf = (r: Rect, side: EdgeSide): [number, number] =>
+    side === "north" || side === "south" ? [r.x, r.x + r.w] : [r.z, r.z + r.d];
+  /** Highest surface under a point (decor rests on it), else the floor. */
+  const surfaceAt = (x: number, z: number) => {
+    let y = 0;
+    for (const o of placed) {
+      const s = o.entry.surface;
+      if (s === undefined || o.entry.layer !== "standard") continue;
+      const r = o.rect;
+      if (x > r.x && x < r.x + r.w && z > r.z && z < r.z + r.d) y = Math.max(y, s);
+    }
+    return y;
+  };
+  const fits = (p: Placed): boolean => {
+    const r = p.rect,
+      layer = p.entry.layer;
+    if (!(r.w > 0 && r.d > 0)) return false;
+    if (r.x < -0.01 || r.z < -0.01 || r.x + r.w > W + 0.01 || r.z + r.d > D + 0.01) return false;
+    if ((layer === "standard" || layer === "decor") && ctx.doors.some((d) => overlaps(d, r)))
+      return false;
+    if (p.side) {
+      const [a, b] = spanOf(r, p.side);
+      const wall = ctx.walls[p.side];
+      const across = (s: WallSpan, margin: number) => a < s.b + margin && b > s.a - margin;
+      // Nothing on a wall over a doorway (with its architrave).
+      if (wall.doors.some((s) => across(s, 8) && p.base < s.y1)) return false;
+      // Only low pieces (a bed, a counter, a sofa) may stand under a window.
+      if (
+        p.catalogId !== "curtains" &&
+        wall.windows.some((s) => across(s, 0) && p.top > s.y0 + 15 && p.base < s.y1)
+      )
+        return false;
+    }
+    for (const o of placed) {
+      const ol = o.entry.layer;
+      if (ol === layer && overlaps(grow(o.rect, LAYER_GAP / 2), grow(r, LAYER_GAP / 2)))
+        return false;
+      // Wall-hung pieces never hide behind (or cut into) taller furniture.
+      if (hung(p) && ol === "standard" && o.top > p.base + 5 && overlaps(o.rect, r)) return false;
+      if (layer === "standard" && hung(o) && p.top > o.base + 5 && overlaps(o.rect, r)) return false;
+      if (major(p) && major(o) && o.group !== p.group) {
+        const g = footprintGap(o.rect, r);
+        if (g > SNUG && g < AUTO_WALKWAY) return false;
+        // Only pieces lined up along walls may sit snug against another group.
+        if (g <= SNUG && !(p.side && o.side)) return false;
+        const pf = frontZone(p),
+          of = frontZone(o);
+        if ((pf && overlaps(pf, o.rect)) || (of && overlaps(of, r))) return false;
+      }
+    }
+    return true;
+  };
+  const b = {
+    W,
+    D,
+    ctx,
+    room,
+    placed,
+    len,
+    /** Places a piece with this footprint; null (and nothing changes) if it doesn't fit. */
+    at(catalogId: string, rect: Rect, rotation: QuarterTurn, opts: PlaceOpts = {}): Placed | null {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
       const turned = rotation % 180 !== 0;
-      items.push({
+      const w = Math.round(opts.w ?? (turned ? rect.d : rect.w)),
+        d = Math.round(opts.d ?? (turned ? rect.w : rect.d));
+      const ok = (key: "w" | "d", v: number) => {
+        const range = entry.stretch?.[key];
+        return range ? v >= range[0] && v <= range[1] : v === entry.size[key];
+      };
+      if (!ok("w", w) || !ok("d", d)) return null;
+      const fw = turned ? d : w,
+        fd = turned ? w : d;
+      const r = {
+        x: rect.x + (rect.w - fw) / 2,
+        z: rect.z + (rect.d - fd) / 2,
+        w: fw,
+        d: fd,
+      };
+      const base =
+        entry.layer === "decor" ? surfaceAt(r.x + r.w / 2, r.z + r.d / 2) : (entry.mountY ?? 0);
+      const p: Placed = {
         catalogId,
-        rect: { x, z, w: turned ? d : w, d: turned ? w : d },
+        rect: r,
         w,
         d,
         rotation,
+        group: opts.group ?? "accent",
+        entry,
+        side: opts.side ?? null,
+        base,
+        top: base + entry.size.h,
+      };
+      if (!fits(p)) return null;
+      placed.push(p);
+      score += opts.weight ?? 1;
+      return p;
+    },
+    /** Places a piece with its back to a wall, centred `center` along it. */
+    wall(
+      catalogId: string,
+      side: EdgeSide,
+      center: number,
+      opts: PlaceOpts & { off?: number } = {},
+    ): Placed | null {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const w = Math.round(opts.w ?? entry.size.w),
+        d = Math.round(opts.d ?? entry.size.d),
+        off = opts.off ?? 0;
+      const rect =
+        side === "north"
+          ? { x: center - w / 2, z: off, w, d }
+          : side === "south"
+            ? { x: center - w / 2, z: D - off - d, w, d }
+            : side === "west"
+              ? { x: off, z: center - w / 2, w: d, d: w }
+              : { x: W - off - d, z: center - w / 2, w: d, d: w };
+      return b.at(catalogId, rect, SIDE_TURN[side], {
+        ...opts,
+        w,
+        d,
+        side: opts.side === undefined ? side : opts.side,
       });
-      owner = items.length - 1;
-      return owner;
     },
-    use(index: number) {
-      owner = index;
+    /** First centre along a wall where the piece fits. */
+    wallScan(catalogId: string, side: EdgeSide, prefer: number, opts: PlaceOpts & { off?: number; reach?: number } = {}) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const w = opts.w ?? entry.size.w;
+      for (const c of centresAlong(len(side), w, prefer)) {
+        if (opts.reach !== undefined && Math.abs(c - prefer) > opts.reach) continue;
+        const p = b.wall(catalogId, side, c, opts);
+        if (p) return p;
+      }
+      return null;
     },
-    done: (): AutoLayout => ({ items, parts }),
+    /** A decor piece on a host, at local offsets from the host's centre (+z toward its front). */
+    on(catalogId: string, host: Placed, along = 0, front = 0, opts: PlaceOpts = {}) {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const ax = AXES[host.rotation];
+      const cx = host.rect.x + host.rect.w / 2 + ax.x[0] * along + ax.z[0] * front,
+        cz = host.rect.z + host.rect.d / 2 + ax.x[1] * along + ax.z[1] * front;
+      const turned = host.rotation % 180 !== 0;
+      const fw = turned ? entry.size.d : entry.size.w,
+        fd = turned ? entry.size.w : entry.size.d;
+      return b.at(catalogId, { x: cx - fw / 2, z: cz - fd / 2, w: fw, d: fd }, host.rotation, {
+        group: host.group,
+        ...opts,
+      });
+    },
+    /** A rug trimmed clear of other groups' furniture; null when too small. */
+    rug(catalogId: string, rect: Rect, group: string, weight = 1): Placed | null {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      let x0 = Math.max(0, rect.x),
+        z0 = Math.max(0, rect.z),
+        x1 = Math.min(W, rect.x + rect.w),
+        z1 = Math.min(D, rect.z + rect.d);
+      for (let k = 0; k < 16; k++) {
+        const cur = { x: x0, z: z0, w: x1 - x0, d: z1 - z0 };
+        const hit = placed.find(
+          (o) =>
+            (o.entry.layer === "standard" && o.group !== group && overlaps(grow(o.rect, 10), cur)) ||
+            (o.entry.layer === "floor" && overlaps(grow(o.rect, LAYER_GAP), cur)),
+        );
+        if (!hit) break;
+        const o = grow(hit.rect, 10);
+        const options: Array<[number, number, number, number]> = [
+          [x0, z0, x1, Math.min(z1, o.z)],
+          [x0, Math.max(z0, o.z + o.d), x1, z1],
+          [x0, z0, Math.min(x1, o.x), z1],
+          [Math.max(x0, o.x + o.w), z0, x1, z1],
+        ];
+        const area = (q: [number, number, number, number]) =>
+          Math.max(0, q[2] - q[0]) * Math.max(0, q[3] - q[1]);
+        const best = options.reduce((m, q) => (area(q) > area(m) ? q : m));
+        [x0, z0, x1, z1] = best;
+      }
+      const sw = entry.stretch?.w ?? [entry.size.w, entry.size.w],
+        sd = entry.stretch?.d ?? [entry.size.d, entry.size.d];
+      let w = Math.floor(Math.min(x1 - x0, sw[1])),
+        d = Math.floor(Math.min(z1 - z0, sd[1]));
+      if (w < sw[0] || d < sd[0]) return null;
+      w -= w % 10;
+      d -= d % 10;
+      if (w < sw[0] || d < sd[0]) return null;
+      const cx = (x0 + x1) / 2,
+        cz = (z0 + z1) / 2;
+      return b.at(catalogId, { x: cx - w / 2, z: cz - d / 2, w, d }, 0, { group, weight });
+    },
+    /** A small piece in the first free corner (corners away from the main wall first). */
+    corner(catalogId: string, weight = 1, group = "accent"): Placed | null {
+      const entry = CATALOG.get(catalogId);
+      if (!entry) return null;
+      const w = entry.size.w,
+        d = entry.size.d;
+      for (const [x, z] of [
+        [W - w, D - d],
+        [0, D - d],
+        [W - w, 0],
+        [0, 0],
+      ]) {
+        const p = b.at(catalogId, { x, z, w, d }, 0, { group, weight });
+        if (p) return p;
+      }
+      return null;
+    },
+    bonus(n: number) {
+      score += n;
+    },
+    checkpoint: () => ({ n: placed.length, score }),
+    restore(cp: { n: number; score: number }) {
+      placed.length = cp.n;
+      score = cp.score;
+    },
+    done: (): AutoLayout => ({
+      items: placed.map(({ catalogId, rect, w, d, rotation, group }) => ({
+        catalogId,
+        rect,
+        w,
+        d,
+        rotation,
+        group,
+      })),
+      score,
+    }),
   };
+  return b;
 }
-type LayoutFn = (room: Room, w: number, d: number) => AutoLayout;
+type Designer = ReturnType<typeof designer>;
+
+/** Curtains on up to `max` windows, each a little wider than its window. */
+function curtainsOnWindows(b: Designer, max = 2) {
+  let n = 0;
+  for (const side of SIDES)
+    for (const s of b.ctx.walls[side].windows) {
+      if (n >= max) return;
+      const a = Math.max(0, s.a - 25),
+        z = Math.min(b.len(side), s.b + 25);
+      const w = Math.round(clamp(z - a, 100, 400));
+      if (w > b.len(side)) continue;
+      if (b.wall("curtains", side, (a + z) / 2, { w, weight: 3, group: "accent" })) n++;
+    }
+}
+/** A ceiling fan over a point, in rooms tall and wide enough for one. */
+function fanOver(b: Designer, x: number, z: number) {
+  if (Math.min(b.W, b.D) < 220) return null;
+  return b.at("ceiling-fan", { x: x - 60, z: z - 60, w: 120, d: 120 }, 0, { weight: 2 });
+}
+const doorOn = (ctx: LayoutContext, side: EdgeSide) => ctx.walls[side].doors.length > 0;
+
+/** Bed options: [catalog id, width, length, weight]. */
+const BEDS: Array<[string, number, number, number]> = [
+  ["bed-double", 160, 210, 100],
+  ["bed-double", 140, 200, 96],
+  ["bed-single", 100, 200, 90],
+  ["bed-single", 90, 190, 88],
+];
+function furnishBedroom(b: Designer, [id, w, d, weight]: [string, number, number, number]) {
+  const { W, D, ctx } = b;
+  let bed: Placed | null = null;
+  if (w <= W && d + 10 <= D)
+    for (const c of centresAlong(W, w, W / 2)) {
+      bed = b.wall(id, "north", c, { w, d, off: 10, group: "sleep", weight });
+      if (bed) {
+        b.bonus(-Math.abs(c - W / 2) / 20);
+        break;
+      }
+    }
+  if (!bed) {
+    // A folded sleeping mat marks a sleeping space too small for a bed.
+    const w = Math.min(76, W),
+      d = Math.min(115, D);
+    if (w >= 40 && d >= 40)
+      for (const c of centresAlong(W, w, W / 2))
+        if (b.wall("sleeping-mat", "north", c, { w, d, group: "sleep", weight: 40, side: null })) break;
+    return;
+  }
+  const cx = bed.rect.x + bed.rect.w / 2,
+    bw = bed.rect.w;
+  // The focal wall: a door facing or beside the bed reads well, never behind it.
+  if (doorOn(ctx, "north")) b.bonus(-15);
+  if (doorOn(ctx, "south")) b.bonus(8);
+  else if (doorOn(ctx, "east") || doorOn(ctx, "west")) b.bonus(4);
+  if (ctx.walls.north.windows.some((s) => s.a < bed!.rect.x + bw && s.b > bed!.rect.x)) b.bonus(-3);
+  // Upholstered panel behind the bed, spanning the bedside tables.
+  const panelW = Math.round(Math.min(bw + 110, W, 360));
+  if (panelW >= 140) b.wall("bed-panel", "north", cx, { w: panelW, group: "sleep", weight: 6 });
+  for (const x of [bed.rect.x - 5 - 45, bed.rect.x + bw + 5]) {
+    const table = b.at("bedside-table", { x, z: 10, w: 45, d: 40 }, 0, {
+      group: "sleep",
+      weight: 10,
+      side: "north",
+    });
+    if (table) b.on("table-lamp", table, 0, -2, { weight: 2 });
+  }
+  b.wall("wall-art", "north", cx, { group: "sleep", weight: 4 });
+  if (bed.catalogId === "bed-double") b.on("cushions", bed, 0, -bed.d / 2 + 63, { weight: 2 });
+  // Wardrobe on a side wall, else facing the bed.
+  const sideSpots: Array<[EdgeSide, (w: number) => number]> = [
+    ["east", (w) => D - w / 2],
+    ["west", (w) => D - w / 2],
+    ["east", (w) => w / 2],
+    ["west", (w) => w / 2],
+  ];
+  const endSpots: Array<[EdgeSide, (w: number) => number]> = [
+    ["south", (w) => W - w / 2],
+    ["south", (w) => w / 2],
+    ["south", () => W / 2],
+  ];
+  wardrobe: for (const spots of [sideSpots, endSpots])
+    for (const w of [150, 120, 100, 80])
+      for (const [side, at] of spots)
+        if (b.wall("wardrobe", side, at(w), { w, group: "store", weight: 25 })) break wardrobe;
+  // A reading corner in roomy bedrooms.
+  if (W >= 360 && D >= 380)
+    for (const x of [W - 85, 0]) {
+      const chair = b.at("armchair", { x, z: D - 85, w: 85, d: 85 }, 180, { group: "read", weight: 6 });
+      if (chair) {
+        b.at("floor-lamp", { x: x === 0 ? 90 : W - 135, z: D - 45, w: 40, d: 40 }, 0, { weight: 2 });
+        break;
+      }
+    }
+  b.rug(
+    "rug-rect",
+    { x: cx - (bw + 100) / 2, z: bed.rect.z + 75, w: bw + 100, d: Math.min(180, D - bed.rect.z - 75) },
+    "sleep",
+    4,
+  );
+  curtainsOnWindows(b);
+  fanOver(b, W / 2, Math.max(D / 2, bed.rect.z + bed.rect.d * 0.6));
+  b.corner("plant-floor", 2);
+}
+
+/** Sofa options: [catalog id, width, depth]. */
+const SOFAS: Array<[string, number, number]> = [
+  ["sofa-3", 240, 90],
+  ["sofa-3", 220, 90],
+  ["sofa-3", 180, 85],
+  ["sofa-2", 160, 85],
+  ["sofa-2", 130, 80],
+  ["sofa-2", 100, 75],
+];
+function furnishLiving(b: Designer, [id, w, d]: [string, number, number]) {
+  const { W, D, ctx } = b;
+  let sofa: Placed | null = null;
+  if (w <= Math.max(W * 0.72, 100) && d <= D)
+    for (const c of centresAlong(W, w, W / 2)) {
+      // A bigger sofa wins only when the rest of the room still works.
+      sofa = b.wall(id, "north", c, { w, d, group: "seat", weight: 90 + w / 20 });
+      if (sofa) {
+        b.bonus(-Math.abs(c - W / 2) / 20);
+        break;
+      }
+    }
+  if (!sofa) {
+    b.corner("plant-floor", 2);
+    return;
+  }
+  if (doorOn(ctx, "north")) b.bonus(-6);
+  const cx = sofa.rect.x + sofa.rect.w / 2,
+    sw = sofa.rect.w,
+    sd = sofa.rect.d;
+  // A TV wall facing the sofa, far enough for a coffee table between.
+  let tv: Placed | null = null;
+  if (D - sd - 40 >= 170)
+    for (const w of [200, 170]) {
+      tv = b.wallScan("tv-panel", "south", cx, { w, group: "media", weight: 30, reach: 60 });
+      if (tv) break;
+    }
+  const tw = Math.round(clamp(Math.round((sw * 0.55) / 10) * 10, 60, 140)),
+    td = D - sd >= 250 ? 60 : 50,
+    tz = sd + 40;
+  const room = tv ? tv.rect.z - 60 : D - 30;
+  const table =
+    tz + td <= room
+      ? b.at("coffee-table", { x: cx - tw / 2, z: tz, w: tw, d: td }, 0, { group: "seat", weight: 12 })
+      : null;
+  if (table)
+    for (const [x, rot] of [
+      [table.rect.x + tw + 45, 90],
+      [table.rect.x - 45 - 85, 270],
+    ] as const)
+      if (b.at("armchair", { x, z: tz + td / 2 - 42.5, w: 85, d: 85 }, rot, { group: "seat", weight: 8 }))
+        break;
+  // Layered light: a lamp on a side table at one end, a floor lamp at the other.
+  const ends = [sofa.rect.x + sw + 5, sofa.rect.x - 50];
+  let lit: number | null = null;
+  for (const x of ends) {
+    const t = b.at("side-table", { x, z: 5, w: 45, d: 45 }, 0, { group: "seat", weight: 3, side: "north" });
+    if (t) {
+      b.on("table-lamp", t, 0, 0, { weight: 2 });
+      lit = x;
+      break;
+    }
+  }
+  for (const x of ends)
+    if (x !== lit && b.at("floor-lamp", { x: x + 2.5, z: 5, w: 40, d: 40 }, 0, { weight: 3, side: "north" }))
+      break;
+  if (sw >= 160) b.on("cushions", sofa, 0, -sd / 2 + 31, { weight: 2 });
+  if (sw >= 215) {
+    b.wall("wall-art", "north", cx - 55, { group: "seat", weight: 3 });
+    b.wall("wall-art", "north", cx + 55, { group: "seat", weight: 2 });
+  } else b.wall("wall-art", "north", cx, { group: "seat", weight: 4 });
+  b.rug(
+    "rug-rect",
+    {
+      x: cx - (sw + 60) / 2,
+      z: sd - 25,
+      w: sw + 60,
+      d: (table ? table.rect.z + table.rect.d + 50 : sd + 150) - (sd - 25),
+    },
+    "seat",
+    5,
+  );
+  // A living / dining room gets its dining set in the free end of the room.
+  const named = /dining/i.test(b.room.name);
+  if (named) diningSet(b, { x: cx, z: sd + 80 }, 30, false);
+  // A jhula swing in big rooms, on a side wall facing in.
+  if (W >= 420 && D >= 380)
+    for (const [x, z, rot] of [
+      [20, D / 2 - 95, 270],
+      [W - 130, D / 2 - 95, 90],
+      [20, D - 190, 270],
+      [W - 130, D - 190, 90],
+    ] as const)
+      if (b.at("jhula", { x, z, w: 110, d: 190 }, rot, { group: "swing", weight: 8 })) break;
+  // Very big living rooms also seat the family for meals.
+  if (!named && W * D >= 220000) diningSet(b, { x: cx, z: sd + 80 }, 8, false);
+  // A styled console on a free side wall.
+  if (W >= 300 && D >= 300)
+    for (const side of ["east", "west"] as const) {
+      const c = b.wall("console-table", side, D / 2, { group: "console", weight: 3 });
+      if (c) {
+        b.on("vase-books", c, 20, 0, { weight: 2 });
+        b.wall("wall-art", side, D / 2, { group: "console", weight: 2 });
+        break;
+      }
+    }
+  // Shoes off at the door, the Indian way.
+  shoeRackByDoor(b);
+  if (tv) b.bonus(-Math.max(0, tv.rect.z - sd - 400) / 40);
+  curtainsOnWindows(b);
+  fanOver(b, cx, (sd + (tv ? tv.rect.z : D)) / 2);
+  b.corner("plant-floor", 2);
+}
+
+/**
+ * A dining table with chairs (and a pendant) in the free floor farthest from
+ * `away`, keeping the walkway to other furniture. Returns the table or null.
+ */
+function diningSet(b: Designer, away: { x: number; z: number }, weight: number, rug: boolean): Placed | null {
+  const { W, D } = b;
+  const spots: Array<{ x: number; z: number; far: number }> = [];
+  for (let x = 0; x <= W; x += 20)
+    for (let z = 0; z <= D; z += 20) spots.push({ x, z, far: Math.hypot(x - away.x, z - away.z) });
+  spots.sort((p, q) => q.far - p.far || p.x - q.x || p.z - q.z);
+  for (const [tw, td, n] of [
+    [150, 90, 2],
+    [120, 80, 2],
+    [90, 70, 1],
+  ] as const)
+    for (const s of spots) {
+      const tz = s.z - td / 2,
+        tx = s.x - tw / 2;
+      if (tx < 0 || tz - 55 < 0 || tx + tw > W || tz + td + 55 > D) continue;
+      const cp = b.checkpoint();
+      const table = b.at("dining-table", { x: tx, z: tz, w: tw, d: td }, 0, { group: "dine", weight });
+      if (!table) continue;
+      let chairs = 0;
+      for (let i = 0; i < n; i++) {
+        const x = tx + (tw * (i + 1)) / (n + 1) - 22.5;
+        if (b.at("dining-chair", { x, z: tz - 55, w: 45, d: 50 }, 0, { group: "dine", weight: 3 })) chairs++;
+        if (b.at("dining-chair", { x, z: tz + td + 5, w: 45, d: 50 }, 180, { group: "dine", weight: 3 })) chairs++;
+      }
+      if (chairs < 2) {
+        b.restore(cp);
+        continue;
+      }
+      b.at("pendant-light", { x: tx + tw / 2 - 22.5, z: tz + td / 2 - 22.5, w: 45, d: 45 }, 0, { weight: 2 });
+      if (rug) b.rug("rug-rect", { x: tx - 60, z: tz - 75, w: tw + 120, d: td + 150 }, "dine", 2);
+      return table;
+    }
+  return null;
+}
+
+function shoeRackByDoor(b: Designer) {
+  for (const side of SIDES)
+    for (const s of b.ctx.walls[side].doors)
+      for (const c of [s.b + 20 + 45, s.a - 20 - 45])
+        if (b.wall("shoe-rack", side, c, { group: "accent", weight: 2 })) return;
+}
+
+function furnishKitchen(b: Designer, fridgeBay: boolean) {
+  const { W, D, ctx } = b;
+  // Variant: the fridge closes the run at its west end (narrow galleys).
+  let fridge: Placed | null = null;
+  if (fridgeBay) {
+    fridge = b.wall("fridge", "north", 35, { group: "fridge", weight: 20 });
+    if (!fridge) return;
+  }
+  const from = fridge ? 75 : 0;
+  // The main run on the north wall: the longest stretch clear of doors.
+  let run: Placed | null = null;
+  for (let w = Math.min(Math.floor((W - from) / 10) * 10, 480); w >= 60 && !run; w -= 10)
+    run = b.wallScan("kitchen-counter", "north", from + w / 2, {
+      w,
+      d: 60,
+      group: "cook",
+      weight: 60 + (w >= 200 ? 40 : 0) + w / 20,
+    });
+  if (!run) return;
+  const entry = CATALOG.get("kitchen-counter")!;
+  const stove = tileModules(entry, run.w).find((m) => m.model === "kitchen-stove");
+  const stoveX = stove ? run.rect.x + run.rect.w / 2 + stove.x : null;
+  if (stoveX !== null)
+    b.wall("kitchen-chimney", "north", clamp(stoveX, 37.5, W - 37.5), { group: "cook", weight: 8 });
+  // Wall cabinets along the run, never over the hob.
+  let uppers = 0;
+  for (let x = run.rect.x; x + 60 <= run.rect.x + run.rect.w + 0.01 && uppers < 6; x += 65) {
+    if (stoveX !== null && Math.abs(x + 30 - stoveX) < 60) continue;
+    if (b.wall("kitchen-upper", "north", x + 30, { group: "cook", weight: 1 })) uppers++;
+  }
+  // Tiles between the worktop and the wall cabinets, broken by windows.
+  const windows = ctx.walls.north.windows
+    .filter((s) => s.y0 < 145)
+    .map((s) => [s.a, s.b] as const)
+    .sort((p, q) => p[0] - q[0]);
+  let start = run.rect.x;
+  for (const [a, z] of [...windows, [Infinity, Infinity] as const]) {
+    const end = Math.min(a, run.rect.x + run.rect.w);
+    const w = Math.floor((end - start) / 10) * 10;
+    if (w >= 60) b.wall("backsplash", "north", start + w / 2, { w: Math.min(w, 480), group: "cook", weight: 2 });
+    start = Math.max(start, z);
+    if (start >= run.rect.x + run.rect.w) break;
+  }
+  // An L-return, then the fridge at its end (the work triangle).
+  let ret: Placed | null = null,
+    retSide: EdgeSide = "west";
+  if (W >= 150)
+    for (const side of ["west", "east"] as const) {
+      for (let l = Math.min(180, Math.floor((D - 65 - 75) / 10) * 10); l >= 60 && !ret; l -= 10)
+        ret = b.wall("kitchen-counter", side, 65 + l / 2, { w: l, d: 60, group: "cook", weight: 20 + l / 20 });
+      if (ret) {
+        retSide = side;
+        break;
+      }
+    }
+  const fridgeSpots: Array<[EdgeSide, number]> = [
+    ...(ret ? ([[retSide, ret.rect.z + ret.rect.d + 5 + 35]] as Array<[EdgeSide, number]>) : []),
+    ["west", D - 35],
+    ["east", D - 35],
+    ["east", 100],
+    ["west", 100],
+    ["south", 35],
+    ["south", W - 35],
+  ];
+  // Its own group: the fridge keeps a full walkway to the counters (or sits snug at a run's end).
+  if (!fridge)
+    for (const [side, c] of fridgeSpots) if (b.wall("fridge", side, c, { group: "fridge", weight: 20 })) break;
+  // A galley's second run when there is no return.
+  if (!ret && D >= 220)
+    for (let w = Math.min(Math.floor(W / 10) * 10, 190); w >= 90; w -= 10)
+      if (b.wallScan("kitchen-counter", "south", W / 2, { w, d: 60, group: "galley", weight: 15 })) break;
+}
+
+function furnishDining(b: Designer) {
+  const { W, D } = b;
+  // [width, depth, chairs per long side]; the last is a chairless bistro table.
+  const TABLES: Array<[number, number, number]> = [
+    [180, 90, 3],
+    [150, 90, 2],
+    [120, 80, 2],
+    [90, 70, 1],
+    [80, 60, 0],
+  ];
+  let table: Placed | null = null,
+    board: Placed | null = null,
+    seats = 0;
+  for (const withBoard of [true, false]) {
+    const cp = b.checkpoint();
+    board = null;
+    if (withBoard)
+      for (const w of [150, 120, 100]) {
+        board = b.wallScan("sideboard", "north", W / 2, { w, group: "store", weight: 15, reach: 40 });
+        if (board) break;
+      }
+    if (withBoard && !board) continue;
+    const top = board ? board.rect.z + board.rect.d + AUTO_WALKWAY : 0;
+    for (const [tw, td, n] of TABLES) {
+      const chairs = n ? 110 : 0;
+      if (tw > W || top + td + chairs > D) continue;
+      const tz = top + (D - top - td - chairs) / 2 + chairs / 2;
+      for (const c of centresAlong(W, tw, W / 2).slice(0, 7)) {
+        table = b.at("dining-table", { x: c - tw / 2, z: tz, w: tw, d: td }, 0, {
+          group: "dine",
+          weight: 100 + tw / 10,
+        });
+        if (table) break;
+      }
+      if (table) {
+        seats = n;
+        break;
+      }
+    }
+    if (table) break;
+    b.restore(cp);
+  }
+  if (!table) return;
+  const { x: tx, z: tz, w: tw, d: td } = table.rect;
+  for (let i = 0; i < seats; i++) {
+    const x = tx + (tw * (i + 1)) / (seats + 1) - 22.5;
+    b.at("dining-chair", { x, z: tz - 55, w: 45, d: 50 }, 0, { group: "dine", weight: 6 });
+    b.at("dining-chair", { x, z: tz + td + 5, w: 45, d: 50 }, 180, { group: "dine", weight: 6 });
+  }
+  b.at("pendant-light", { x: tx + tw / 2 - 22.5, z: tz + td / 2 - 22.5, w: 45, d: 45 }, 0, { weight: 4 });
+  if (!board)
+    for (const side of ["east", "west", "south"] as const) {
+      for (const w of [150, 120, 100]) {
+        board = b.wallScan("sideboard", side, b.len(side) / 2, { w, group: "store", weight: 12, reach: 60 });
+        if (board) break;
+      }
+      if (board) break;
+    }
+  if (board) {
+    b.on("vase-books", board, board.w * 0.22, 0, { weight: 2 });
+    const side = board.side!;
+    const c = side === "north" || side === "south" ? board.rect.x + board.rect.w / 2 : board.rect.z + board.rect.d / 2;
+    b.wall("wall-art", side, c, { group: "store", weight: 3 });
+  }
+  b.rug("rug-rect", { x: tx - 60, z: tz - 75, w: tw + 120, d: td + 150 }, "dine", 4);
+  curtainsOnWindows(b);
+  b.corner("plant-floor", 2);
+}
+
+function furnishBathroom(b: Designer) {
+  const { W, D } = b;
+  let toilet: Placed | null = null;
+  for (const c of [21, W - 21, ...centresAlong(W, 42, 21)]) {
+    toilet = b.wall("toilet", "north", c, { group: "wet", weight: 100 });
+    if (toilet) break;
+  }
+  if (!toilet) return;
+  const west = toilet.rect.x < W / 2;
+  let vanity: Placed | null = null;
+  for (const w of [80, 60, 50]) {
+    const spots: Array<[EdgeSide, number]> = [
+      ["north", west ? W - w / 2 : w / 2],
+      [west ? "east" : "west", w / 2],
+      ["east", D - w / 2],
+      ["west", D - w / 2],
+      ["south", W / 2],
+    ];
+    for (const [side, c] of spots) {
+      vanity = b.wall("vanity", side, c, { w, group: "wet", weight: 30 });
+      if (vanity) break;
+    }
+    if (vanity) break;
+  }
+  if (vanity) {
+    const side = vanity.side!;
+    const c = side === "north" || side === "south" ? vanity.rect.x + vanity.rect.w / 2 : vanity.rect.z + vanity.rect.d / 2;
+    b.wall("mirror-cabinet", side, c, { group: "wet", weight: 4 });
+  }
+  if (W >= 150 && D >= 175)
+    for (const s of [90, 80]) {
+      const shower =
+        b.at("shower", { x: W - s, z: D - s, w: s, d: s }, 180, { w: s, d: s, group: "wet", weight: 20, side: "south" }) ??
+        b.at("shower", { x: 0, z: D - s, w: s, d: s }, 180, { w: s, d: s, group: "wet", weight: 20, side: "south" });
+      if (shower) break;
+    }
+  b.corner("plant-small", 1);
+}
+
+function furnishPrayer(b: Designer) {
+  const shrine = b.wallScan("prayer-shrine", "north", b.W / 2, { group: "pooja", weight: 100 });
+  if (!shrine) return;
+  // The shrine faces the door, so it greets you as you come in.
+  if (doorOn(b.ctx, "south")) b.bonus(6);
+  else if (!doorOn(b.ctx, "north")) b.bonus(2);
+  const cx = shrine.rect.x + shrine.rect.w / 2;
+  const mat =
+    b.D >= 125
+      ? b.at("prayer-mat", { x: cx - 32.5, z: 62, w: 65, d: 56 }, 0, { group: "pooja", weight: 10 })
+      : null;
+  const dz = mat ? 84 : 56;
+  for (const x of [cx - 32.5 - 22, cx + 32.5 + 6])
+    b.at("diya", { x, z: dz, w: 16, d: 12 }, 0, { group: "pooja", weight: 2 });
+  for (const x of [cx - 40 - 8 - 30, cx + 40 + 8])
+    b.at("plant-small", { x, z: 0, w: 30, d: 30 }, 0, { weight: 2, side: "north" });
+  b.wall("wall-light", "north", cx, { group: "pooja", weight: 2 });
+}
+
+function furnishStudy(b: Designer) {
+  const { W, D } = b;
+  let desk: Placed | null = null;
+  for (const w of [130, 110, 90, 70]) {
+    if (w > W) continue;
+    desk = b.wallScan("desk", "north", W / 2, { w, d: 60, group: "work", weight: 100 });
+    if (desk) break;
+  }
+  if (!desk) return;
+  const cx = desk.rect.x + desk.rect.w / 2;
+  b.at("office-chair", { x: cx - 30, z: 65, w: 60, d: 60 }, 180, { group: "work", weight: 20 });
+  b.on("table-lamp", desk, -(desk.w / 2 - 20), -10, { weight: 2 });
+  const spots: Array<[EdgeSide, number]> = [
+    ["north", desk.rect.x + desk.rect.w + 10 + 45],
+    ["north", desk.rect.x - 10 - 45],
+    ["east", D - 45],
+    ["west", D - 45],
+    ["south", W / 2],
+  ];
+  for (const [side, c] of spots) if (b.wall("bookshelf", side, c, { group: "store", weight: 15 })) break;
+  b.wall("wall-art", "north", cx, { group: "work", weight: 2 });
+  curtainsOnWindows(b);
+  fanOver(b, W / 2, D / 2);
+  b.corner("plant-floor", 2);
+}
+
+function furnishUtility(b: Designer) {
+  const { W } = b;
+  let washer: Placed | null = null;
+  for (const c of [30, W - 30, ...centresAlong(W, 60, 30)]) {
+    washer = b.wall("washing-machine", "north", c, { group: "laundry", weight: 100 });
+    if (washer) break;
+  }
+  if (washer)
+    for (const dir of [1, -1]) {
+      const room = dir > 0 ? W - (washer.rect.x + 65) : washer.rect.x - 5;
+      const w = Math.floor(Math.min(110, room) / 10) * 10;
+      if (w < 40) continue;
+      const c = dir > 0 ? washer.rect.x + 65 + w / 2 : washer.rect.x - 5 - w / 2;
+      if (b.wall("laundry-counter", "north", c, { w, group: "laundry", weight: 20 })) break;
+    }
+  for (const side of ["east", "west", "south"] as const)
+    if (b.wallScan("shoe-rack", side, b.len(side) / 2, { group: "store", weight: 10 })) break;
+}
+
+function furnishShop(b: Designer) {
+  const { W, D } = b;
+  for (let w = Math.min(Math.floor(W / 10) * 10, 300); w >= 60; w -= 20)
+    if (b.wallScan("display-shelf", "north", w / 2, { w, group: "retail", weight: 100 })) break;
+  if (D >= 220) {
+    const w = Math.min(140, Math.floor(W / 10) * 10);
+    if (w >= 60) b.at("shop-counter", { x: W - w, z: D - 60, w, d: 60 }, 0, { group: "till", weight: 20 });
+  }
+  b.corner("plant-floor", 2);
+}
+
+/** A recipe tries each variant (a bed or sofa size) and keeps the best. */
+const recipe =
+  (...variants: Array<(b: Designer) => void>): LayoutFn =>
+  (room, W, D, ctx) => {
+    let best: AutoLayout | null = null;
+    for (const furnish of variants) {
+      const b = designer(W, D, ctx, room);
+      furnish(b);
+      const layout = b.done();
+      if (!best || layout.score > best.score + 1e-6) best = layout;
+    }
+    return best!;
+  };
 export const AUTO_LAYOUTS: Record<AutoLayoutKind, LayoutFn> = {
-  bedroom: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const width = W >= 215 ? 155 : 90;
-    if (W >= width && D >= 200) {
-      const x = Math.max(0, (W - width) / 2);
-      b.place(width === 155 ? "bed-double" : "bed-single", x, 0, width, 200);
-      bed(b.e, x, 0, width, 200);
-      if (x >= 36) {
-        const sx = x - 36;
-        b.place("bedside-table", sx, 5, 30, 38);
-        bedsideTable(b.e, sx, 5, 30, 38);
-      }
-    } else {
-      // A folded sleeping mat identifies a too-small sleeping space without a tiny bed.
-      const x = Math.max(0, (W - 76) / 2),
-        w = Math.min(76, W),
-        d = Math.min(115, D);
-      b.place("sleeping-mat", x, 0, w, d);
-      sleepingMat(b.e, x, 0, w, d);
-    }
-    return b.done();
-  },
-  kitchen: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const width = Math.min(W, 330);
-    b.place("kitchen-counter", 0, 0, width, 60);
-    kitchenCounter(b.e, 0, 0, width, 60, true);
-    if (D >= 190 && W >= 250) {
-      const length = Math.min(120, D - 62);
-      b.place("kitchen-counter", 0, 62, length, 60, 270);
-      counterReturn(b.e, 0, 62, length);
-    }
-    return b.done();
-  },
-  dining: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const width = W >= 230 ? 145 : 90,
-      depth = D >= 225 ? 86 : 66;
-    const x = (W - width) / 2,
-      z = (D - depth) / 2;
-    const table = b.place("dining-table", x, z, width, depth);
-    diningTop(b.e, x, z, width, depth);
-    for (let i = 0; i < diningSeats(width); i++) {
-      const cx = seatX(x, width, i);
-      if (z >= 43) {
-        b.place("dining-chair", cx, z - 43, 40, 40, 0);
-        chair(b.e, cx, z - 43, 40, 40, "north");
-      }
-      if (z + depth + 43 <= D) {
-        b.place("dining-chair", cx, z + depth + 3, 40, 40, 180);
-        chair(b.e, cx, z + depth + 3, 40, 40, "south");
-      }
-      b.use(table);
-      diningPlates(b.e, cx, z, depth);
-    }
-    b.use(table);
-    diningBowl(b.e, x, z, width, depth);
-    return b.done();
-  },
-  living: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const width = Math.min(220, W),
-      depth = Math.min(85, D);
-    b.place(width > 170 ? "sofa-3" : "sofa-2", 0, 0, width, depth);
-    sofa(b.e, 0, 0, width, depth);
-    if (D >= 210 && W >= 140) {
-      const x = (width - 100) / 2;
-      b.place("coffee-table", x, 127, 100, 55);
-      coffeeTable(b.e, x, 127, 100, 55);
-    }
-    return b.done();
-  },
-  bathroom: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    b.place("toilet", 0, 0, 42, 68);
-    toilet(b.e, 0, 0, 42, 68);
-    if (W >= 108) {
-      b.place("vanity", W - 54, 0, 54, 46);
-      vanity(b.e, W - 54, 0, 54, 46);
-    }
-    if (W >= 150 && D >= 175) {
-      b.place("shower", W - 82, D - 82, 82, 82);
-      shower(b.e, W - 82, D - 82, 82, 82);
-    }
-    return b.done();
-  },
-  prayer: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const x = (W - 80) / 2;
-    b.place("prayer-shrine", x, 0, 80, 50);
-    prayerShrine(b.e, x, 0, 80, 50);
-    if (D >= 120) {
-      const mx = (W - 65) / 2;
-      b.place("prayer-mat", mx, 61, 65, 56);
-      prayerMat(b.e, mx, 61, 65, 56);
-    }
-    return b.done();
-  },
-  study: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const width = Math.min(130, W);
-    b.place("desk", 0, 0, width, 55);
-    desk(b.e, 0, 0, width, 55);
-    if (D >= 112) {
-      const x = width / 2 - 20;
-      b.place("office-chair", x, 68, 40, 40, 180);
-      chair(b.e, x, 68, 40, 40, "south");
-    }
-    return b.done();
-  },
-  shop: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    const width = Math.min(W, 300);
-    b.place("display-shelf", 0, 0, width, 38);
-    displayShelf(b.e, 0, 0, width, 38);
-    if (D >= 220) {
-      const x = Math.max(0, W - 140),
-        w = Math.min(140, W);
-      b.place("shop-counter", x, D - 60, w, 60);
-      shopCounter(b.e, x, D - 60, w, 60);
-    }
-    return b.done();
-  },
-  utility: (_room, W, D) => {
-    const b = layoutBuilder(W, D);
-    b.place("washing-machine", 0, 0, 60, 60);
-    washingMachine(b.e, 0, 0, 60, 60);
-    if (W >= 125) {
-      const w = Math.min(110, W - 67);
-      b.place("laundry-counter", 67, 0, w, 55);
-      laundryCounter(b.e, 67, 0, w, 55);
-    }
-    return b.done();
-  },
+  bedroom: recipe(...BEDS.map((bed) => (b: Designer) => furnishBedroom(b, bed))),
+  living: recipe(...SOFAS.map((sofa) => (b: Designer) => furnishLiving(b, sofa))),
+  kitchen: recipe(
+    (b) => furnishKitchen(b, false),
+    (b) => furnishKitchen(b, true),
+  ),
+  dining: recipe(furnishDining),
+  bathroom: recipe(furnishBathroom),
+  prayer: recipe(furnishPrayer),
+  study: recipe(furnishStudy),
+  utility: recipe(furnishUtility),
+  shop: recipe(furnishShop),
 };
 
 /** Which recipe a room uses: its kind, or a study / prayer cue from its name. */
@@ -847,7 +1752,7 @@ export function autoLayoutKind(room: Pick<Room, "kind" | "name">): AutoLayoutKin
     room.kind === "bathroom"
   )
     return room.kind;
-  if (/prayer|pooja|puja/i.test(room.name)) return "prayer";
+  if (/prayer|pooja|puja|mandir/i.test(room.name)) return "prayer";
   if (/study|office/i.test(room.name)) return "study";
   return room.kind === "shop" ? "shop" : "utility";
 }
@@ -856,72 +1761,146 @@ export const AUTO_INSET = 13;
 export const autoFurnitureId = (roomId: string, index: number) =>
   `auto:${roomId}:${index}`;
 
-/**
- * The automatic furnishing for a room: the recipe for its kind tried in each
- * permitted orientation, scored against door approaches (forced by
- * `furnishingRotation`). Parts are byte-identical to the original recipes.
- */
-export function autoFurnishing(
+type OpeningSpan = { door: boolean; rect: Rect; y0: number; y1: number };
+/** Doors and windows on a room's edges, as thin rects along the edge (plot cm). */
+function roomOpeningSpans(room: Room, walls: readonly Wall[]): OpeningSpan[] {
+  const r = room.bounds;
+  const out: OpeningSpan[] = [];
+  for (const wall of walls)
+    for (const o of wall.openings) {
+      const door = isPassable(o.kind),
+        y0 = o.sill,
+        y1 = o.sill + o.height;
+      if (wall.axis === "x" && (wall.z === r.z || wall.z === r.z + r.d)) {
+        const c = wall.x + o.offset;
+        const a = Math.max(c - o.width / 2, r.x),
+          b = Math.min(c + o.width / 2, r.x + r.w);
+        if (b - a > 1)
+          out.push({ door, y0, y1, rect: { x: a, z: wall.z === r.z ? r.z : r.z + r.d - 1, w: b - a, d: 1 } });
+      } else if (wall.axis === "z" && (wall.x === r.x || wall.x === r.x + r.w)) {
+        const c = wall.z + o.offset;
+        const a = Math.max(c - o.width / 2, r.z),
+          b = Math.min(c + o.width / 2, r.z + r.d);
+        if (b - a > 1)
+          out.push({ door, y0, y1, rect: { x: wall.x === r.x ? r.x : r.x + r.w - 1, z: a, w: 1, d: b - a } });
+      }
+    }
+  return out;
+}
+/** Doors and windows seen from a recipe's canonical frame (room turned `turns`). */
+function layoutContext(
   room: Room,
-  walls: readonly Wall[] = [],
-): { items: FurnitureItem[]; parts: RoomDetail[] } {
+  approaches: readonly Rect[],
+  spans: readonly OpeningSpan[],
+  turns: number,
+  W: number,
+  D: number,
+): LayoutContext {
+  const inset = AUTO_INSET,
+    rw = room.bounds.w - inset * 2,
+    rd = room.bounds.d - inset * 2;
+  const back = (r: Rect) =>
+    turnRect(
+      { x: r.x - room.bounds.x - inset, z: r.z - room.bounds.z - inset, w: r.w, d: r.d },
+      rw,
+      rd,
+      (4 - turns) % 4,
+    );
+  const walls = noWalls();
+  for (const s of spans) {
+    const q = back(s.rect);
+    let side: EdgeSide, a: number, b: number;
+    if (q.z + q.d <= 0.5) [side, a, b] = ["north", q.x, q.x + q.w];
+    else if (q.z >= D - 0.5) [side, a, b] = ["south", q.x, q.x + q.w];
+    else if (q.x + q.w <= 0.5) [side, a, b] = ["west", q.z, q.z + q.d];
+    else if (q.x >= W - 0.5) [side, a, b] = ["east", q.z, q.z + q.d];
+    else continue;
+    (s.door ? walls[side].doors : walls[side].windows).push({ a, b, y0: s.y0, y1: s.y1 });
+  }
+  return { doors: approaches.map(back), walls };
+}
+
+type Furnishing = { items: FurnitureItem[]; parts: RoomDetail[] };
+const FURNISHED = new WeakMap<Room, { key: string; value: Furnishing }>();
+/**
+ * The automatic furnishing for a room: its designer recipe tried with the
+ * room turned each permitted quarter turn (forced by `furnishingRotation`),
+ * keeping the best-scoring layout (ties keep the first turn). Deterministic.
+ */
+export function autoFurnishing(room: Room, walls: readonly Wall[] = []): Furnishing {
   const inset = AUTO_INSET,
     rw = room.bounds.w - inset * 2,
     rd = room.bounds.d - inset * 2;
   if (rw <= 0 || rd <= 0) return { items: [], parts: [] };
-  const doors = roomDoorApproaches(room, walls);
+  const approaches = roomDoorApproaches(room, walls);
+  const spans = roomOpeningSpans(room, walls);
+  const key = JSON.stringify([
+    room.id,
+    room.kind,
+    room.name,
+    room.bounds,
+    room.furnishingRotation,
+    approaches,
+    spans,
+  ]);
+  const hit = FURNISHED.get(room);
+  if (hit && hit.key === key) return { items: [...hit.value.items], parts: [...hit.value.parts] };
   const orientations =
-    room.furnishingRotation === undefined
-      ? [0, 1, 2, 3]
-      : [room.furnishingRotation / 90];
-  const recipe = AUTO_LAYOUTS[autoLayoutKind(room)];
-  const candidates = orientations.map((turns) => {
+    room.furnishingRotation === undefined ? [0, 1, 2, 3] : [room.furnishingRotation / 90];
+  const recipeFor = AUTO_LAYOUTS[autoLayoutKind(room)];
+  let best: { turns: number; w: number; d: number; layout: AutoLayout } | null = null;
+  for (const turns of orientations) {
     const w = turns % 2 ? rd : rw,
       d = turns % 2 ? rw : rd;
-    const layout = recipe(room, w, d);
-    const parts = layout.parts.map(({ owner, part }) => {
-      const r = turnRect(part.bounds, w, d, turns);
-      return {
-        ...part,
-        bounds: {
-          ...r,
-          x: r.x + room.bounds.x + inset,
-          z: r.z + room.bounds.z + inset,
-        },
-        ownerId: autoFurnitureId(room.id, owner),
-      };
-    });
-    const obstruction = parts.reduce(
-      (sum, part) =>
-        sum + doors.reduce((n, door) => n + overlapArea(part.bounds, door), 0),
-      0,
-    );
-    return { turns, w, d, layout, parts, score: parts.length * 40 - obstruction };
+    const layout = recipeFor(room, w, d, layoutContext(room, approaches, spans, turns, w, d));
+    if (!best || layout.score > best.layout.score + 1e-6) best = { turns, w, d, layout };
+  }
+  const items = best!.layout.items.map((p, index): FurnitureItem => {
+    const r = turnRect(p.rect, best!.w, best!.d, best!.turns);
+    return {
+      id: autoFurnitureId(room.id, index),
+      catalogId: p.catalogId,
+      x: r.x + inset + r.w / 2,
+      z: r.z + inset + r.d / 2,
+      rotation: ((p.rotation + best!.turns * 90) % 360) as QuarterTurn,
+      w: p.w,
+      d: p.d,
+    };
   });
-  candidates.sort((a, b) => b.score - a.score);
-  const best = candidates[0];
-  if (!best) return { items: [], parts: [] };
-  const owners = new Set(best.layout.parts.map((p) => p.owner));
-  const items = best.layout.items.flatMap((placement, index): FurnitureItem[] => {
-    if (!owners.has(index)) return [];
-    const r = turnRect(placement.rect, best.w, best.d, best.turns);
-    return [
-      {
-        id: autoFurnitureId(room.id, index),
-        catalogId: placement.catalogId,
-        x: r.x + inset + r.w / 2,
-        z: r.z + inset + r.d / 2,
-        rotation: ((placement.rotation + best.turns * 90) % 360) as QuarterTurn,
-        w: placement.w,
-        d: placement.d,
-      },
-    ];
-  });
-  return { items, parts: best.parts };
+  const parts = items.flatMap((item) => furnitureParts(room, item, items));
+  const value = { items, parts };
+  FURNISHED.set(room, { key, value });
+  return { items: [...items], parts: [...parts] };
 }
 /** Automatic furniture items (room-local centres, `auto:` ids). */
 export const autoFurniture = (room: Room, walls: readonly Wall[] = []) =>
   autoFurnishing(room, walls).items;
+const BACK_SIDE: Record<QuarterTurn, EdgeSide> = { 0: "north", 90: "east", 180: "south", 270: "west" };
+/** Main pieces, in order, whose wall reads as a room's focal (feature) wall. */
+const FOCAL_PIECES = [
+  "bed-double",
+  "bed-single",
+  "sofa-3",
+  "sofa-2",
+  "diwan",
+  "prayer-shrine",
+  "tv-panel",
+  "desk",
+  "sideboard",
+  "kitchen-counter",
+];
+/**
+ * The wall a room's main piece stands against (the bed's headboard wall, the
+ * sofa's back wall…), for an accent wall; null when there is none.
+ */
+export function roomFocalWall(room: Room, walls: readonly Wall[] = []): EdgeSide | null {
+  const items = resolveFurniture(room, walls);
+  for (const id of FOCAL_PIECES) {
+    const item = items.find((i) => i.catalogId === id);
+    if (item) return BACK_SIDE[item.rotation];
+  }
+  return null;
+}
 /** The furniture a room shows: explicit, none, or the automatic layout. */
 export function resolveFurniture(
   room: Room,
@@ -952,11 +1931,38 @@ export function furnitureFootprint(
     fd = turned ? w : d;
   return { x: item.x - fw / 2, z: item.z - fd / 2, w: fw, d: fd };
 }
-/** An item's parts in plot centimetres, owned by the item. */
-export function furnitureParts(room: Room, item: FurnitureItem): RoomDetail[] {
+/**
+ * Height (cm) of an item's base above the floor: its wall mount, or for decor
+ * pieces the top surface of the furniture under their centre (else the floor).
+ */
+export function furnitureBaseY(
+  item: Pick<FurnitureItem, "id" | "catalogId" | "x" | "z">,
+  siblings: readonly FurnitureItem[] = [],
+): number {
+  const entry = CATALOG.get(item.catalogId);
+  if (!entry) return 0;
+  if (entry.layer !== "decor") return entry.mountY ?? 0;
+  let y = 0;
+  for (const o of siblings) {
+    if (o.id === item.id) continue;
+    const host = CATALOG.get(o.catalogId);
+    if (host?.surface === undefined || host.layer !== "standard") continue;
+    const fp = furnitureFootprint(o);
+    if (item.x > fp.x && item.x < fp.x + fp.w && item.z > fp.z && item.z < fp.z + fp.d)
+      y = Math.max(y, host.surface);
+  }
+  return y;
+}
+/** An item's parts in plot centimetres, owned by the item (decor rests on `siblings`). */
+export function furnitureParts(
+  room: Room,
+  item: FurnitureItem,
+  siblings: readonly FurnitureItem[] = room.furniture ?? [],
+): RoomDetail[] {
   const entry = CATALOG.get(item.catalogId),
     gen = GENERATORS[item.catalogId];
   if (!entry || !gen) return [];
+  const lift = entry.layer === "decor" ? furnitureBaseY(item, siblings) : 0;
   const { w, d } = itemSize(item);
   const local: Array<{ part: RoomDetail; tint: boolean }> = [];
   gen(
@@ -976,6 +1982,7 @@ export function furnitureParts(room: Room, item: FurnitureItem): RoomDetail[] {
     return {
       ...part,
       bounds: { x: r.x + ox, z: r.z + oz, w: r.w, d: r.d },
+      y: part.y + lift,
       ownerId: item.id,
       ...(tint && color ? { color } : {}),
     };
@@ -1416,8 +2423,8 @@ export function reconcileFurniture(
         ? reframeForResize(prev, room, room.furniture)
         : room.furniture;
     // A new use keeps only the pieces that belong in it: a bedroom turned
-    // into a kitchen loses its bed. If nothing is left, the room furnishes
-    // itself automatically for its new use.
+    // into a kitchen loses its bed. If only accessories are left (art, rugs,
+    // lamps, plants), the room furnishes itself automatically for its new use.
     if (prev.kind !== room.kind) {
       const misfits = source.filter((item) => !furnitureFitsRoom(item.catalogId, room.kind));
       if (misfits.length) {
@@ -1434,7 +2441,7 @@ export function reconcileFurniture(
             ),
           );
         source = source.filter((item) => furnitureFitsRoom(item.catalogId, room.kind));
-        if (!source.length) {
+        if (!source.some((item) => !isAccessory(item.catalogId))) {
           changed = true;
           const { furniture: _gone, ...rest } = room;
           void _gone;

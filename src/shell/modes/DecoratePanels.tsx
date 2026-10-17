@@ -33,7 +33,13 @@ import { ROOM_META } from "../../domain/types";
 import { useEditor } from "../../editor/EditorProvider";
 import { THUMBS } from "../../scene/assets/assetManifest";
 import { Icon } from "../../ui/icons";
-import { Button, Field, IconButton, Section, Swatches } from "../../ui/primitives";
+import {
+  Button,
+  Field,
+  IconButton,
+  Section,
+  Swatches,
+} from "../../ui/primitives";
 import { MakeItNice } from "../../ai/MakeItNice";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -75,7 +81,13 @@ function useFurnitureRun(floorId: string, roomId: string) {
     });
 }
 
-export function FurnitureCatalog({ room, floorId }: { room: Room; floorId: string }) {
+export function FurnitureCatalog({
+  room,
+  floorId,
+}: {
+  room: Room;
+  floorId: string;
+}) {
   const { project } = useEditor();
   const run = useFurnitureRun(floorId, room.id);
   const [category, setCategory] = useState<string>("suggested");
@@ -86,7 +98,9 @@ export function FurnitureCatalog({ room, floorId }: { room: Room; floorId: strin
   // Only pieces that belong in this kind of room: a kitchen never offers beds.
   const fitting = useMemo(
     () =>
-      FURNITURE_CATALOG.filter((i) => !HIDDEN.has(i.id) && furnitureFitsRoom(i.id, room.kind)),
+      FURNITURE_CATALOG.filter(
+        (i) => !HIDDEN.has(i.id) && furnitureFitsRoom(i.id, room.kind),
+      ),
     [room.kind],
   );
   const categories = [...new Set(fitting.map((i) => i.category))];
@@ -96,7 +110,11 @@ export function FurnitureCatalog({ room, floorId }: { room: Room; floorId: strin
       : fitting.filter((i) => i.category === category);
   return (
     <div className="dh-catalog-picker">
-      <div className="dh-chips" role="radiogroup" aria-label="Furniture categories">
+      <div
+        className="dh-chips"
+        role="radiogroup"
+        aria-label="Furniture categories"
+      >
         <button
           type="button"
           role="radio"
@@ -141,8 +159,19 @@ export function FurnitureCatalog({ room, floorId }: { room: Room; floorId: strin
   );
 }
 
-/** Decorating one room: paint, floor and its furniture. */
-export function DecorateRoomPanel({ room, floorId }: { room: Room; floorId: string }) {
+/**
+ * Decorating one room: its furniture (with ✨ Make it nice) and its colours.
+ * `part` shows one half (the Room Studio's Furniture and Colours tabs).
+ */
+export function DecorateRoomPanel({
+  room,
+  floorId,
+  part = "all",
+}: {
+  room: Room;
+  floorId: string;
+  part?: "all" | "furniture" | "colours";
+}) {
   const editor = useEditor();
   const { project, select, run } = editor;
   const walls = useMemo(
@@ -150,76 +179,130 @@ export function DecorateRoomPanel({ room, floorId }: { room: Room; floorId: stri
     [project, floorId],
   );
   const items = resolveFurniture(room, walls);
+  const furniture = part !== "colours",
+    colours = part !== "furniture";
   return (
     <div className="dh-inspector-body">
-      {room.kind !== "shop" && <MakeItNice room={room} floorId={floorId} />}
-      <Section title={`Furniture in ${room.name}`} description={`${items.length} piece${items.length === 1 ? "" : "s"}`} open>
-        <div className="dh-furniture-list">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="dh-furniture-chip"
-              onClick={() =>
-                select({ kind: "furniture", floorId, roomId: room.id, id: item.id }, "list")
-              }
-            >
-              <Thumb id={item.catalogId} label={furnitureLabel(item)} />
-              <span>{furnitureLabel(item)}</span>
-            </button>
-          ))}
-          {!items.length && <p className="dh-note">This room is empty. Add something below!</p>}
-        </div>
-        <div className="dh-cluster">
-          <Button
-            variant="ghost"
-            icon={Icon.auto}
-            onClick={() =>
-              run(resetFurniture(project, floorId, room.id), `Auto-furnish ${room.name}`, {
-                notice: `${room.name} is furnished automatically again.`,
-              })
-            }
+      {furniture && room.kind !== "shop" && (
+        <MakeItNice room={room} floorId={floorId} compact={part !== "all"} />
+      )}
+      {furniture && (
+        <>
+          <Section
+            title="Add furniture"
+            description="Tap to place it in a free spot"
+            open
           >
-            Auto-furnish
-          </Button>
-          <Button
-            variant="ghost"
-            icon={Icon.remove}
-            onClick={() =>
-              run(clearFurniture(project, floorId, room.id), `Empty ${room.name}`, {
-                notice: `${room.name} is empty now. Undo brings everything back.`,
-              })
-            }
+            <FurnitureCatalog room={room} floorId={floorId} />
+          </Section>
+          <Section
+            title={`Furniture in ${room.name}`}
+            description={`${items.length} piece${items.length === 1 ? "" : "s"}`}
+            open
           >
-            Empty the room
-          </Button>
-        </div>
-      </Section>
-      <Section title="Add furniture" description="Tap to place it in a free spot" open>
-        <FurnitureCatalog room={room} floorId={floorId} />
-      </Section>
-      <Section title="Walls & floor" description="Paint and flooring" open>
-      <Swatches
-        label="Wall paint"
-        value={roomWallPaint(room)}
-        options={Object.entries(WALL_PAINTS).map(([value, s]) => ({ value, label: s.label, color: s.color }))}
-        onChange={(id) =>
-          run(setRoomWallColor(project, floorId, room.id, id), `Paint ${room.name}`, {
-            coalesceKey: `paint:${room.id}`,
-          })
-        }
-      />
-      <Swatches
-        label="Floor"
-        value={roomFloorMaterial(room)}
-        options={Object.entries(FLOOR_MATERIALS).map(([value, s]) => ({ value, label: s.label, color: s.color }))}
-        onChange={(id) =>
-          run(setRoomFloorMaterial(project, floorId, room.id, id), `Change ${room.name} floor`, {
-            coalesceKey: `floor:${room.id}`,
-          })
-        }
-      />
-      </Section>
+            <div className="dh-furniture-list">
+              {items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="dh-furniture-chip"
+                  onClick={() =>
+                    select(
+                      {
+                        kind: "furniture",
+                        floorId,
+                        roomId: room.id,
+                        id: item.id,
+                      },
+                      "list",
+                    )
+                  }
+                >
+                  <Thumb id={item.catalogId} label={furnitureLabel(item)} />
+                  <span>{furnitureLabel(item)}</span>
+                </button>
+              ))}
+              {!items.length && (
+                <p className="dh-note">
+                  This room is empty. Add something below!
+                </p>
+              )}
+            </div>
+            <div className="dh-cluster">
+              <Button
+                variant="ghost"
+                icon={Icon.auto}
+                onClick={() =>
+                  run(
+                    resetFurniture(project, floorId, room.id),
+                    `Auto-furnish ${room.name}`,
+                    {
+                      notice: `${room.name} is furnished automatically again.`,
+                    },
+                  )
+                }
+              >
+                Auto-furnish
+              </Button>
+              <Button
+                variant="ghost"
+                icon={Icon.remove}
+                onClick={() =>
+                  run(
+                    clearFurniture(project, floorId, room.id),
+                    `Empty ${room.name}`,
+                    {
+                      notice: `${room.name} is empty now. Undo brings everything back.`,
+                    },
+                  )
+                }
+              >
+                Empty the room
+              </Button>
+            </div>
+          </Section>
+        </>
+      )}
+      {colours && (
+        <Section title="Walls & floor" description="Paint and flooring" open>
+          <Swatches
+            label="Wall paint"
+            value={roomWallPaint(room)}
+            options={Object.entries(WALL_PAINTS).map(([value, s]) => ({
+              value,
+              label: s.label,
+              color: s.color,
+            }))}
+            onChange={(id) =>
+              run(
+                setRoomWallColor(project, floorId, room.id, id),
+                `Paint ${room.name}`,
+                {
+                  coalesceKey: `paint:${room.id}`,
+                },
+              )
+            }
+          />
+          <Swatches
+            label="Floor"
+            value={roomFloorMaterial(room)}
+            options={Object.entries(FLOOR_MATERIALS).map(([value, s]) => ({
+              value,
+              label: s.label,
+              color: s.color,
+            }))}
+            onChange={(id) =>
+              run(
+                setRoomFloorMaterial(project, floorId, room.id, id),
+                `Change ${room.name} floor`,
+                {
+                  coalesceKey: `floor:${room.id}`,
+                },
+              )
+            }
+          />
+        </Section>
+      )}
     </div>
   );
 }
@@ -229,7 +312,7 @@ const NUDGE = 30;
 
 export function FurnitureInspector() {
   const editor = useEditor();
-  const { project, selected, dispatch, unit } = editor;
+  const { project, selected, unit } = editor;
   const item = selected?.furniture;
   const room = selected?.room;
   const floor = selected?.floor;
@@ -274,25 +357,50 @@ export function FurnitureInspector() {
           <small>{unit === "ft" ? "About 1 ft" : "30 cm"} each tap</small>
         </span>
         <div>
-          <IconButton icon={Icon.left} label="Move left" onClick={() => nudge(-NUDGE, 0)} />
-          <IconButton icon={Icon.up} label="Move back" onClick={() => nudge(0, -NUDGE)} />
-          <IconButton icon={Icon.down} label="Move forward" onClick={() => nudge(0, NUDGE)} />
-          <IconButton icon={Icon.right} label="Move right" onClick={() => nudge(NUDGE, 0)} />
+          <IconButton
+            icon={Icon.left}
+            label="Move left"
+            onClick={() => nudge(-NUDGE, 0)}
+          />
+          <IconButton
+            icon={Icon.up}
+            label="Move back"
+            onClick={() => nudge(0, -NUDGE)}
+          />
+          <IconButton
+            icon={Icon.down}
+            label="Move forward"
+            onClick={() => nudge(0, NUDGE)}
+          />
+          <IconButton
+            icon={Icon.right}
+            label="Move right"
+            onClick={() => nudge(NUDGE, 0)}
+          />
         </div>
       </div>
       <div className="dh-cluster">
         <Button
           icon={Icon.rotate}
-          onClick={() => run(rotateFurniture(project, floor.id, room.id, item.id, 1), `Turn ${label.toLowerCase()}`)}
+          onClick={() =>
+            run(
+              rotateFurniture(project, floor.id, room.id, item.id, 1),
+              `Turn ${label.toLowerCase()}`,
+            )
+          }
         >
           Turn
         </Button>
         <Button
           icon={Icon.duplicate}
           onClick={() =>
-            run(duplicateFurniture(project, floor.id, room.id, item.id), `Copy ${label.toLowerCase()}`, {
-              notice: `Another ${label.toLowerCase()}!`,
-            })
+            run(
+              duplicateFurniture(project, floor.id, room.id, item.id),
+              `Copy ${label.toLowerCase()}`,
+              {
+                notice: `Another ${label.toLowerCase()}!`,
+              },
+            )
           }
         >
           Copy
@@ -304,11 +412,16 @@ export function FurnitureInspector() {
           value={item.finish ?? entry?.defaultFinish ?? null}
           options={finishes}
           onChange={(finish) =>
-            run(updateFurniture(project, floor.id, room.id, item.id, { finish }), `Recolour ${label.toLowerCase()}`)
+            run(
+              updateFurniture(project, floor.id, room.id, item.id, { finish }),
+              `Recolour ${label.toLowerCase()}`,
+            )
           }
         />
       )}
-      {floor.rooms.some((r) => r.id !== room.id && furnitureFitsRoom(item.catalogId, r.kind)) && (
+      {floor.rooms.some(
+        (r) => r.id !== room.id && furnitureFitsRoom(item.catalogId, r.kind),
+      ) && (
         <Field label="Move to another room">
           <select
             aria-label="Move to another room"
@@ -316,16 +429,27 @@ export function FurnitureInspector() {
             onChange={(e) => {
               const to = floor.rooms.find((r) => r.id === e.target.value);
               if (!to) return;
-              const result = moveFurniture(project, floor.id, room.id, item.id, {
-                roomId: to.id,
-                x: Math.round(to.bounds.w / 2 / 5) * 5,
-                z: Math.round(to.bounds.d / 2 / 5) * 5,
-                rotation: item.rotation,
-              });
+              const result = moveFurniture(
+                project,
+                floor.id,
+                room.id,
+                item.id,
+                {
+                  roomId: to.id,
+                  x: Math.round(to.bounds.w / 2 / 5) * 5,
+                  z: Math.round(to.bounds.d / 2 / 5) * 5,
+                  rotation: item.rotation,
+                },
+              );
               editor.run(result, `Move ${label.toLowerCase()} to ${to.name}`, {
                 select:
                   result.ok && result.focusId
-                    ? { kind: "furniture", floorId: floor.id, roomId: to.id, id: result.focusId }
+                    ? {
+                        kind: "furniture",
+                        floorId: floor.id,
+                        roomId: to.id,
+                        id: result.focusId,
+                      }
                     : undefined,
                 quietError: true,
               });
@@ -333,7 +457,10 @@ export function FurnitureInspector() {
           >
             <option value="">Choose a room</option>
             {floor.rooms
-              .filter((r) => r.id !== room.id && furnitureFitsRoom(item.catalogId, r.kind))
+              .filter(
+                (r) =>
+                  r.id !== room.id && furnitureFitsRoom(item.catalogId, r.kind),
+              )
               .map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name} ({ROOM_META[r.kind].label})
@@ -347,20 +474,17 @@ export function FurnitureInspector() {
           variant="danger"
           icon={Icon.remove}
           onClick={() =>
-            editor.run(removeFurniture(project, floor.id, room.id, item.id), `Remove ${label.toLowerCase()}`, {
-              select: { kind: "room", floorId: floor.id, id: room.id },
-              notice: `${label} removed. Undo brings it back.`,
-            })
+            editor.run(
+              removeFurniture(project, floor.id, room.id, item.id),
+              `Remove ${label.toLowerCase()}`,
+              {
+                select: { kind: "room", floorId: floor.id, id: room.id },
+                notice: `${label} removed. Undo brings it back.`,
+              },
+            )
           }
         >
           Remove
-        </Button>
-        <Button
-          variant="ghost"
-          icon={Icon.left}
-          onClick={() => dispatch({ type: "select", target: { kind: "room", floorId: floor.id, id: room.id } })}
-        >
-          Back to {room.name}
         </Button>
       </div>
     </div>

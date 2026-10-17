@@ -2,6 +2,7 @@
 // into an explicit list (accepting `auto:` ids), then validates via finalizeEdit.
 import "./features";
 import { floorForGeometry, replaceFloor } from "./core";
+import { floorCirculation } from "./circulation";
 import { finalizeEdit } from "./edit";
 import { allocateId, componentIds } from "./geometry";
 import { LIMITS } from "./limits";
@@ -10,6 +11,7 @@ import {
   OPENING_GAP,
   OPENING_SPECS,
   findRoomDoor,
+  repairCirculation,
   freeCenter,
   materializeOpenings,
   openingLabel,
@@ -255,8 +257,9 @@ export function removeOpening(
 }
 
 /**
- * Adds a door to a room that has none (scored like the automatic doors, with
- * an outside ground-floor wall as the fallback). No-op if it already has one.
+ * Gives a room a door that works: adds one when it has none, moves a door
+ * that opens onto a wall, and adds a way in when nobody can reach the room
+ * (scored like the automatic doors). No-op when all is already well.
  */
 export function ensureRoomDoor(
   project: Project,
@@ -267,10 +270,21 @@ export function ensureRoomDoor(
   const room = floor?.rooms.find((r) => r.id === roomId);
   if (!floor || !room) return { ok: false, error: "Room not found." };
   const geo = floorForGeometry(project, floorId);
-  if (roomHasPassage(room, resolveFloorOpenings(geo, project.plot.road)))
-    return { ok: true, project };
+  const circulation = floorCirculation(project, floorId);
+  const fine =
+    roomHasPassage(room, resolveFloorOpenings(geo, project.plot.road)) &&
+    !circulation.unreachable.includes(roomId) &&
+    !circulation.blockedDoors.some((d) => d.roomIds.includes(roomId));
+  if (fine) return { ok: true, project };
   const prep = prepare(project, floorId)!;
   const { geo: next, segments } = geometry(prep.p, floorId);
+  const used = componentIds(prep.p);
+  const repaired = repairCirculation(next, segments, prep.openings, used, []);
+  const changed = JSON.stringify(repaired) !== JSON.stringify(prep.openings);
+  if (changed && roomHasPassage(room, repaired))
+    return finalizeEdit(project, withOpenings(prep.p, prep.floor, repaired));
+  // Nothing better exists (e.g. no way in at all yet): keep a door that's there.
+  if (!changed && roomHasPassage(room, prep.openings)) return { ok: true, project };
   const door = findRoomDoor(next, segments, room, prep.openings);
   if (!door)
     return {

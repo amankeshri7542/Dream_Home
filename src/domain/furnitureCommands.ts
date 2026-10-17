@@ -110,6 +110,11 @@ export function findFurnitureSpot(
     ...(opts.d !== undefined ? { d: opts.d } : {}),
   };
   const { w, d } = itemSize(base);
+  // Decor (lamps, cushions, vases) first looks for a free spot on a surface.
+  if (entry.layer === "decor") {
+    const onTop = decorSpot(room, catalogId, others, near, rotation);
+    if (onTop) return onTop;
+  }
   const turns: QuarterTurn[] =
     rotation !== undefined ? [rotation] : entry.wallSnap ? [0, 90, 180, 270] : [0, 90];
   const range = (size: number, span: number) => {
@@ -154,6 +159,54 @@ export function findFurnitureSpot(
   );
   const best = clear ?? free[0];
   return best ? { x: best.x, z: best.z, rotation: best.rotation } : null;
+}
+
+/** Hosts decor prefers, best first (a lamp on a bedside table before a desk). */
+const DECOR_HOSTS: Record<string, string[]> = {
+  "table-lamp": ["bedside-table", "side-table", "console-table", "desk", "sideboard", "dresser"],
+  cushions: ["sofa-3", "sofa-2", "diwan", "bed-double", "bed-single"],
+  "vase-books": ["console-table", "sideboard", "dresser", "shoe-rack", "media-unit", "tv-panel", "side-table"],
+  diya: ["prayer-shrine", "console-table", "side-table"],
+};
+/**
+ * A free spot for a decor piece on top of a surface in the room: the centre or
+ * either end of each host (preferred hosts first, then nearest `near`).
+ */
+function decorSpot(
+  room: Room,
+  catalogId: string,
+  others: readonly FurnitureItem[],
+  near: { x: number; z: number },
+  rotation?: QuarterTurn,
+): { x: number; z: number; rotation: QuarterTurn } | null {
+  const entry = furnitureCatalogItem(catalogId)!;
+  const prefer = DECOR_HOSTS[catalogId] ?? [];
+  const hosts = others
+    .filter((o) => furnitureCatalogItem(o.catalogId)?.surface !== undefined)
+    .map((o) => {
+      const rank = prefer.indexOf(o.catalogId);
+      return { o, rank: rank < 0 ? prefer.length : rank, dist: Math.hypot(o.x - near.x, o.z - near.z) };
+    })
+    .sort((a, b) => a.rank - b.rank || a.dist - b.dist);
+  for (const { o } of hosts) {
+    const { w } = itemSize(o);
+    const turn = rotation ?? o.rotation;
+    const reach = Math.max(0, w / 2 - entry.size.w / 2 - 5);
+    // Along the host's width: centre, then each end.
+    const ax = o.rotation % 180 === 0 ? [1, 0] : [0, 1];
+    for (const t of [0, -reach, reach]) {
+      const c: FurnitureItem = {
+        id: "__candidate",
+        catalogId,
+        x: snap5(o.x + ax[0] * t),
+        z: snap5(o.z + ax[1] * t),
+        rotation: turn,
+      };
+      if (fitsRoom(room, furnitureFootprint(c)) && !furnitureCollisions(c, others).length)
+        return { x: c.x, z: c.z, rotation: c.rotation };
+    }
+  }
+  return null;
 }
 
 /** Turns a room's automatic furniture into editable pieces. */

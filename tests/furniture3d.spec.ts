@@ -38,7 +38,6 @@ for (const [name, size] of [
     await page.setViewportSize(size);
     const project = createPreset("compact");
     await seed(page, project);
-    await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Decorate", exact: true }).click();
     const { room, bed } = bedOf(project);
     const centre = { x: room.bounds.x + bed.x, z: room.bounds.z + bed.z, y: TOP };
     // Tap the room to step inside: the camera glides in and its label steps aside.
@@ -70,7 +69,6 @@ for (const [name, size] of [
 test("decorate: a bed dragged onto other furniture is refused with a reason", async ({ page }) => {
   const project = createPreset("compact");
   await seed(page, project);
-  await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Decorate", exact: true }).click();
   const { room, bed } = bedOf(project);
   const centre = { x: room.bounds.x + bed.x, z: room.bounds.z + bed.z, y: TOP };
   await page.locator(".scene-room-label").filter({ hasText: room.name }).click();
@@ -92,7 +90,6 @@ test("decorate: a kitchen's catalog never offers beds", async ({ page }) => {
   await page.setViewportSize(mobile);
   const project = createPreset("compact");
   await seed(page, project);
-  await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: "Decorate", exact: true }).click();
   const kitchen = project.floors[0].rooms.find((r) => r.kind === "kitchen")!;
   await page.locator(".scene-room-label").filter({ hasText: kitchen.name }).click();
   const chips = page.getByRole("radiogroup", { name: "Furniture categories" });

@@ -1,9 +1,12 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { createPreset } from "../src/domain/model";
 import {
   controls,
   dock,
+  enterRoom,
+  homeAction,
   noOverflow,
+  roomTab,
   openPlan,
   seed,
   showDetails,
@@ -56,7 +59,7 @@ for (const size of SIZES)
     await controls(page, "My plot").click();
     await same();
     await tool(page, "Add space").click();
-    await expect(page.getByRole("region", { name: "Add space" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Add room" })).toBeVisible();
     await same();
     await page.keyboard.press("Escape");
     await controls(page, "View").click();
@@ -103,30 +106,48 @@ test("chrome groups never overlap on a small phone, with or without a selection"
   await check();
 });
 
-test("primary touch targets are at least 48 px on phones", async ({ page }) => {
+test("primary touch targets are at least 48 px on phones, at Home and in a room", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
-  await seed(page, createPreset("compact"));
-  const targets = [
-    tool(page, "Add space"),
-    tool(page, "Move"),
-    tool(page, "Edit in 2D"),
-    tool(page, "Rooms"),
+  const project = createPreset("compact");
+  await seed(page, project);
+  const measure = async (targets: Locator[]) => {
+    for (const target of targets) {
+      const box = (await target.boundingBox())!;
+      const name = (await target.getAttribute("aria-label")) ?? (await target.textContent());
+      expect(box.width, name ?? "").toBeGreaterThanOrEqual(44);
+      expect(box.height, name ?? "").toBeGreaterThanOrEqual(44);
+    }
+  };
+  await measure([
+    homeAction(page, "Add room"),
+    homeAction(page, "Outside"),
+    homeAction(page, "Explore"),
+    homeAction(page, "Design with AI"),
     page.getByRole("button", { name: "Undo last change" }),
     page.getByRole("button", { name: "Fit home" }),
     page.getByRole("button", { name: "View options" }),
     page.getByRole("button", { name: "Floor plan" }),
-  ];
-  for (const target of targets) {
-    const box = (await target.boundingBox())!;
-    expect(box.width, await target.textContent()).toBeGreaterThanOrEqual(44);
-    expect(box.height, await target.textContent()).toBeGreaterThanOrEqual(48);
-  }
+  ]);
+  await enterRoom(page, project.floors[0].rooms[0].name);
+  await roomTab(page, "Layout").click();
+  await measure([
+    page.getByRole("button", { name: "Back to home" }),
+    page.getByRole("button", { name: "Previous room" }),
+    page.getByRole("button", { name: "Next room" }),
+    roomTab(page, "Furniture"),
+    roomTab(page, "Colours"),
+    roomTab(page, "Layout"),
+    roomTab(page, "Doors"),
+    dock(page, "Move").locator,
+    dock(page, "Edit in 2D").locator,
+  ]);
 });
 
 test("removing a room asks first and offers setting it aside instead", async ({ page }) => {
   await seed(page, createPreset("compact"));
   await controls(page, "Rooms").click();
   await page.locator(".room-card").first().click();
+  await roomTab(page, "Layout").click();
   await page.getByRole("button", { name: "Remove room" }).click();
   const confirm = page.getByRole("dialog", { name: /^Remove / });
   await expect(confirm).toBeVisible();
@@ -181,7 +202,7 @@ for (const [name, size] of [
       await expect(items.first()).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(menu).toHaveCount(0);
-      await expect(dock(page, "More actions")).toBeFocused();
+      await expect(dock(page, "More actions").locator).toBeFocused();
       await dock(page, "More actions").click();
     }
     // "All details" leaves the plan and shows the room's details.
