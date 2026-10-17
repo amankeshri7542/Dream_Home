@@ -8,7 +8,8 @@ work can resume after any interruption. Update it at the end of every phase.
   - M0a: server router, limiter, Claude pricing, security headers.
   - M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
   - M1: share links, the viewer, Remix, WhatsApp previews, reports, admin.
-- **Next phase: M2.** Photo mode. It also gives share links a render-quality preview picture.
+  - M2: Photo mode (render-quality stills), also used for share-link pictures.
+- **Next phase: M3.** Regional looks + lived-in details (the Diwali mood gets its diyas and string lights there).
 - **Owner actions pending** (sharing and the AI designer are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
@@ -77,11 +78,23 @@ work can resume after any interruption. Update it at the end of every phase.
   - `plot.location`, `vastu` and `remixOf` were added to the schema and whitelists now, because the server validates shares. New looks wait for M3, and the viewer parses leniently.
   - **Dev fix:** Vite now ignores `node_modules.nosync`. Stray file events there were forcing full page reloads every 30 seconds.
 
+- **17 Oct 2026 (M2):**
+  - **Renderer:** n8ao's `N8AOPass` (2.0.1, pinned) draws the scene plus ambient occlusion into half-float targets at the photo's size. Each sample shifts the camera by a sub-pixel Halton offset (clean edges) and moves the sun across a small disc (soft shadows, shadow map re-rendered each sample). A two-target ping-pong shader averages the samples. One final shader adds lamp glow (a bright pass blurred at quarter size), Neutral tone mapping, a gentle warm grade, a vignette and fine grain, then sRGB. Read-back is `readRenderTargetPixelsAsync`; a 2D canvas only adds the mark and encodes the JPEG (0.9).
+  - **Sizes:** phones 1600 px long edge with 16 samples and a 2048 shadow map; desktops 2560 px, 40 samples, 4096. Always capped by the GPU's texture limit. On this Mac a phone-size photo takes about 1.5 s and a desktop one about 3 s.
+  - **On-screen rendering pauses** (`frameloop "never"`) during the photo, and everything is put back afterwards: render target, auto-clear, tone mapping, clear colour, fog, sun position, shadow map size, frameloop. Tests check for 0 idle frames afterwards.
+  - **The renderer and n8ao load only when a photo is taken.** This also took n8ao out of the Scene chunk: 237 KB → 77 KB gzip.
+  - **Framing:** Aerial and Front frame the **whole plot** (compound wall, garden, a strip of street), not just the house. Fitting only the house cut the wall off. A few "look at the middle of what you see, step to fill the frame" passes centre the subject and fill at least 87% of the frame for every shape. Tall shapes (Story, Post) look more steeply down and more along the plot, so the home isn't a sliver in empty sky. Room uses the dollhouse focus and leaves street life out (a passing bird was a dark blot at room scale). This view keeps the live camera, including the walker's eyes.
+  - **Moods:** Morning 8:30, Noon 12:30, Golden hour 17:15, Night 21:30, Diwali night 21:15 (20:30 was a muddy dusk), each with its own warmth, glow and vignette.
+  - **Fallback:** if the careful render can't run (an error, a lost graphics context), the studio offers a quick picture of the live view, cropped to the shape and marked, and says so.
+  - **One studio for all entry points** (View options, Explore, the Room studio's camera, the share sheet). The old Explore photo dialog is gone. The chips wrap rather than scroll, so every choice stays in sight.
+  - **Share-link pictures** are now a 1200 × 630 aerial golden-hour render (10 samples, no mark), still falling back to the live capture.
+  - **Bug found on the way:** a shader uniform called `sample` is a reserved word in WebGL2 shaders, so that shader didn't compile and photos came out flat peach. Renamed `current`.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
 - [x] **M1** Live link + Remix + WhatsApp preview
-- [ ] **M2** Photo mode
+- [x] **M2** Photo mode
 - [ ] **M3** Regional looks + lived-in details
 - [ ] **M4** "My dream home" reel
 - [ ] **M5** Location, real sun, sunlight, Vastu, Home score
@@ -138,3 +151,18 @@ work can resume after any interruption. Update it at the end of every phase.
     - `tests/share.spec.ts` (5 browser tests): the whole share, view and remix loop across two browsers; update and stop; offline; previews; report.
     - `tests/preview/security.spec.ts`: the viewer under the production CSP.
   - **Docs:** `docs/SECURITY.md` (with the admin runbook).
+- **2026-10-17, M2:**
+  - **New `src/photo/`:**
+    - `render.ts`: the offline renderer (AO, jitter, soft sun, averaging, glow, finish shader, restore).
+    - `PhotoRenderer.tsx`: runs jobs inside the Canvas; waits for the scene to settle, builds the photo camera, pauses on-screen rendering.
+    - `framing.ts`: where the camera stands for each framing and shape.
+    - `settings.ts`: moods, shapes, sizes per device, and the test hook.
+    - `encode.ts`: JPEG with the Dream Home mark; the cropped quick fallback.
+    - `PhotoStudio.tsx` and `photo.css`: the studio.
+  - **Changed:** `SceneHost` (what each framing shows), `SceneRoot` (mounts the renderer), `AppShell` (studio, jobs, share pictures), `Hud` and `RoomStudio` (camera buttons). Removed `src/explore/PhotoDialog.tsx` and its CSS.
+  - **Tests:**
+    - `src/photo/photo.test.ts` (17): Halton, sizes, device quality, aerial poses, and every framing × shape keeps the subject inside, centred and filling the frame.
+    - `tests/photo.spec.ts` (4): JPEG of the right shape and 0 idle frames afterwards; Cancel; the quick fallback; the Room camera on a phone with wrapping chips. `DH_SHOTS=1` writes 5 moods × 2 framings × (390, 1440) to `docs/screenshots/photo/`.
+    - `tests/explore.spec.ts`: the Explore camera opens the studio.
+    - `tests/preview/security.spec.ts`: a full photo renders under the production CSP.
+  - **Gate:** typecheck, lint, 753 unit tests, build, `check:api`, 109 browser tests (14 screenshot-only skipped), 4 preview tests, `diff --check`: all green.

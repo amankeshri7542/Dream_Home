@@ -128,6 +128,14 @@ export function ViewOptions() {
         </button>
       </div>
       <Button
+        icon={Icon.photo}
+        variant="primary"
+        full
+        onClick={() => dispatch({ type: "overlay", overlay: "photo" })}
+      >
+        Take a photo
+      </Button>
+      <Button
         icon={Icon.fitHome}
         full
         onClick={() => fit("hero", "plot")}

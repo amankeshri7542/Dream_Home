@@ -110,19 +110,27 @@ fails if it's stale).
    shrubs, flower beds, hedges, a pool, paths, patios, lamps and benches; pick
    the ground and a fence.
 7. **Explore** — admire the home on a turntable, slide the time of day from
-   morning to a glowing night, take a photo to save or share, and walk inside
-   with the keyboard, a thumb joystick or tap-to-walk; stairs take you between
-   floors.
-8. **Share** — *Make my link* gives a short link (`/h/…`) anyone can open on
+   morning to a glowing night, and walk inside with the keyboard, a thumb
+   joystick or tap-to-walk; stairs take you between floors.
+8. **Photo** — the camera (View options, Explore, a room's header, or Share)
+   opens the **Photo studio**: pick *This view, Room, Front* or *Aerial*, a
+   mood (*Morning, Noon, Golden hour, Night, Diwali night*) and a shape
+   (*Story 9:16, Square, Post 4:5, Wide 16:9*), then *Take photo*. A few
+   seconds later you get a render-quality picture with soft shadows, ambient
+   occlusion, clean edges and glowing lamps, ready to *Share* or *Save*, with
+   an optional small Dream Home mark. Devices that can't make the full render
+   get a quick picture of the view instead.
+9. **Share** — *Make my link* gives a short link (`/h/…`) anyone can open on
    any phone to see the home turning in golden light, walk inside it, and
    **Remix this home** into their own My homes (their own home stays safe).
-   WhatsApp and other apps show a preview picture and the home's name. The
+   WhatsApp and other apps show a rendered golden-hour picture and the home's
+   name. The
    sharer sees views and remixes, can *Update link* after changes and *Stop
    sharing* at any time; the city and name are private unless chosen. Plan
    images per floor and a JSON backup are under *More ways to share*.
 
 **Never lost:** every change can be undone (with a description of what it
-undid), removing a room asks first and offers *Set aside instead*, and the
+undid), removing a room asks first and offers *Keep for later instead*, and the
 browser/phone Back button closes the top panel instead of leaving the app.
 **Friendly checks:** a Home checklist notices rooms without doors, bedrooms
 without windows, missing stairs, kitchen or bathroom — "friendly checks, not

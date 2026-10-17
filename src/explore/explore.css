@@ -268,22 +268,6 @@
       font-size: calc(13.5px * var(--dh-text));
     }
   }
-  .dh-photo-flash {
-    position: absolute;
-    inset: 0;
-    z-index: var(--dh-z-notify);
-    background: var(--dh-paper-0);
-    pointer-events: none;
-    animation: dh-flash 420ms var(--dh-ease-out) forwards;
-  }
-  @keyframes dh-flash {
-    from {
-      opacity: 0.85;
-    }
-    to {
-      opacity: 0;
-    }
-  }
   @media (max-width: 430px) {
     .dh-time-row output {
       min-width: 0;

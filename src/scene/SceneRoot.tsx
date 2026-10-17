@@ -32,6 +32,7 @@ import { SiteExtras } from "./props/SiteExtras";
 import { StreetLife } from "./street/StreetLife";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
+import { PhotoRenderer } from "../photo/PhotoRenderer";
 import { TIERS, MEASURE_FRAMES } from "./quality/quality";
 import type { QualityTier } from "../editor/types";
 import { useSceneStore } from "./store";
@@ -229,6 +230,14 @@ export function SceneRoot(props: RootProps) {
       <Turntable active={explore === "showcase" && !reducedMotion} />
       <OverlayProjector registry={registry} />
       <PhotoCapture request={props.photoRequest ?? null} onPhoto={props.onPhoto} />
+      <PhotoRenderer
+        job={props.photoJob ?? null}
+        project={project}
+        view={view}
+        cancel={props.photoCancel}
+        onProgress={props.onPhotoProgress}
+        onDone={props.onPhotoDone}
+      />
       <DebugBridge
         project={project}
         quality={tier}

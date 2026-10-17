@@ -363,6 +363,13 @@ M0 ships in two phases:
 **Done when:** a link opened on a phone shows the home in ≤ 3 s on a warm cache (measure with Playwright tracing locally), and the WhatsApp preview HTML validates (check the meta tags in the response).
 
 ### M2: Photo mode (render-quality stills)
+✅ Done on 17 Oct 2026 (see the roadmap log). Differences from the text below:
+- the button says **"Take photo"**;
+- sizes are 1600 px / 16 samples on phones and 2560 px / 40 on desktops (quick enough, and kinder to phone memory);
+- Aerial and Front frame the whole plot, not just the house;
+- the Lived-in toggle arrives with M3;
+- a real 4 GB phone wasn't available. A lost graphics context is caught and falls back to the quick photo; the owner's real-phone check is in M8.
+
 **Goal:** one tap gives an image that looks like a professional render.
 
 **Experience:**
@@ -392,7 +399,7 @@ M0 ships in two phases:
 - **Save and restore** the GL state: `autoClear` (postprocessing sets it to false), `toneMapping`, exposure, render target, viewport, shadow map size, hour, camera and frameloop.
 - **Moods** set `hour` and the palette:
   - Golden hour is 17.25;
-  - Diwali night is 20.5 plus M3 props (diyas, string lights, rangoli) and warmer lamps;
+  - Diwali night is 21.25 (full night; 20.5 was a muddy dusk) plus M3 props (diyas, string lights, rangoli) and warmer lamps;
   - with a location (M5), use the real sun.
 - **Framing** uses `fitBox` / `roomHeroPose` / `heroPose` / `frontPose` from `src/scene/camera/*` with the target aspect as the viewport. Room framing reuses the dollhouse focus uniforms (`src/scene/materials/focus.ts`).
 - Restore everything afterwards (DPR, shadow size, frameloop, camera). The scene must return to **0 idle frames**.
@@ -401,7 +408,7 @@ M0 ships in two phases:
 **Reuse:**
 - `src/scene/PhotoCapture.tsx` (pattern), `src/scene/effects/Effects.tsx` (N8AO/Bloom config);
 - `src/scene/environment/{Lights,shadowFit,timeOfDay}.ts`, `src/scene/quality/quality.ts`;
-- `src/explore/PhotoDialog.tsx` (save/share UI pieces).
+- `src/explore/PhotoDialog.tsx` (save/share UI pieces; replaced by the Photo studio in M2 and removed).
 
 **Tests:**
 - E2E at tiny sizes (320 × 568 target, N = 4): output blob is a JPEG with the right dimensions; after closing, 0 frames over 2 s; draw-call budgets unchanged in Build.
@@ -751,4 +758,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b and M1 shipped on 17 Oct 2026. The next phase is **M2** (Photo mode).
+- M0a, M0b, M1 and M2 shipped on 17 Oct 2026. The next phase is **M3** (Regional looks + lived-in details).

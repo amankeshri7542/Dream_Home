@@ -31,6 +31,13 @@ test("the built app runs cleanly under its Content-Security-Policy", async ({ pa
   await homeAction(page, "Explore").click();
   await page.waitForTimeout(2500);
   await renderedModel(page);
+  // A photo loads the renderer chunk lazily and shows the result as a blob: image.
+  await page.evaluate(() => ((window as unknown as { __dreamHomePhotoTest: unknown }).__dreamHomePhotoTest = { longEdge: 320, samples: 2 }));
+  await page.getByRole("button", { name: "Take a photo" }).click();
+  const studio = page.getByRole("dialog", { name: "Photo studio" });
+  await studio.getByRole("button", { name: "Take photo" }).click();
+  await expect(studio.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 30000 });
+  await expect(studio.getByText("quick photo instead")).toHaveCount(0);
   expect(violations).toEqual([]);
 });
 

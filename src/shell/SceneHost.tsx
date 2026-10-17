@@ -6,6 +6,23 @@ import { DEFAULT_VIEW, sceneView, GOLDEN_HOUR } from "../editor/state";
 import { BrandMark } from "./TopBar";
 import { useReducedMotion } from "../editor/hooks";
 import { setAsideRoom } from "../domain/tray";
+import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
+import type { Framing } from "../photo/settings";
+import type { SceneView } from "../scene/types";
+
+/**
+ * What a photo shows: "Front" is the finished house from the street (roof on);
+ * "Aerial" the whole home opened up like a dollhouse; "This view" and "Room"
+ * keep what's on screen (a room stays the cut-open hero). A room photo leaves
+ * out street life: a passing bird is a big dark blot at room scale.
+ */
+function photoView(framing: Framing, current: SceneView, streetLife: boolean | undefined): SceneView {
+  if (framing === "front")
+    return { ...DEFAULT_VIEW, floor: "all", stage: 5, roof: true, cutaway: false, labels: false, walls: true, streetLife };
+  if (framing === "aerial") return { ...DEFAULT_VIEW, floor: "all", labels: false, streetLife };
+  if (framing === "room") return { ...current, labels: false, streetLife: false };
+  return { ...current, labels: false };
+}
 
 // The single, always-mounted 3D canvas. It never unmounts when panels, the
 // plan lens or tools change — only overlays move around it.
@@ -26,7 +43,18 @@ export function SceneHost({
   photoRequest,
   onPhoto,
   onWalkStatus,
+  photo,
+  photoJob,
+  photoCancel,
+  onPhotoProgress,
+  onPhotoDone,
 }: {
+  /** While the photo studio is open (or a share picture is made): the mood's hour and the framing's view. */
+  photo?: { framing: Framing; hour: number } | null;
+  photoJob?: PhotoJobRequest | null;
+  photoCancel?: { current: boolean };
+  onPhotoProgress?: (fraction: number) => void;
+  onPhotoDone?: (outcome: PhotoOutcome) => void;
   onWalkStatus?: (status: { floorId: string; roomId: string | null }) => void;
   photoRequest?: { id: number } | null;
   onPhoto?: (blob: Blob) => void;
@@ -102,7 +130,9 @@ export function SceneHost({
           <Scene
             project={preview ?? project}
             view={
-              showcase
+              photo && !showcase && !(walking && photo.framing === "view")
+                ? photoView(photo.framing, sceneView(state), state.view.streetLife)
+                : showcase
                 ? { ...DEFAULT_VIEW, stage: 5, roof: true, cutaway: false, labels: false }
                 : walking
                   ? {
@@ -119,16 +149,20 @@ export function SceneHost({
                     }
                   : sceneView(state)
             }
-            mode={showcase ? "explore" : state.mode}
-            selection={showcase ? null : (selected?.target ?? null)}
+            mode={showcase || photo ? "explore" : state.mode}
+            selection={showcase || photo ? null : (selected?.target ?? null)}
             onSelect={onSelect}
             highlight={state.flash}
             cameraCommand={state.camera}
             insets={insets}
-            hour={showcase ? GOLDEN_HOUR : state.hour}
+            hour={showcase ? GOLDEN_HOUR : photo ? photo.hour : state.hour}
             quality={state.quality}
             onQualityResolved={() => undefined}
-            explore={showcase ? "showcase" : state.explore}
+            explore={showcase ? "showcase" : photo && !walking ? "orbit" : state.explore}
+            photoJob={photoJob}
+            photoCancel={photoCancel}
+            onPhotoProgress={onPhotoProgress}
+            onPhotoDone={onPhotoDone}
             photoRequest={photoRequest}
             onPhoto={onPhoto}
             onWalkStatus={walkStatus}

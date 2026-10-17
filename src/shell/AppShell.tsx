@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createStarter } from "../domain/starters";
 import type { Project } from "../domain/types";
 import { loadSession, saveSession } from "../editor/preferences";
@@ -7,7 +7,10 @@ import { CoachMarks, TemplateGallery, TitleScreen } from "../onboarding/Onboardi
 import { AiDesigner, type AiResult } from "../ai/AiDesigner";
 import { DesignNotes } from "../ai/DesignNotes";
 import { ExploreHud } from "../explore/ExploreHud";
-import { PhotoDialog } from "../explore/PhotoDialog";
+import { PhotoStudio, type PhotoSettings } from "../photo/PhotoStudio";
+import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
+import { photoQuality, type Framing } from "../photo/settings";
+import { GOLDEN_HOUR } from "../editor/state";
 import type { TrayPointer } from "../components/RoomTray";
 import { useEditor } from "../editor/EditorProvider";
 import { useChromeInsets, useDesktop } from "../editor/hooks";
@@ -125,8 +128,6 @@ export function AppShell() {
    */
   const adopt = (project: Project, label: string) => addHome(editor, project, label);
   const [photoRequest, setPhotoRequest] = useState<{ id: number } | null>(null);
-  const [photo, setPhoto] = useState<Blob | null>(null);
-  const [flash, setFlash] = useState(0);
   const [walkStatus, setWalkStatus] = useState("");
   const [walkFloorId, setWalkFloorId] = useState<string | undefined>();
   const onWalkStatus = useCallback(
@@ -157,16 +158,42 @@ export function AppShell() {
       }),
     [],
   );
-  const onPhoto = useCallback((blob: Blob) => {
-    if (snapshotFor.current) snapshotFor.current(blob);
-    else setPhoto(blob);
+  const onPhoto = useCallback((blob: Blob) => snapshotFor.current?.(blob), []);
+
+  // Render-quality photos (src/photo): the studio, and share-link pictures.
+  const [photoScene, setPhotoScene] = useState<{ framing: Framing; hour: number } | null>(null);
+  const [photoJob, setPhotoJob] = useState<PhotoJobRequest | null>(null);
+  const [photoProgress, setPhotoProgress] = useState(0);
+  const photoCancel = useMemo(() => ({ current: false }), []);
+  const photoWaiter = useRef<((outcome: PhotoOutcome) => void) | null>(null);
+  const onPhotoDone = useCallback((outcome: PhotoOutcome) => {
+    setPhotoJob(null);
+    const resolve = photoWaiter.current;
+    photoWaiter.current = null;
+    resolve?.(outcome);
   }, []);
-  const takePhoto = useCallback(() => {
-    setPhotoRequest((r) => ({ id: (r?.id ?? 0) + 1 }));
-    if (!reduced) setFlash((n) => n + 1);
-  }, [reduced]);
+  const makePhoto = useCallback(
+    (settings: PhotoSettings & { longEdge?: number; samples?: number }) =>
+      new Promise<PhotoOutcome>((resolve) => {
+        const quality = photoQuality({ phone: !desktop, maxTexture: Infinity });
+        photoCancel.current = false;
+        photoWaiter.current = resolve;
+        setPhotoProgress(0);
+        setPhotoJob({ id: Date.now(), ...quality, ...settings });
+      }),
+    [desktop, photoCancel],
+  );
+  const openPhotoStudio = useCallback(() => dispatch({ type: "overlay", overlay: "photo" }), [dispatch]);
+  /** The share link's picture: the whole home, opened up, in golden light. */
+  const sharePicture = useCallback(async () => {
+    setPhotoScene({ framing: "aerial", hour: GOLDEN_HOUR });
+    const outcome = await makePhoto({ framing: "aerial", mood: "golden", aspect: 1200 / 630, watermark: false, longEdge: 1200, samples: 10 });
+    setPhotoScene(null);
+    return "blob" in outcome ? outcome.blob : capture();
+  }, [makePhoto, capture]);
   const explore = state.mode === "explore";
-  const chromeHidden = state.chromeHidden || screen !== "workspace";
+  const studioOpen = state.overlay === "photo" && screen === "workspace";
+  const chromeHidden = state.chromeHidden || screen !== "workspace" || studioOpen;
   const layerOpen =
     screen === "gallery" ||
     screen === "ai" ||
@@ -221,8 +248,22 @@ export function AppShell() {
         photoRequest={photoRequest}
         onPhoto={onPhoto}
         onWalkStatus={onWalkStatus}
+        photo={photoScene}
+        photoJob={photoJob}
+        photoCancel={photoCancel}
+        onPhotoProgress={setPhotoProgress}
+        onPhotoDone={onPhotoDone}
       />
-      {flash > 0 && <div key={flash} className="dh-photo-flash" aria-hidden />}
+      {studioOpen && (
+        <PhotoStudio
+          onClose={() => dispatch({ type: "overlay", overlay: null })}
+          onScene={setPhotoScene}
+          render={makePhoto}
+          progress={photoProgress}
+          onCancel={() => (photoCancel.current = true)}
+          snapshot={capture}
+        />
+      )}
       {caption && (
         <div
           key={caption}
@@ -234,16 +275,13 @@ export function AppShell() {
           {caption}
         </div>
       )}
-      {explore && screen === "workspace" && !state.chromeHidden && (
+      {explore && screen === "workspace" && !state.chromeHidden && !studioOpen && (
         <ExploreHud
-          onPhoto={takePhoto}
+          onPhoto={openPhotoStudio}
           walkAvailable
           walkStatus={state.explore === "walk" ? walkStatus : undefined}
           walkFloorId={walkFloorId}
         />
-      )}
-      {photo && (
-        <PhotoDialog blob={photo} name={editor.project.name} onClose={() => setPhoto(null)} />
       )}
       <PlanLens
         desktop={desktop}
@@ -332,7 +370,7 @@ export function AppShell() {
           }}
         />
       )}
-      {screen !== "workspace" || explore ? null : chromeHidden ? (
+      {screen !== "workspace" || explore || studioOpen ? null : chromeHidden ? (
         <IconButton
           icon={Icon.showInside}
           className="dh-show-chrome"
@@ -390,8 +428,8 @@ export function AppShell() {
         onHomeOpened={() => {
           if (screen !== "workspace") enterWorkspace();
         }}
-        capture={capture}
-        onTakePhoto={takePhoto}
+        capture={sharePicture}
+        onTakePhoto={openPhotoStudio}
       />
       <ImportFromLink
         onAdded={() => {

@@ -1,6 +1,7 @@
 // The contract between the editor shell and the lazy 3D scene.
 import type { ReactNode } from "react";
 import type { Project, ViewSettings } from "../domain/types";
+import type { PhotoJobRequest, PhotoOutcome } from "../photo/PhotoRenderer";
 import type {
   CameraCommand,
   EditorMode,
@@ -52,6 +53,11 @@ export type SceneProps = {
   onPhoto?: (blob: Blob) => void;
   /** Units for room-label areas (default metres). */
   areaUnit?: "m" | "ft";
+  /** A render-quality photo to make (see src/photo). */
+  photoJob?: PhotoJobRequest | null;
+  photoCancel?: { current: boolean };
+  onPhotoProgress?: (fraction: number) => void;
+  onPhotoDone?: (outcome: PhotoOutcome) => void;
   /** Fired while walking when the room under the visitor changes. */
   onWalkStatus?: (status: { floorId: string; roomId: string | null }) => void;
 };

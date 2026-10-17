@@ -202,6 +202,12 @@ export function RoomStudio({ desktop }: { desktop: boolean }) {
             ].join(" · ")}
           </p>
         </div>
+        <IconButton
+          icon={Icon.photo}
+          tone="plain"
+          label={`Take a photo of ${room.name}`}
+          onClick={() => dispatch({ type: "overlay", overlay: "photo" })}
+        />
         {small ? (
           // Tucked down beside the floor plan: one tap brings the tools back.
           <IconButton icon={Icon.expand} tone="plain" label="Show details" onClick={() => dispatch({ type: "sheet", snap: "medium" })} />

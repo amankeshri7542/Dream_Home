@@ -66,6 +66,12 @@ git diff --check
   - The server re-validates every shared home with `parseProject` and stores the cleaned copy, gzipped, in private Vercel Blob. Records live in KV. Edit tokens are stored only as SHA-256 hashes.
   - Link-preview robots get `/api/og` through a user-agent rewrite in `vercel.json`.
   - Admin actions are in `docs/SECURITY.md`.
+- **Photos** (`src/photo/`):
+  - `renderPhoto` (`render.ts`) borrows the live renderer, scene and lights, renders offline into its own targets, and must put back everything it changes. Keep it lazily imported; it pulls in n8ao.
+  - Ask for a photo through `makePhoto` in `src/shell/AppShell.tsx`: it sets a job that `PhotoRenderer` runs inside the Canvas. The studio, the share-link picture and (later) the reel all use this path.
+  - What each framing shows lives in `photoView` (`src/shell/SceneHost.tsx`); where the camera stands is in `src/photo/framing.ts`. Moods and sizes are in `src/photo/settings.ts`.
+  - Tests make tiny photos with `window.__dreamHomePhotoTest = { longEdge, samples, fail }` (see `tests/photo.spec.ts`).
+  - Shader uniforms must not use GLSL reserved words (`sample` silently broke a shader once).
 - **Feedback:** `feedback.pop() / click() / error() / success()` from `src/ui/feedback.ts` play soft generated sounds and vibration. `run()` already calls them for edits.
 - **Server (`server/`):**
   - Every `/api/*` request goes through `server/router.ts`. Handlers take `(request, env, deps)` so tests inject a fake Claude and store.
@@ -89,6 +95,9 @@ git diff --check
 | `src/editor/` | the reducer, provider (undo/redo, `run`), preferences, selection actions |
 | `src/shell/` | app chrome: Home bar, Room Studio (`studio/`), inspectors, dialogs, checklist |
 | `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge |
+| `src/photo/` | Photo mode: the studio, the offline renderer, framing, moods |
+| `src/share/` | share sheet, the `/h/:id` viewer, Remix |
+| `src/homes/` | My homes shelf (IndexedDB) and move links |
 | `src/ai/` | the AI brief, prompts, strict schemas, built-in planner, plan → home builder |
 | `src/onboarding/` | title screen, template gallery, tour |
 | `server/` | the API (router, design, limiter, Claude caller, headers); bundled to `api/index.js` |

@@ -1011,27 +1011,6 @@
     margin-top: 20px;
   }
 
-  /* Photos */
-  .dh-photo {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 0 20px 20px;
-  }
-  .dh-photo img {
-    width: 100%;
-    max-height: 60dvh;
-    object-fit: contain;
-    border-radius: var(--dh-radius-lg);
-    box-shadow: var(--dh-shadow-2);
-    background: var(--dh-paper-2);
-  }
-  .dh-photo-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
   /* Shortcuts */
   .dh-shortcuts {
     display: flex;

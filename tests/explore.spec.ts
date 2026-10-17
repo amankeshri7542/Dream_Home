@@ -69,7 +69,7 @@ test("explore: walk inside with the keyboard and announce the room", async ({ pa
   await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(orbit.fov);
 });
 
-test("explore: a photo opens a save dialog on phones", async ({ page }) => {
+test("explore: every choice fits a phone and the camera opens the photo studio", async ({ page }) => {
   await page.setViewportSize(mobile);
   await seed(page, createPreset("compact"));
   await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
@@ -85,11 +85,12 @@ test("explore: a photo opens a save dialog on phones", async ({ page }) => {
     expect(box.x + box.width).toBeLessThanOrEqual(mobile.width);
   }
   await page.getByRole("button", { name: "Take a photo" }).click();
-  const dialog = page.getByRole("dialog", { name: "Your photo" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("img", { name: /^Photo of/ })).toHaveJSProperty("complete", true);
-  expect(await dialog.getByRole("img", { name: /^Photo of/ }).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(300);
-  await expect(dialog.getByRole("button", { name: "Save photo" })).toBeVisible();
+  const studio = page.getByRole("dialog", { name: "Photo studio" });
+  await expect(studio).toBeVisible();
+  // "This view" keeps the explore camera.
+  await expect(studio.getByRole("radio", { name: "This view" })).toBeEnabled();
+  await studio.getByRole("button", { name: "Close photo studio" }).click();
+  await expect(page.getByRole("button", { name: "Back to building" })).toBeVisible();
 });
 
 test("explore: the joystick walks from a standstill and floor buttons climb the stairs", async ({ page }) => {
