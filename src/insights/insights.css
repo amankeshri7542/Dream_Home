@@ -1,0 +1,376 @@
+/* Insights: city picker, compass rose, sunlight sheet, Vastu card, Home score. */
+@layer components {
+  /* City picker */
+  .dh-city {
+    display: grid;
+    gap: 8px;
+  }
+  .dh-city input[type="search"] {
+    width: 100%;
+  }
+  .dh-city.is-set {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 4px 4px 4px 12px;
+    border: 1px solid var(--dh-line);
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-0);
+  }
+  .dh-city.is-set > span {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+  }
+  .dh-city.is-set strong {
+    font-size: calc(15px * var(--dh-text));
+  }
+  .dh-city.is-set small,
+  .dh-city-results small {
+    color: var(--dh-ink-muted);
+    font-size: calc(12.5px * var(--dh-text));
+    font-weight: 500;
+  }
+  .dh-city-results {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .dh-city-results button {
+    display: grid;
+    min-height: 44px;
+    padding: 4px 14px;
+    border: 1px solid var(--dh-line-strong);
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink);
+    font-size: calc(14px * var(--dh-text));
+    font-weight: 650;
+    text-align: left;
+  }
+  .dh-city-none {
+    color: var(--dh-ink-muted);
+    font-size: calc(13.5px * var(--dh-text));
+  }
+  .dh-city-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Compass rose */
+  .dh-facing {
+    display: grid;
+    gap: 8px;
+  }
+  .dh-facing > span {
+    font-size: var(--dh-text-label);
+    font-weight: 650;
+  }
+  .dh-facing > small {
+    color: var(--dh-ink-muted);
+    font-size: calc(12.5px * var(--dh-text));
+  }
+  .dh-facing-rose {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(44px, 64px));
+    gap: 6px;
+    justify-content: start;
+  }
+  .dh-facing-rose button,
+  .dh-facing-home {
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    border-radius: var(--dh-radius-lg);
+    font-size: calc(14px * var(--dh-text));
+    font-weight: 750;
+  }
+  .dh-facing-rose button {
+    border: 1px solid var(--dh-line-strong);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink);
+  }
+  .dh-facing-rose button[aria-checked="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+    box-shadow: inset 0 0 0 1px var(--dh-terracotta-600);
+  }
+  .dh-facing-home {
+    color: var(--dh-ink-muted);
+  }
+
+  /* Sunlight sheet */
+  .dh-sun-sheet {
+    position: absolute;
+    inset: 0;
+    z-index: var(--dh-z-sheet);
+    pointer-events: none;
+  }
+  .dh-sun-sheet > * {
+    pointer-events: auto;
+  }
+  .dh-sun-panel {
+    position: absolute;
+    left: calc(8px + var(--dh-safe-left, 0px));
+    right: calc(8px + var(--dh-safe-right, 0px));
+    bottom: calc(8px + var(--dh-safe-bottom, 0px));
+    display: grid;
+    gap: 12px;
+    max-height: min(62%, calc(100% - 96px));
+    overflow-y: auto;
+    padding: 12px 14px 14px;
+    border: 1px solid var(--dh-glass-border);
+    border-radius: var(--dh-radius-xl);
+    background: var(--dh-glass-solid);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-rise var(--dh-dur-base) var(--dh-ease-pop);
+  }
+  .dh-app.is-desktop .dh-sun-panel {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    width: 420px;
+    max-height: calc(100% - 120px);
+  }
+  .dh-sun-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dh-sun-head h2 {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: calc(18px * var(--dh-text));
+  }
+  .dh-sun-where {
+    margin: 0;
+    color: var(--dh-ink-muted);
+    font-size: calc(13.5px * var(--dh-text));
+  }
+  .dh-sun-time {
+    display: grid;
+    gap: 6px;
+  }
+  .dh-sun-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .dh-sun-time-row strong {
+    font-size: calc(22px * var(--dh-text));
+  }
+  .dh-sun-time-row small {
+    color: var(--dh-ink-muted);
+    font-size: calc(12.5px * var(--dh-text));
+    text-align: right;
+  }
+  .dh-sun-time input[type="range"] {
+    width: 100%;
+    min-height: 44px;
+    accent-color: var(--dh-terracotta-600);
+  }
+  .dh-sun-rooms,
+  .dh-sun-tips,
+  .dh-vastu-rules {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .dh-sun-rooms li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 10px;
+    padding: 8px 10px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    font-size: calc(14px * var(--dh-text));
+  }
+  .dh-sun-rooms li.is-here {
+    box-shadow: inset 0 0 0 2px var(--dh-sun-400);
+  }
+  .dh-sun-rooms li > span:last-child {
+    grid-column: 1 / -1;
+    color: var(--dh-ink-soft);
+  }
+  .dh-sun-rooms li small {
+    color: var(--dh-ink-muted);
+    font-size: calc(12.5px * var(--dh-text));
+    white-space: nowrap;
+  }
+  .dh-sun-tips li,
+  .dh-vastu .dh-vastu-rules li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 10px;
+    align-items: start;
+    padding: 10px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-0);
+    font-size: calc(14px * var(--dh-text));
+  }
+  .dh-sun-tips li > button,
+  .dh-vastu .dh-vastu-rules li > button {
+    grid-column: 2;
+    justify-self: start;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+    font-weight: 700;
+    font-size: calc(13.5px * var(--dh-text));
+  }
+  .dh-sun-sheet h3,
+  .dh-vastu h3,
+  .dh-score-badges h3 {
+    margin: 0;
+    font-size: var(--dh-text-label);
+  }
+
+  /* Vastu card (inside the Home score) */
+  .dh-vastu {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .dh-vastu-score {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dh-vastu-score strong {
+    font-size: calc(20px * var(--dh-text));
+  }
+  /* (Inside the Home score, more specific than its checklist rows.) */
+  .dh-vastu .dh-vastu-rules li {
+    min-height: 0;
+    border-bottom: 0;
+  }
+  .dh-vastu .dh-vastu-rules li > b {
+    font-weight: 700;
+  }
+  .dh-vastu .dh-vastu-rules li > p {
+    grid-column: 2;
+    margin: 0;
+    color: var(--dh-ink-soft);
+  }
+  .dh-vastu-mark {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: calc(12px * var(--dh-text));
+    font-weight: 800;
+  }
+  .dh-vastu-mark.is-pass {
+    background: var(--dh-sage-600);
+    color: var(--dh-paper-0);
+  }
+  .dh-vastu-mark.is-partial {
+    background: var(--dh-sun-400);
+    color: var(--dh-ink);
+  }
+  .dh-vastu-mark.is-fail {
+    border: 2px solid var(--dh-line-strong);
+    color: var(--dh-ink-muted);
+  }
+  .dh-vastu-note {
+    margin: 0;
+    color: var(--dh-ink-muted);
+    font-size: calc(12.5px * var(--dh-text));
+  }
+
+  /* Home score */
+  .dh-score-ring {
+    width: 34px;
+    height: 34px;
+    flex: none;
+  }
+  .dh-score-ring circle {
+    fill: none;
+    stroke-width: 4.5;
+    stroke: var(--dh-line-strong);
+  }
+  .dh-score-ring circle + circle {
+    stroke: var(--dh-sage-600);
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 20px 20px;
+    transition: stroke-dashoffset var(--dh-dur-base) var(--dh-ease-pop);
+  }
+  .dh-score-ring text {
+    fill: var(--dh-ink);
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .dh-score-parts {
+    display: grid;
+    gap: 6px;
+    margin: 8px 0 4px;
+  }
+  .dh-score-part {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 3px 8px;
+    font-size: calc(13.5px * var(--dh-text));
+  }
+  .dh-score-part i {
+    grid-column: 1 / -1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--dh-paper-2);
+    overflow: hidden;
+  }
+  .dh-score-part i > b {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--dh-sage-600);
+  }
+  .dh-score-badges {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .dh-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .dh-badges li,
+  .dh-score-badges .dh-badges li {
+    border-bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 4px 12px;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-2);
+    color: var(--dh-ink-muted);
+    font-size: calc(13px * var(--dh-text));
+    font-weight: 650;
+  }
+  .dh-badges li.is-earned,
+  .dh-score-badges .dh-badges li.is-earned {
+    background: var(--dh-sun-400);
+    color: var(--dh-ink);
+  }
+}

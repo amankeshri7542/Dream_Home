@@ -49,6 +49,8 @@ export type ReelSettings = {
   link: string | null;
   /** The app's address, for "Design yours at …". */
   appUrl: string;
+  /** The Home score and its badges' names, for the end card. */
+  score?: { value: number; badges: string[] } | null;
 };
 export type ReelQuality = {
   width: number;

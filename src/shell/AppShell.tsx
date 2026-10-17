@@ -44,6 +44,7 @@ import "./studio/studio.css";
 
 // The video studio loads only when opened (the filming itself loads later still).
 const ReelStudio = lazy(() => import("../reel/ReelStudio"));
+const SunlightSheet = lazy(() => import("../insights/SunlightSheet"));
 
 /** The construction reveal: five steps, then "Ta-da!" for a moment. */
 const REVEAL_MS = 5 * 520 + 1800;
@@ -230,7 +231,7 @@ export function AppShell() {
   );
   const openReelStudio = useCallback(() => dispatch({ type: "overlay", overlay: "reel" }), [dispatch]);
   const explore = state.mode === "explore";
-  const studioOpen = (state.overlay === "photo" || state.overlay === "reel") && screen === "workspace";
+  const studioOpen = (state.overlay === "photo" || state.overlay === "reel" || state.overlay === "sunlight") && screen === "workspace";
   const chromeHidden = state.chromeHidden || screen !== "workspace" || studioOpen;
   const layerOpen =
     screen === "gallery" ||
@@ -309,6 +310,11 @@ export function AppShell() {
             capture={sharePicture}
             onTakePhoto={openPhotoStudio}
           />
+        </Suspense>
+      )}
+      {studioOpen && state.overlay === "sunlight" && (
+        <Suspense fallback={null}>
+          <SunlightSheet onClose={() => dispatch({ type: "overlay", overlay: null })} />
         </Suspense>
       )}
       {studioOpen && state.overlay === "photo" && (

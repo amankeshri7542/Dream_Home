@@ -17,7 +17,10 @@ import {
   type HomeFlavor,
 } from "../domain/blueprints";
 import "./GuidedStart.css";
-import type { Project } from "../domain/types";
+import type { PlotLocation, Project } from "../domain/types";
+import { COMPASS8, COMPASS_ANGLE, COMPASS_LABEL, EDGE_BEARING, homeFacing, wrapDegrees, type Compass8 } from "../domain/compass";
+import { withPlace } from "../domain/place";
+import { LazyCityPicker } from "../insights/LazyCityPicker";
 import { ROOM_META } from "../domain/types";
 import {
   area,
@@ -130,7 +133,10 @@ export default function GuidedStart({
   const [shopsPerFloor, setShopsPerFloor] = useState(2);
   const [preferCourtyard, setPreferCourtyard] = useState(false);
   const [road, setRoad] = useState<Project["plot"]["road"]>(project.plot.road);
-  const [north, setNorth] = useState(project.plot.north);
+  // Which way the main door (the road side) faces, if the homeowner knows; and their city.
+  const [facing, setFacing] = useState<Compass8 | "">(homeFacing(project) ?? "");
+  const [location, setLocation] = useState<PlotLocation | undefined>(project.plot.location);
+  const north = facing ? wrapDegrees(EDGE_BEARING[road] - COMPASS_ANGLE[facing]) : project.plot.north;
   const [chosen, setChosen] = useState<string | null>(null);
   const w = fromDisplay(Number(width), unit),
     d = fromDisplay(Number(depth), unit);
@@ -369,7 +375,7 @@ export default function GuidedStart({
             </div>
             <details className="plain-details">
               <summary>
-                {"Road side & open margin"}
+                {"Road, direction, city & margin"}
                 <ChevronDown size={16} aria-hidden />
               </summary>
               <label className="select-label">
@@ -386,17 +392,18 @@ export default function GuidedStart({
                   <option value="west">{"Left"}</option>
                 </select>
               </label>
-              <label className="big-field">
-                North direction (degrees)
-                <input
-                  type="number"
-                  aria-label="North direction"
-                  value={north}
-                  min="0"
-                  max="359"
-                  onChange={(e) => setNorth(Number(e.target.value))}
-                />
+              <label className="select-label">
+                {"Which way does the main door face?"}
+                <select value={facing} onChange={(e) => setFacing(e.target.value as Compass8 | "")}>
+                  <option value="">{"Not sure yet"}</option>
+                  {COMPASS8.map((d) => (
+                    <option key={d} value={d}>
+                      {COMPASS_LABEL[d]}
+                    </option>
+                  ))}
+                </select>
               </label>
+              <LazyCityPicker value={location} onPick={(l) => setLocation(l ?? undefined)} label="Your city (for the real sun)" />
               <label className="big-field">
                 {"Open margin on each side (ft)"}
                 <input
@@ -666,7 +673,11 @@ export default function GuidedStart({
             if (step < 2) {
               setChosen(null);
               setStep(step + 1);
-            } else if (selected?.project) onUse(selected.project, unit);
+            } else if (selected?.project)
+              onUse(
+                withPlace(facing ? { ...selected.project, plot: { ...selected.project.plot, compass: true } } : selected.project, location),
+                unit,
+              );
           }}
         >
           {step === 0

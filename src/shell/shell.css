@@ -1563,6 +1563,24 @@
     padding: 16px;
     pointer-events: none;
   }
+  /* A badge: a small card at the top, out of the way. */
+  .dh-celebrate.is-badge {
+    align-items: start;
+    padding-top: calc(var(--dh-inset-top, 0px) + 72px);
+  }
+  .dh-celebrate.is-badge .dh-celebrate-card {
+    width: min(340px, 100%);
+    padding: 20px 18px 12px;
+    pointer-events: auto;
+  }
+  .dh-celebrate.is-badge .dh-celebrate-badge {
+    width: 52px;
+    height: 52px;
+    margin-top: -46px;
+  }
+  .dh-celebrate.is-badge h2 {
+    font-size: calc(19px * var(--dh-text));
+  }
   .dh-confetti {
     position: absolute;
     inset: 0;

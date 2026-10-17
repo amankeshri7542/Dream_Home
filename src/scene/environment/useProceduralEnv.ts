@@ -14,16 +14,16 @@ import {
   Vector3,
 } from "three";
 import { createSkyMaterial, updateSky } from "./SkyDome";
-import { envBucket, lighting, type Lighting } from "./timeOfDay";
+import { envBucket, lighting, type Lighting, type SunContext } from "./timeOfDay";
 
-export function useProceduralEnv(light: Lighting, north: number, size: number) {
+export function useProceduralEnv(light: Lighting, north: number, size: number, place?: SunContext | null) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
   const bucket = envBucket(light.hour);
   useEffect(() => {
     // Rebuild from the bucket's representative hour (stable per bucket).
-    const l = lighting(bucket / 4, north);
+    const l = lighting(bucket / 4, north, place);
     const envScene = new Scene();
     const sky = createSkyMaterial();
     updateSky(sky, l, false);
@@ -62,7 +62,7 @@ export function useProceduralEnv(light: Lighting, north: number, size: number) {
       if (scene.environment === target.texture) scene.environment = null;
       target.dispose();
     };
-  }, [bucket, north, size, gl, scene, invalidate]);
+  }, [bucket, north, size, place, gl, scene, invalidate]);
   useLayoutEffect(() => {
     scene.environmentIntensity = light.palette.envIntensity;
   }, [scene, light]);

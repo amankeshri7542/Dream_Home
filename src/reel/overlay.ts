@@ -6,7 +6,7 @@ import { brandMark } from "../photo/encode";
 import type { ReelShot } from "./path";
 import { qrModules } from "./qr";
 
-export type Words = { title: string; link: string | null; appUrl: string };
+export type Words = { title: string; link: string | null; appUrl: string; score?: { value: number; badges: string[] } | null };
 
 const SERIF = '"Fraunces Variable", Georgia, serif';
 const SANS = '"Figtree Variable", system-ui, sans-serif';
@@ -108,6 +108,43 @@ function endCard(ctx: CanvasRenderingContext2D, W: number, H: number, u: number,
   ctx.fillStyle = CREAM;
   ctx.textAlign = "left";
   shadowed(ctx, 12 * u, () => ctx.fillText(label, left + mark + gap, by));
+  // The Home score: a ring with the number, and up to two badges.
+  let below = by;
+  if (words.score) {
+    const r = 24 * u,
+      cy = by + 60 * u;
+    ctx.font = `750 ${26 * u}px ${SANS}`;
+    const label = `Home score ${words.score.value}`;
+    const width = r * 2 + 12 * u + ctx.measureText(label).width;
+    const cx = (W - width) / 2 + r;
+    ctx.save();
+    ctx.lineWidth = 6 * u;
+    ctx.strokeStyle = "rgba(255, 250, 243, 0.25)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#f4bc55";
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * words.score.value) / 100);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = CREAM;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    shadowed(ctx, 12 * u, () => ctx.fillText(label, cx + r + 12 * u, cy));
+    ctx.textBaseline = "alphabetic";
+    below = cy + r;
+    const badges = words.score.badges.slice(0, 2);
+    if (badges.length) {
+      ctx.textAlign = "center";
+      const { px } = fit(ctx, badges.join("  ·  "), W * 0.86, 22 * u, (p) => `650 ${p}px ${SANS}`);
+      ctx.font = `650 ${px}px ${SANS}`;
+      ctx.fillStyle = "#f4bc55";
+      shadowed(ctx, 10 * u, () => ctx.fillText(badges.join("  ·  "), W / 2, below + 34 * u));
+      below += 40 * u;
+    }
+  }
   // The QR code on a white tile, with its quiet zone.
   const target = words.link ?? words.appUrl;
   const modules = qrModules(target);
@@ -115,7 +152,7 @@ function endCard(ctx: CanvasRenderingContext2D, W: number, H: number, u: number,
   const cell = Math.floor((300 * u) / n);
   const tile = cell * n;
   const tx = Math.round((W - tile) / 2),
-    ty = Math.round(by + 48 * u);
+    ty = Math.round(below + 48 * u);
   shadowed(ctx, 24 * u, () => {
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();

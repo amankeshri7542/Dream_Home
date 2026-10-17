@@ -2,7 +2,10 @@
 // elevation = 62°·sin(πd), bearing = 90 + 180d (E → S → W), rotated by the
 // plot's north (clockwise degrees from plan-up −z to true north). At night a
 // cool, dim moon sits opposite at 35°. Palettes interpolate in linear space.
+// With a place and a date the sun is the real one (NOAA); the palette and the
+// night then follow its true height, so a winter 5:15 pm in Delhi is dusk.
 import { Color } from "three";
+import { solarPosition, type CalendarDate } from "../../insights/solar";
 
 export type Palette = {
   zenith: Color;
@@ -210,9 +213,25 @@ function interpolate(hour: number): Palette {
   };
 }
 
-export function lighting(hour: number, north = 0): Lighting {
-  const h = normalizeHour(hour);
-  const sun = sunPosition(h);
+/** A place and a date: the sun is the real one. */
+export type SunContext = { lat: number; lon: number; date: CalendarDate };
+
+/**
+ * The stylised hour whose sun stands as high as the real one, on the same
+ * side of noon: it picks the sky colours and how much night it is.
+ */
+export function paletteHour(elevation: number, morning: boolean): number {
+  const x = Math.asin(Math.max(-1, Math.min(1, elevation / 62))) / Math.PI;
+  return morning ? SUNRISE + (SUNSET - SUNRISE) * x : SUNSET - (SUNSET - SUNRISE) * x;
+}
+
+export function lighting(hour: number, north = 0, place?: SunContext | null): Lighting {
+  const clock = normalizeHour(hour);
+  const real = place ? solarPosition(place.lat, place.lon, place.date, clock) : null;
+  const sun = real ?? sunPosition(clock);
+  // East of the meridian is morning; around midnight the clock decides.
+  const east = Math.sin(sun.bearing * DEG);
+  const h = real ? paletteHour(real.elevation, Math.abs(east) > 0.2 ? east > 0 : clock < 12) : clock;
   const sunDir = directionFrom(sun.bearing, sun.elevation, north);
   // Clamp the key light above 7° so dawn/dusk shadows stay readable.
   const keySun = directionFrom(sun.bearing, Math.max(7, sun.elevation), north);
@@ -233,7 +252,7 @@ export function lighting(hour: number, north = 0): Lighting {
     keyDir[1] /= l2;
     keyDir[2] /= l2;
   }
-  return { hour: h, keyDir, sunDir, moonDir, elevation: sun.elevation, night, palette: interpolate(h) };
+  return { hour: clock, keyDir, sunDir, moonDir, elevation: sun.elevation, night, palette: interpolate(h) };
 }
 
 /** 15-minute bucket used to rebuild the environment map sparingly. */

@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { homeChecks, type HomeCheck } from "../domain/advice";
+import { BADGES, BADGE_ORDER, homeScore, type BadgeId } from "../insights/score";
+import { useVastuScore } from "../insights/useVastu";
+import { linkFor } from "../share/links";
 import { addRoomWindow, ensureRoomDoor } from "../domain/openingCommands";
 import { addAttachedBathroom } from "../domain/ensuite";
 import { useEditor } from "../editor/EditorProvider";
@@ -11,6 +14,9 @@ import { Icon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
 import { Celebration } from "./Celebration";
 
+// Vastu's rules and card load only when the Home score opens.
+const VastuCard = lazy(() => import("../insights/VastuCard").then((m) => ({ default: m.VastuCard })));
+
 const QUEST_MODE: Record<string, EditorMode> = {
   furnish: "decorate",
   paint: "decorate",
@@ -18,11 +24,41 @@ const QUEST_MODE: Record<string, EditorMode> = {
   garden: "outside",
 };
 
-/** A gentle, friendly checklist — "friendly checks, not building-code checks". */
+/** The Home score as a ring with the number in it. */
+function ScoreRing({ score }: { score: number }) {
+  const r = 16,
+    c = 2 * Math.PI * r;
+  return (
+    <svg className="dh-score-ring" viewBox="0 0 40 40" aria-hidden>
+      <circle cx="20" cy="20" r={r} />
+      <circle cx="20" cy="20" r={r} strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)} />
+      <text x="20" y="25" textAnchor="middle">
+        {score}
+      </text>
+    </svg>
+  );
+}
+
+/**
+ * The Home score: a ring with a number (essentials, ideas, sunlight and, when
+ * asked, Vastu), the friendly checklist ("friendly checks, not building-code
+ * checks"), the Vastu card and badges to earn.
+ */
 export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
   const editor = useEditor();
   const { project, dispatch, run } = editor;
   const checks = useMemo(() => homeChecks(project), [project]);
+  const shared = !!linkFor(editor.homes.activeId);
+  const vastu = useVastuScore(project);
+  const score = useMemo(() => homeScore(project, { shared, checks, vastu }), [project, shared, checks, vastu]);
+  // A badge earned while editing gets its own little party (not ones the home already had).
+  const earned = useRef(new Set(score.badges));
+  const [badge, setBadge] = useState<BadgeId | null>(null);
+  useEffect(() => {
+    const fresh = score.badges.find((b) => !earned.current.has(b));
+    score.badges.forEach((b) => earned.current.add(b));
+    if (fresh) setBadge(fresh);
+  }, [score.badges]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const done = checks.essentials.filter((c) => c.done).length;
@@ -31,11 +67,13 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
   const questsDone = checks.quests.filter((c) => c.done);
   // A quick cheer for each "make it yours" idea the moment it's done.
   const cheered = useRef(new Set(questsDone.map((c) => c.id)));
+  const undoShowing = !!editor.state.notice?.undo;
   useEffect(() => {
     for (const q of questsDone)
       if (!cheered.current.has(q.id)) {
         cheered.current.add(q.id);
-        dispatch({ type: "notify", text: `Nice! “${q.label}” — done.`, tone: "success" });
+        // Never over a message that offers Undo (trying a look sets a roof, too).
+        if (!undoShowing) dispatch({ type: "notify", text: `Nice! “${q.label}” — done.`, tone: "success" });
       }
     // Re-run when the set of finished ideas changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,29 +183,60 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
           />,
           ref.current?.closest(".dh-app") ?? document.body,
         )}
+      {badge &&
+        !celebrate &&
+        // A badge waits for any message (and its Undo) and any open dialog to go
+        // first, so it never covers one; one that was undone meanwhile doesn't show.
+        !editor.state.notice &&
+        !editor.state.overlay &&
+        score.badges.includes(badge) &&
+        createPortal(
+          <Celebration
+            badge
+            title={BADGES[badge].label}
+            body={`${BADGES[badge].cheer} Your Home score is ${score.score}.`}
+            onExplore={() => {
+              setBadge(null);
+              dispatch({ type: "set-mode", mode: "explore" });
+            }}
+            onClose={() => setBadge(null)}
+          />,
+          ref.current?.closest(".dh-app") ?? document.body,
+        )}
       <button
         type="button"
         className={`dh-checklist-pill ${complete ? "is-complete" : ""}`}
         aria-label={
           complete
-            ? `Home checklist, ${done} of ${total} done, ${questsDone.length} of ${checks.quests.length} ideas tried`
-            : `Home checklist, ${done} of ${total} done`
+            ? `Home score ${score.score}. Home checklist, ${done} of ${total} done, ${questsDone.length} of ${checks.quests.length} ideas tried`
+            : `Home score ${score.score}. Home checklist, ${done} of ${total} done`
         }
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        {complete ? <Icon.sparkle size={17} aria-hidden /> : <Icon.checklist size={17} aria-hidden />}
-        <span className="dh-num">
-          {complete ? `${questsDone.length}/${checks.quests.length}` : `${done}/${total}`}
+        <ScoreRing score={score.score} />
+        <span className="dh-checklist-pill-label">
+          {complete ? `${questsDone.length}/${checks.quests.length} ideas` : `${done}/${total} done`}
         </span>
-        {complete && <span className="dh-checklist-pill-label">ideas</span>}
       </button>
       {open && (
-        <div className="dh-checklist-pop" role="dialog" aria-label="Home checklist">
+        <div className="dh-checklist-pop" role="dialog" aria-label="Home score">
           <div className="dh-popover-head">
-            <h2>{complete ? "Ready to move in!" : "Home checklist"}</h2>
-            <IconButton icon={Icon.close} tone="plain" label="Close checklist" onClick={() => setOpen(false)} />
+            <h2>Home score {score.score}</h2>
+            <IconButton icon={Icon.close} tone="plain" label="Close home score" onClick={() => setOpen(false)} />
           </div>
+          <div className="dh-score-parts">
+            {score.parts.map((p) => (
+              <div key={p.id} className="dh-score-part">
+                <span>{p.label}</span>
+                <span className="dh-num">{Math.round(p.value * 100)}%</span>
+                <i aria-hidden>
+                  <b style={{ width: `${Math.round(p.value * 100)}%` }} />
+                </i>
+              </div>
+            ))}
+          </div>
+          <h3>{complete ? "Ready to move in!" : "Home checklist"}</h3>
           <p className="dh-note">Friendly checks, not building-code checks.</p>
           <ul>
             {checks.essentials.map((c) => (
@@ -200,6 +269,49 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
               </li>
             ))}
           </ul>
+          <h3>Sunlight</h3>
+          <ul>
+            {(() => {
+              const lived = score.sun.filter((r) => r.kind === "bedroom" || r.kind === "living");
+              const sunny = lived.filter((r) => r.hours > 0).length;
+              return (
+                <li className={sunny === lived.length ? "is-done" : ""}>
+                  <span className="dh-check-mark" aria-hidden>
+                    {sunny === lived.length ? <Icon.check size={15} aria-hidden /> : null}
+                  </span>
+                  <span>
+                    {sunny} of {lived.length} bedrooms and living rooms catch direct sun
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      dispatch({ type: "overlay", overlay: "sunlight" });
+                    }}
+                  >
+                    See it
+                  </button>
+                </li>
+              );
+            })()}
+          </ul>
+          <Suspense fallback={null}>
+            <VastuCard />
+          </Suspense>
+          <div className="dh-score-badges">
+            <h3>Badges</h3>
+            <ul className="dh-badges">
+              {BADGE_ORDER.map((id) => {
+                const has = score.badges.includes(id);
+                return (
+                  <li key={id} className={has ? "is-earned" : undefined} aria-label={has ? `Earned: ${BADGES[id].label}` : `Not yet: ${BADGES[id].label}. ${BADGES[id].how}`}>
+                    <Icon.badge size={15} aria-hidden />
+                    {BADGES[id].label}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 // The card that greets an AI-designed home: what the designer did and why,
 // plus "Try another" and "Keep it". Everything after that is normal editing.
+import { withPlace } from "../domain/place";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../ui/icons";
 import { Button, IconButton } from "../ui/primitives";
@@ -52,7 +53,7 @@ export function DesignNotes({
       if (built)
         onReplace({
           ...result,
-          project: built.project,
+          project: withPlace(built.project, result.location),
           notes: built.notes,
           source: designed.source,
           why: designed.why,

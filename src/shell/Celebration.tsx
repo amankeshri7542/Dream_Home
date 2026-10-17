@@ -6,8 +6,24 @@ import { feedback } from "../ui/feedback";
 
 const COLORS = ["#b5562f", "#4d7a53", "#f4bc55", "#c68a4e", "#7fb0c9", "#e58f6f"];
 
-/** "Ready to move in!" — a confetti burst and an invitation to explore. */
-export function Celebration({ onExplore, onClose }: { onExplore: () => void; onClose: () => void }) {
+/**
+ * "Ready to move in!" — a confetti burst and an invitation to explore. A badge
+ * earned (Home score) gets the same confetti and sound in a small card at the
+ * top that never takes focus or covers what you're doing, and leaves by itself.
+ */
+export function Celebration({
+  onExplore,
+  onClose,
+  title = "Ready to move in!",
+  body = "Your home has everything it needs. Take a walk inside, watch the sun set, or snap a photo.",
+  badge = false,
+}: {
+  onExplore: () => void;
+  onClose: () => void;
+  title?: string;
+  body?: string;
+  badge?: boolean;
+}) {
   const reduced = useReducedMotion();
   const primary = useRef<HTMLButtonElement>(null);
   // Deterministic pieces: spread across the width, varied fall and spin.
@@ -27,7 +43,12 @@ export function Celebration({ onExplore, onClose }: { onExplore: () => void; onC
   // Once per celebration (the effect below re-runs whenever onClose changes).
   useEffect(() => feedback.success(), []);
   useEffect(() => {
-    primary.current?.focus();
+    if (!badge) return;
+    const timer = window.setTimeout(onClose, 6000);
+    return () => window.clearTimeout(timer);
+  }, [badge, onClose]);
+  useEffect(() => {
+    if (!badge) primary.current?.focus();
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -36,9 +57,9 @@ export function Celebration({ onExplore, onClose }: { onExplore: () => void; onC
     };
     window.addEventListener("keydown", key, { capture: true });
     return () => window.removeEventListener("keydown", key, { capture: true });
-  }, [onClose]);
+  }, [onClose, badge]);
   return (
-    <div className="dh-celebrate" data-chrome="celebration">
+    <div className={`dh-celebrate${badge ? " is-badge" : ""}`} data-chrome="celebration">
       {!reduced && (
         <div className="dh-confetti" aria-hidden>
           {pieces.map((p, i) => (
@@ -59,20 +80,33 @@ export function Celebration({ onExplore, onClose }: { onExplore: () => void; onC
           ))}
         </div>
       )}
-      <div className="dh-celebrate-card" role="dialog" aria-modal="false" aria-labelledby="dh-celebrate-title">
+      <div
+        className="dh-celebrate-card"
+        role={badge ? "status" : "dialog"}
+        aria-modal={badge ? undefined : "false"}
+        aria-labelledby="dh-celebrate-title"
+      >
         <span className="dh-celebrate-badge" aria-hidden>
-          <Icon.sparkle size={28} />
+          {badge ? <Icon.badge size={28} /> : <Icon.sparkle size={28} />}
         </span>
-        <h2 id="dh-celebrate-title">Ready to move in!</h2>
-        <p>Your home has everything it needs. Take a walk inside, watch the sun set, or snap a photo.</p>
-        <div className="dh-celebrate-actions">
-          <Button ref={primary} variant="primary" icon={Icon.explore} onClick={onExplore}>
-            Explore my home
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Keep building
-          </Button>
-        </div>
+        <h2 id="dh-celebrate-title">{title}</h2>
+        <p>{body}</p>
+        {badge ? (
+          <div className="dh-celebrate-actions">
+            <Button variant="ghost" onClick={onClose}>
+              Nice!
+            </Button>
+          </div>
+        ) : (
+          <div className="dh-celebrate-actions">
+            <Button ref={primary} variant="primary" icon={Icon.explore} onClick={onExplore}>
+              Explore my home
+            </Button>
+            <Button variant="ghost" onClick={onClose}>
+              Keep building
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

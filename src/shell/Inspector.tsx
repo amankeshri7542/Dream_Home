@@ -62,7 +62,7 @@ export function Inspector({
     );
   } else if (selected?.opening && selected.floor && selected.wall) {
     const room = selected.floor.rooms.find((r) =>
-      wallLabel(floorForGeometry(project, selected.floor!.id), selected.wall!).includes(r.name),
+      wallLabel(floorForGeometry(project, selected.floor!.id), selected.wall!, project.plot).includes(r.name),
     );
     label = selected.name;
     content = (
@@ -71,7 +71,7 @@ export function Inspector({
           desktop={desktop}
           title={selected.name}
           kicker={floorName(project.floors.indexOf(selected.floor))}
-          meta={wallLabel(floorForGeometry(project, selected.floor.id), selected.wall)}
+          meta={wallLabel(floorForGeometry(project, selected.floor.id), selected.wall, project.plot)}
           icon={<Icon.openings size={20} aria-hidden />}
           onBack={room ? back({ kind: "room", floorId: selected.floor.id, id: room.id }) : undefined}
         />

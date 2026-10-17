@@ -4,6 +4,10 @@
 // they choose Remix.
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Project } from "../domain/types";
+import { BADGES, homeScore } from "../insights/score";
+import { useVastuScore } from "../insights/useVastu";
+import { isoDate, today } from "../insights/solar";
+import "../insights/insights.css";
 import { DEFAULT_VIEW, GOLDEN_HOUR } from "../editor/state";
 import { useChromeInsets, useReducedMotion } from "../editor/hooks";
 import { Joystick } from "../explore/Joystick";
@@ -124,6 +128,7 @@ export default function ViewerApp({ id }: { id: string }) {
                 onSelect={() => undefined}
                 insets={insets}
                 hour={GOLDEN_HOUR}
+                sunDate={isoDate(today())}
                 quality="auto"
                 explore={walking ? "walk" : "showcase"}
                 areaUnit="ft"
@@ -181,6 +186,12 @@ export default function ViewerApp({ id }: { id: string }) {
               </>
             )}
           </p>
+          {state.project.plot.location && (
+            <p className="dh-viewer-meta">
+              <Icon.location size={15} aria-hidden /> {state.project.plot.location.city}
+            </p>
+          )}
+          <ViewerScore project={state.project} />
           {state.simplified && <p className="dh-viewer-note">Some newer details look simpler here.</p>}
           <div className="dh-viewer-actions">
             <Button variant="primary" size="lg" icon={Icon.sparkle} disabled={busy} onClick={startRemix}>
@@ -289,6 +300,25 @@ export default function ViewerApp({ id }: { id: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** The home's score and badges: something to be proud of when it's shared. */
+function ViewerScore({ project }: { project: Project }) {
+  const vastu = useVastuScore(project);
+  const score = useMemo(() => homeScore(project, { shared: true, vastu }), [project, vastu]);
+  return (
+    <div className="dh-viewer-score" aria-label={`Home score ${score.score} out of 100`}>
+      <strong className="dh-num">Home score {score.score}</strong>
+      <ul className="dh-badges">
+        {score.badges.map((id) => (
+          <li key={id} className="is-earned">
+            <Icon.badge size={15} aria-hidden />
+            {BADGES[id].label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

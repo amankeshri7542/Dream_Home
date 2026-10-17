@@ -22,6 +22,7 @@ import { Night } from "./environment/Night";
 import { ShadowInvalidator } from "./environment/ShadowInvalidator";
 import { SkyDome } from "./environment/SkyDome";
 import { lighting } from "./environment/timeOfDay";
+import { parseIsoDate, today } from "../insights/solar";
 import { useProceduralEnv } from "./environment/useProceduralEnv";
 import { getLibrary } from "./materials/library";
 import { OverlayProjector } from "./overlay/OverlayProjector";
@@ -77,13 +78,19 @@ export function SceneRoot(props: RootProps) {
   const pageVisible = usePageVisible();
   const spec = TIERS[tier];
   const hour = explore === "showcase" ? 17.25 : props.hour;
-  const light = useMemo(() => lighting(hour, project.plot.north), [hour, project.plot.north]);
+  // With a city and a date, the real sun (one object per place and day, so the sky rebuilds only then).
+  const location = project.plot.location;
+  const place = useMemo(() => {
+    const date = parseIsoDate(props.sunDate) ?? today();
+    return location ? { lat: location.lat, lon: location.lon, date } : null;
+  }, [location, props.sunDate]);
+  const light = useMemo(() => lighting(hour, project.plot.north, place), [hour, project.plot.north, place]);
   const library = getLibrary({
     textureSize: spec.textureSize,
     anisotropy: Math.min(spec.anisotropy, gl.capabilities.getMaxAnisotropy()),
   });
   library.ao().opacity = 0.34 * spec.aoStrips;
-  useProceduralEnv(light, project.plot.north, spec.envSize);
+  useProceduralEnv(light, project.plot.north, spec.envSize, place);
 
   // Fog melts the backdrop disc into the horizon colour.
   const plotRadius = Math.hypot(project.plot.width, project.plot.depth) / 200;

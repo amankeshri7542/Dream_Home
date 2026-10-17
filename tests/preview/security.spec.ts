@@ -47,6 +47,15 @@ test("the built app runs cleanly under its Content-Security-Policy", async ({ pa
   await reel.getByRole("button", { name: "Make my video" }).click();
   await expect(reel.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 60000 });
   await expect.poll(() => reel.locator("video").evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
+  await reel.getByRole("button", { name: "Close video studio" }).click();
+  // The Sunlight sheet loads lazily, with the city picker and the city list.
+  await page.getByRole("button", { name: "Back to building" }).click();
+  await page.getByRole("button", { name: "View options" }).first().click();
+  await page.getByRole("button", { name: "Sunlight", exact: true }).click();
+  const sun = page.getByRole("dialog", { name: "Sunlight" });
+  await sun.getByRole("searchbox", { name: "Find your city" }).fill("Madras");
+  await sun.getByRole("button", { name: /^Chennai/ }).click();
+  await expect(sun).toContainText("The real sun in Chennai");
   expect(violations).toEqual([]);
 });
 

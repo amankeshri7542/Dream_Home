@@ -44,6 +44,8 @@ export type SceneProps = {
   insets: Insets;
   /** 0–24 hours; view preference, not project data. */
   hour: number;
+  /** The day the sun is shown for ("YYYY-MM-DD"; default today). Used when the plot has a city. */
+  sunDate?: string;
   quality: QualitySetting;
   onQualityResolved?: (tier: QualityTier) => void;
   explore?: ExploreView;

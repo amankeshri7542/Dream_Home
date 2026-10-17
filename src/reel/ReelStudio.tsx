@@ -7,6 +7,8 @@ import { DEFAULT_VIEW } from "../editor/state";
 import { useEditor } from "../editor/EditorProvider";
 import { Switch } from "../components/Controls";
 import { Chips, Ring } from "../photo/PhotoStudio";
+import { BADGES, homeScore } from "../insights/score";
+import { vastuReport } from "../insights/vastu";
 import { linkFor, shareUrl } from "../share/links";
 import { publishHome } from "../share/publish";
 import { Icon } from "../ui/icons";
@@ -122,7 +124,9 @@ export default function ReelStudio({
       else note = `${res.message} The video ends with the Dream Home address instead.`;
     }
     setPhase({ kind: "filming" });
+    const scored = homeScore(project, { shared: !!link, vastu: project.vastu ? (vastuReport(project)?.score ?? null) : null });
     const outcome = await render({
+      score: { value: scored.score, badges: scored.badges.map((id) => BADGES[id].label) },
       title: title.trim() || project.name,
       style,
       mood,

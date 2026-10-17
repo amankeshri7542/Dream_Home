@@ -171,6 +171,17 @@
   .dh-viewer-meta a {
     color: var(--dh-terracotta-700);
   }
+  .dh-viewer-score {
+    display: grid;
+    gap: 6px;
+    margin: 6px 0 2px;
+  }
+  .dh-viewer-score strong {
+    font-size: calc(15px * var(--dh-text));
+  }
+  .dh-viewer-meta svg {
+    vertical-align: -2px;
+  }
   .dh-viewer-note {
     font-size: calc(13px * var(--dh-text));
   }

@@ -133,7 +133,7 @@ test("the home checklist reports progress and offers fixes", async ({ page }) =>
   const pill = page.getByRole("button", { name: /Home checklist, \d+ of \d+ done/ });
   await expect(pill).toBeVisible();
   await pill.click();
-  const list = page.getByRole("dialog", { name: "Home checklist" });
+  const list = page.getByRole("dialog", { name: "Home score" });
   await expect(list).toContainText("There’s a bathroom");
   await expect(list).toContainText("Friendly checks");
   // Adding the missing bathroom completes the list: a celebration invites exploring.

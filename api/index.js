@@ -3348,6 +3348,8 @@ function checkLocation(l) {
 function checkProjectExtras(p) {
   if (obj(p.plot) && p.plot.location !== void 0 && !checkLocation(p.plot.location))
     throw new Error("Project contains an invalid location.");
+  if (obj(p.plot) && p.plot.compass !== void 0 && typeof p.plot.compass !== "boolean")
+    throw new Error("Project contains an invalid compass setting.");
   if (p.vastu !== void 0 && typeof p.vastu !== "boolean")
     throw new Error("Project contains an invalid Vastu setting.");
   if (p.remixOf !== void 0 && !(obj(p.remixOf) && str(p.remixOf.id) && SHARE_ID.test(p.remixOf.id) && str(p.remixOf.name) && p.remixOf.name.length <= 80))
@@ -5017,7 +5019,8 @@ function parseProject(text2) {
           lat: Math.round(raw.plot.location.lat * 100) / 100,
           lon: Math.round(raw.plot.location.lon * 100) / 100
         }
-      } : {}
+      } : {},
+      ...raw.plot.compass === true ? { compass: true } : {}
     },
     garden: raw.garden,
     parking: raw.parking,

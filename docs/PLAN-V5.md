@@ -540,6 +540,14 @@ Crossfades between shots happen in the compositor.
 **Done when:** on a mid-range Android profile and a desktop, the Grand tour renders within about 90 s (phone) / 30 s (desktop) and plays in WhatsApp and Instagram (manual owner check on a real phone is an M8 item).
 
 ### M5: Location, real sun, sunlight timeline, Vastu score, Home score
+✅ Done on 17 Oct 2026 (see the roadmap log). Differences from the text below:
+- a saved `plot.compass` flag says north is real (the homeowner set the facing; AI homes set it from the brief);
+- without a city the 3D view keeps the stylised sun, and room sunlight is worked out for central India (it says so);
+- the Home score's sunlight is judged on the September equinox, so the score doesn't drift with the date;
+- a badge celebrates in a small card at the top that waits for any message or dialog, rather than the full "Ready to move in!" card;
+- the View options' "North direction" degrees and the start wizard's degrees became "Main door faces";
+- Vastu's rules, the city list and the pickers load lazily, to keep the first load within budget.
+
 **Goal:** useful insights that people love sharing.
 
 **City picker:**
@@ -773,4 +781,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b, M1, M2, M3 and M4 shipped on 17 Oct 2026. The next phase is **M5** (location, real sun, sunlight, Vastu, Home score).
+- M0a, M0b, M1, M2, M3, M4 and M5 shipped on 17 Oct 2026. The next phase is **M6** (builder's plan → 3D).

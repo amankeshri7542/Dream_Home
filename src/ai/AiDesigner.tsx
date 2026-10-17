@@ -4,7 +4,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { LOOK_PALETTES, STYLE_PRESET_INFO } from "../domain/looks";
 import { FLOOR_MATERIALS } from "../domain/materials";
-import type { Project } from "../domain/types";
+import { withPlace } from "../domain/place";
+import type { PlotLocation, Project } from "../domain/types";
+import { LazyCityPicker } from "../insights/LazyCityPicker";
 import { useReducedMotion } from "../editor/hooks";
 import { PLOT_SIZES } from "../onboarding/templates";
 import { Icon, roomIcon, type LucideIcon } from "../ui/icons";
@@ -23,6 +25,8 @@ export type AiResult = {
   brief: HomeBrief;
   variant: number;
   credits: Credits;
+  /** The city picked in the brief (kept for "Try another design"). */
+  location?: PlotLocation;
 };
 
 const FAMILY_CARDS: { id: Family; label: string; hint: string }[] = [
@@ -89,6 +93,7 @@ export function AiDesigner({
   const [musts, setMusts] = useState<Must[]>(["ensuite", "pooja", "parking", "vastu"]);
   const [vibe, setVibe] = useState<Vibe>("indian-modern");
   const [note, setNote] = useState("");
+  const [location, setLocation] = useState<PlotLocation | null>(null);
   const [credits, setCredits] = useState<Credits>(savedCredits);
   const [working, setWorking] = useState(false);
   const [stage, setStage] = useState(0);
@@ -131,7 +136,8 @@ export function AiDesigner({
       const built = buildHome(brief, designed.plan);
       if (!built) throw new Error("no-fit");
       onDone({
-        project: built.project,
+        project: withPlace(built.project, location),
+        ...(location ? { location } : {}),
         notes: built.notes,
         source: designed.source,
         why: designed.why,
@@ -253,6 +259,7 @@ export function AiDesigner({
                 ))}
               </div>
               <p className="dh-ai-small">The side with the road and your main gate.</p>
+              <LazyCityPicker value={location ?? undefined} onPick={setLocation} label="Your city (optional, for the real sun)" />
             </>
           )}
 

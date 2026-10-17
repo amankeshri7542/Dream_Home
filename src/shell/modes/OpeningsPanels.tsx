@@ -55,7 +55,7 @@ export function RoomOpeningsPanel({ room, floorId }: { room: Room; floorId: stri
   const geo = floorForGeometry(project, floorId);
   const walls = deriveWalls(geo, project.plot.road).filter((w) => touches(w, room.bounds));
   const openings = walls.flatMap((wall) =>
-    wall.openings.map((o) => ({ o, wall, label: wallLabel(geo, wall) })),
+    wall.openings.map((o) => ({ o, wall, label: wallLabel(geo, wall, project.plot) })),
   );
   const add = () => {
     const candidates = listCompatibleWalls(project, floorId, kind).filter((c) => {

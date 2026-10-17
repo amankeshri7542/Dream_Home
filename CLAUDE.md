@@ -77,6 +77,10 @@ git diff --check
   - `reelPath` (`path.ts`) is the pure shot list: each shot's view, light and camera move. Filming shows each shot's scene through `setReelScene`, settles, then renders every frame offline with the photo pipeline (`createPipeline` in `src/photo/render.ts`) on the store's clock, never on screen.
   - The music is pure synthesis (`music.ts`), so it is testable and royalty-free.
   - Tests make tiny reels with `window.__dreamHomeReelTest = { width, height, seconds, samples, capture, noVideo }` (see `tests/reel.spec.ts`); `DH_REEL_BENCH=1` times full-quality ones.
+- **Insights** (`src/insights/`, compass in `src/domain/compass.ts`):
+  - `plot.north` turns plan-up to true north; `plot.compass` says it's real (the homeowner set which way the home faces: `setFacing` in `src/domain/place.ts`). Until then sides are Front/Back/Left/Right (`sideName`).
+  - With `plot.location`, `lighting(hour, north, place)` uses the real sun (`solar.ts`, NOAA, IST); the day comes from the editor's `season` as `sunDate`.
+  - `sunHours`/`sunTips` (`sun.ts`), `vastuReport` (`vastu.ts`, loaded lazily via `useVastuScore`) and `homeScore` (`score.ts`) are pure. The Home score ring is `src/shell/Checklist.tsx`.
 - **Looks and lived-in details:**
   - A look's outside bundle, room palettes, garden and card text live in `src/domain/looks.ts`; card pictures are `public/looks/<id>.webp` (`npm run looks:thumbs`).
   - Lived-in details are derived, never saved: `livedInDecor` (`src/domain/livedIn.ts`) places them, `src/scene/life/LivedIn.tsx` draws them in Explore and Photo only. Their models come from `public/models/life.glb` (sizes in `src/domain/catalog/life.json`).
@@ -107,6 +111,7 @@ git diff --check
 | `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge; `life/` draws lived-in details |
 | `src/photo/` | Photo mode: the studio, the offline renderer, framing, moods |
 | `src/reel/` | the "My dream home" reel: studio, shot list, filming, compositor, music, QR end card |
+| `src/insights/` | cities, the real sun, sunlight per room, Vastu, the Home score and badges; the Sunlight sheet and pickers |
 | `src/share/` | share sheet, the `/h/:id` viewer, Remix |
 | `src/homes/` | My homes shelf (IndexedDB) and move links |
 | `src/ai/` | the AI brief, prompts, strict schemas, built-in planner, plan → home builder |

@@ -3,6 +3,7 @@
 // and a step that would break the home is skipped, so the result is always
 // a project the editor accepts.
 import { homeChecks } from "../domain/advice";
+import { COMPASS_ANGLE, roomBearing, roomZone } from "../domain/compass";
 import { createBlueprint } from "../domain/blueprints";
 import { ROOM_CATALOG, addCatalogRoom, resizeBuilding } from "../domain/builder";
 import { addAttachedBathroom } from "../domain/ensuite";
@@ -65,42 +66,13 @@ const ADDED: Partial<Record<RoomUse, { catalog: string; size: "small" | "regular
   bathroom: { catalog: "bathroom", size: "regular" },
 };
 
-// ---------------------------------------------------------------------------
-// Compass zones (Vastu): which ninth of the footprint a room sits in.
-// ---------------------------------------------------------------------------
-const ZONE_ANGLE: Partial<Record<Zone, number>> = {
-  north: 0,
-  northeast: 45,
-  east: 90,
-  southeast: 135,
-  south: 180,
-  southwest: 225,
-  west: 270,
-  northwest: 315,
-};
-/** A room's compass bearing from the footprint centre (0 = north), and how far out it sits (0–1). */
-export function roomBearing(p: Project, floorId: string, room: Room): { angle: number; reach: number } {
-  const fp = p.floors.find((f) => f.id === floorId)!.footprint;
-  const u = (room.bounds.x + room.bounds.w / 2 - (fp.x + fp.w / 2)) / (fp.w / 2);
-  const v = (room.bounds.z + room.bounds.d / 2 - (fp.z + fp.d / 2)) / (fp.d / 2);
-  const t = (p.plot.north * Math.PI) / 180;
-  // Plan +x/+z → true north/east components (plan north is −z when north = 0).
-  const northness = u * Math.sin(t) - v * Math.cos(t);
-  const eastness = u * Math.cos(t) + v * Math.sin(t);
-  const angle = ((Math.atan2(eastness, northness) * 180) / Math.PI + 360) % 360;
-  return { angle, reach: Math.min(1, Math.hypot(northness, eastness)) };
-}
-export function roomZone(p: Project, floorId: string, room: Room): Zone {
-  const { angle, reach } = roomBearing(p, floorId, room);
-  if (reach < 0.3) return "centre";
-  const names: Zone[] = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
-  return names[Math.round(angle / 45) % 8];
-}
+// Compass zones (Vastu): which ninth of the footprint a room sits in (src/domain/compass.ts).
+export { roomBearing, roomZone };
 function zoneCost(p: Project, floorId: string, room: Room, want: Zone): number {
   if (want === "any") return 0;
   const { angle, reach } = roomBearing(p, floorId, room);
   if (want === "centre") return reach;
-  const diff = Math.abs(((angle - ZONE_ANGLE[want]! + 540) % 360) - 180);
+  const diff = Math.abs(((angle - COMPASS_ANGLE[want] + 540) % 360) - 180);
   return (diff / 180) * (0.5 + reach / 2);
 }
 /** The smallest sensible side for a room in each use. */
@@ -180,6 +152,8 @@ function blueprint(brief: HomeBrief, plan: HomePlan, notes: string[]): Project |
         if (!r.ok) continue;
         // The real plot is deeper by the front strip; the house keeps its place at the back.
         r.project.plot.depth += front;
+        // The homeowner told us which way it faces: the compass is real.
+        r.project.plot.compass = true;
         if (validateProject(r.project).length) continue;
         if (levels !== floors) notes.push(`We used ${levels} floors so every room fits on this plot.`);
         if (beds < bedroomCount) notes.push(`This plot fits ${beds} bedroom${beds === 1 ? "" : "s"} comfortably.`);

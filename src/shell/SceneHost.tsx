@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { isoDate, seasonDate } from "../insights/solar";
 import { useEditor } from "../editor/EditorProvider";
 import type { GhostPreview, Insets, SelectionTarget } from "../editor/types";
 import type { Project } from "../domain/types";
@@ -122,6 +123,8 @@ export function SceneHost({
     }
   });
   useEffect(() => onWebGLUnavailable(unsupported), [unsupported, onWebGLUnavailable]);
+  // The day the sun is shown for (it matters once the plot has a city).
+  const sunDate = useMemo(() => isoDate(seasonDate(state.season)), [state.season]);
   // A photo (the share link's picture) wins over the reel studio's preview.
   const filmed = reel && !showcase && !photo ? reel : null;
   const onSelect = useCallback(
@@ -179,6 +182,7 @@ export function SceneHost({
             cameraCommand={state.camera}
             insets={insets}
             hour={showcase ? GOLDEN_HOUR : photo ? photo.hour : filmed ? filmed.hour : state.hour}
+            sunDate={sunDate}
             quality={state.quality}
             onQualityResolved={() => undefined}
             explore={showcase ? "showcase" : (photo && !walking) || filmed ? "orbit" : state.explore}

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
+import { COMPASS8, COMPASS_LABEL, homeFacing, type Compass8 } from "../domain/compass";
+import { setFacing } from "../domain/place";
 import { Switch } from "../components/Controls";
-import { updatePlot } from "../domain/model";
 import { STAGES } from "../domain/types";
 import { floorName } from "../domain/display";
 import { useEditor } from "../editor/EditorProvider";
@@ -137,6 +138,9 @@ export function ViewOptions() {
       </Button>
       <Button icon={Icon.video} full onClick={() => dispatch({ type: "overlay", overlay: "reel" })}>
         Make a video
+      </Button>
+      <Button icon={Icon.sunlight} full onClick={() => dispatch({ type: "overlay", overlay: "sunlight" })}>
+        Sunlight
       </Button>
       <Button
         icon={Icon.fitHome}
@@ -280,22 +284,21 @@ export function ViewOptions() {
             onChange={() => setView({ landscape: !view.landscape })}
           />
           <label className="dh-field">
-            <span>North direction</span>
+            <span>Main door faces</span>
             <select
-              value={project.plot.north}
+              value={homeFacing(project) ?? ""}
               onChange={(e) =>
-                run(updatePlot(project, { north: Number(e.target.value) }), "Change north direction")
+                e.target.value && run(setFacing(project, e.target.value as Compass8), "Set which way the home faces")
               }
             >
-              {[...new Set([project.plot.north, 0, 90, 180, 270])]
-                .sort((a, b) => a - b)
-                .map((n) => (
-                  <option key={n} value={n}>
-                    {n}°
-                  </option>
-                ))}
+              {!project.plot.compass && <option value="">Not set yet</option>}
+              {COMPASS8.map((d) => (
+                <option key={d} value={d}>
+                  {COMPASS_LABEL[d]}
+                </option>
+              ))}
             </select>
-            <small>Turns the sun’s path. Orientation reference only.</small>
+            <small>Sets true north for the sun and Vastu.</small>
           </label>
         </div>
       </details>

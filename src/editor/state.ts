@@ -1,6 +1,7 @@
 // The editor controller: a pure reducer owning all transient UI state.
 // `useProject` remains the only owner of the document and its history.
 import type { SceneView } from "../scene/types";
+import type { Season } from "../insights/solar";
 import {
   PICKABLE,
   type CameraCommand,
@@ -39,6 +40,7 @@ export type Overlay =
   | "shortcuts"
   | "photo"
   | "reel"
+  | "sunlight"
   | "homes"
   | "plans"
   | null;
@@ -74,6 +76,8 @@ export type EditorState = {
   camera: CameraCommand | null;
   cameraSeq: number;
   hour: number;
+  /** The day the sun is shown for, when the plot has a city (Sunlight sheet). */
+  season: Season;
   explore: ExploreView;
   quality: QualitySetting;
   chromeHidden: boolean;
@@ -124,6 +128,7 @@ export function initialEditorState(
     camera: null,
     cameraSeq: 0,
     hour: BUILD_HOUR,
+    season: "today",
     explore: "orbit",
     quality: "auto",
     chromeHidden: false,
@@ -163,6 +168,7 @@ export type EditorAction =
   | { type: "choose-floor"; floor: string | "all" }
   | { type: "camera"; command: CameraIntent }
   | { type: "hour"; hour: number }
+  | { type: "season"; season: Season }
   | { type: "explore"; view: ExploreView }
   | { type: "quality"; quality: QualitySetting }
   | { type: "chrome"; hidden: boolean }
@@ -472,6 +478,8 @@ export function editorReducer(
       return withCamera(state, action.command);
     case "hour":
       return { ...state, hour: Math.max(0, Math.min(24, action.hour)) };
+    case "season":
+      return { ...state, season: action.season };
     case "explore":
       return { ...state, explore: action.view };
     case "quality":

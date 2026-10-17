@@ -104,7 +104,7 @@ export async function film(context: FilmContext): Promise<FilmResult> {
     ));
   const path = reelPath(context.project, { aspect: W / H, style: job.style, mood: job.mood, livedIn: job.livedIn, seconds: job.seconds });
   const total = Math.max(1, Math.round(path.seconds * FPS));
-  const words = { title: job.title, link: job.link, appUrl: job.appUrl };
+  const words = { title: job.title, link: job.link, appUrl: job.appUrl, score: job.score ?? null };
 
   // The live thumbnail is the encoder's own canvas.
   const canvas = document.createElement("canvas");

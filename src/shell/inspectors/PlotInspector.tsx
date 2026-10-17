@@ -1,4 +1,5 @@
 import { Dimension, Switch } from "../../components/Controls";
+import { lazy, Suspense } from "react";
 import { resizeBuilding } from "../../domain/builder";
 import { projectStats, updatePlot } from "../../domain/model";
 import { area, areaLabel, roadName } from "../../domain/display";
@@ -6,6 +7,8 @@ import type { Project } from "../../domain/types";
 import { useEditor } from "../../editor/EditorProvider";
 import { Icon } from "../../ui/icons";
 import { Button, Field, Section, Segmented } from "../../ui/primitives";
+
+const PlaceSection = lazy(() => import("../../insights/PlaceSection"));
 
 export function PlotInspector() {
   const editor = useEditor();
@@ -83,6 +86,11 @@ export function PlotInspector() {
           ))}
         </select>
       </Field>
+      <Section title="Where is it?" description="For the real sun and true directions" open>
+        <Suspense fallback={<p className="dh-note">Loading…</p>}>
+          <PlaceSection />
+        </Suspense>
+      </Section>
       <Section title="House size" description="Make room for more rooms" open>
         <Button icon={Icon.fitHome} full onClick={useAvailable}>
           Grow the house to fill the plot

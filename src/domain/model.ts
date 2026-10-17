@@ -941,6 +941,7 @@ export function parseProject(text: string): Project {
             },
           }
         : {}),
+      ...(raw.plot.compass === true ? { compass: true } : {}),
     },
     garden: raw.garden,
     parking: raw.parking,

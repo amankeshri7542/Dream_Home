@@ -174,6 +174,8 @@ export type Project = {
     setback: number;
     /** Where the plot is, for a true sun path (rounded; never shared unless asked). */
     location?: PlotLocation;
+    /** `north` is real: the homeowner said which way their home faces. */
+    compass?: boolean;
   };
   floors: Floor[];
   units: Unit[];

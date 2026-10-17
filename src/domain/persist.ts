@@ -227,6 +227,8 @@ function checkLocation(l: unknown): boolean {
 export function checkProjectExtras(p: Obj) {
   if (obj(p.plot) && p.plot.location !== undefined && !checkLocation(p.plot.location))
     throw new Error("Project contains an invalid location.");
+  if (obj(p.plot) && p.plot.compass !== undefined && typeof p.plot.compass !== "boolean")
+    throw new Error("Project contains an invalid compass setting.");
   if (p.vastu !== undefined && typeof p.vastu !== "boolean")
     throw new Error("Project contains an invalid Vastu setting.");
   if (

@@ -21,7 +21,9 @@ import {
   snapToWall,
   wallAccepts,
 } from "./openings";
+import { sideName } from "./compass";
 import type {
+  EdgeSide,
   EditResult,
   Floor,
   GeometryFloor,
@@ -374,16 +376,18 @@ export function addRoomWindow(
   };
 }
 
-const SIDE_NAMES = { north: "North", south: "South", west: "West", east: "East" };
-/** A friendly name for a wall segment, e.g. "North wall of Bedroom 1". */
-export function wallLabel(floor: GeometryFloor, wall: Wall): string {
+/**
+ * A friendly name for a wall segment, e.g. "Front wall of Bedroom 1", or
+ * "North wall of Bedroom 1" once the homeowner has set the compass.
+ */
+export function wallLabel(floor: GeometryFloor, wall: Wall, plot: Pick<Project["plot"], "north" | "road" | "compass">): string {
   const rooms = floor.rooms.filter((room) => touches(wall, room.bounds));
   const line = wallLine(wall);
   if (rooms.length >= 2)
     return `Between ${rooms[0].name} and ${rooms[1].name}`;
   if (rooms.length === 1) {
     const b = rooms[0].bounds;
-    const side =
+    const side: EdgeSide =
       wall.axis === "x"
         ? line === b.z
           ? "north"
@@ -391,13 +395,13 @@ export function wallLabel(floor: GeometryFloor, wall: Wall): string {
         : line === b.x
           ? "west"
           : "east";
-    return `${SIDE_NAMES[side]} wall of ${rooms[0].name}`;
+    return `${sideName(plot, side)} wall of ${rooms[0].name}`;
   }
   const fp = floor.footprint;
   if (wall.axis === "x" && (line === fp.z || line === fp.z + fp.d))
-    return `${line === fp.z ? "North" : "South"} outside wall`;
+    return `${sideName(plot, line === fp.z ? "north" : "south")} outside wall`;
   if (wall.axis === "z" && (line === fp.x || line === fp.x + fp.w))
-    return `${line === fp.x ? "West" : "East"} outside wall`;
+    return `${sideName(plot, line === fp.x ? "west" : "east")} outside wall`;
   return wall.exterior ? "Courtyard wall" : "Inside wall";
 }
 
@@ -431,7 +435,7 @@ export function listCompatibleWalls(
         return [
           {
             wallId: w.id,
-            label: wallLabel(geo, w),
+            label: wallLabel(geo, w, project.plot),
             axis: w.axis,
             line: wallLine(w),
             center,

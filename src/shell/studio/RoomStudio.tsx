@@ -80,7 +80,7 @@ export function RoomStudio({ desktop }: { desktop: boolean }) {
           desktop={desktop}
           title={selected.name}
           kicker={room.name}
-          meta={wallLabel(floorForGeometry(project, floor.id), selected.wall)}
+          meta={wallLabel(floorForGeometry(project, floor.id), selected.wall, project.plot)}
           icon={<Icon.openings size={20} aria-hidden />}
           onBack={backToRoom}
           backLabel={`Back to ${room.name}`}
@@ -202,6 +202,12 @@ export function RoomStudio({ desktop }: { desktop: boolean }) {
             ].join(" · ")}
           </p>
         </div>
+        <IconButton
+          icon={Icon.sunlight}
+          tone="plain"
+          label={`Sunlight in ${room.name}`}
+          onClick={() => dispatch({ type: "overlay", overlay: "sunlight" })}
+        />
         <IconButton
           icon={Icon.photo}
           tone="plain"

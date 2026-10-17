@@ -249,9 +249,15 @@ describe("explicit opening rules", () => {
     const withWindow = ok(addRoomWindow(withDoor, "f0", "kitchen"));
     const window = openingsOf(withWindow).at(-1)!;
     expect(window).toMatchObject({ kind: "window", width: 150, axis: "x", line: 1500 });
+    // Until the homeowner sets the compass, walls are named from the road…
     const labels = listCompatibleWalls(p, "f0", "window").map((w) => w.label);
-    expect(labels).toContain("North wall of bed");
-    expect(labels).toContain("South wall of kitchen");
+    expect(labels).toContain("Back wall of bed");
+    expect(labels).toContain("Front wall of kitchen");
+    // …and then by their true direction.
+    const compass = { ...p, plot: { ...p.plot, compass: true, north: 90 } };
+    const named = listCompatibleWalls(compass, "f0", "window").map((w) => w.label);
+    expect(named).toContain("West wall of bed");
+    expect(named).toContain("East wall of kitchen");
     expect(listCompatibleWalls(p, "f0", "archway").map((w) => w.label)).toContain(
       "Between bed and kitchen",
     );
