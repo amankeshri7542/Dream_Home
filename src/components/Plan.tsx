@@ -527,7 +527,10 @@ export default function Plan({
         : "Tap a room, then drag it to move or pull a dot to resize"
       : activeTool === "move"
         ? "Drag a space · drop on a room to swap uses"
-        : "Tap a room, balcony or courtyard";
+        : floor.rooms.length || floor.balconies.length
+          ? "Tap a room, balcony or courtyard"
+          : // An empty floor has nothing to tap yet.
+            "";
   return (
     <div
       className={`plan-wrap direct-plan tool-${activeTool}${preview ? " has-preview" : ""}`}
@@ -971,13 +974,15 @@ export default function Plan({
           <span>Fit</span>
         </button>
       </div>
-      <div
-        className={`plan-hint${feedback ? (feedback.valid ? " is-valid" : " is-invalid") : ""}`}
-        role="status"
-      >
-        {(trayDrag ? preview?.message : feedback?.message) ??
-          `${hint}${zoom > 1 ? " · drag empty space to pan" : ""}`}
-      </div>
+      {(hint || feedback || trayDrag) && (
+        <div
+          className={`plan-hint${feedback ? (feedback.valid ? " is-valid" : " is-invalid") : ""}`}
+          role="status"
+        >
+          {(trayDrag ? preview?.message : feedback?.message) ??
+            `${hint}${zoom > 1 ? " · drag empty space to pan" : ""}`}
+        </div>
+      )}
     </div>
   );
 }

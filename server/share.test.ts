@@ -12,7 +12,7 @@ import { jpegSize, publicName } from "./share";
 
 const DEVICE = "device-0123456789abcdef";
 const ORIGIN = "https://home.example";
-const env = { PUBLIC_ORIGIN: ORIGIN, ADMIN_TOKEN: "admin-secret-0123456789abcdef" };
+const env = { PUBLIC_ORIGIN: ORIGIN, ADMIN_TOKEN: "admin-secret-0123456789abcdef-0123456789abcdef" };
 const fresh = (): Deps => ({ kv: memoryKv(), blobs: memoryBlobs(), store: memoryStore() });
 
 const call = (
@@ -120,6 +120,69 @@ describe("share links", () => {
     expect(publicName("write to me@x.co")).toBe("write to");
     expect(publicName('"><script>alert(1)</script>')).not.toMatch(/[<>]/);
     expect(publicName("https://only.a.link")).toBe("A Dream Home");
+    // Digits in any script, and anything shaped like a web address.
+    expect(publicName("Call ९८७६५४३२१० now")).toBe("Call now");
+    expect(publicName("win at scam.shop/win")).toBe("win at");
+    expect(publicName("see example.dev today")).toBe("see today");
+    expect(publicName("Plot No. 12.5, Sector 4")).toBe("Plot No. 12.5, Sector 4");
+  });
+
+  it("cleans the remixed-from name too", async () => {
+    const deps = fresh();
+    const remix = { ...createPreset("compact"), remixOf: { id: "AbCdEfGhIj", name: "Call +91 98765 43210" } };
+    const { id } = await share(deps, remix);
+    expect((await (await call(deps, `/api/share/${id}`)).json()).meta.remixOf).toEqual({ id: "AbCdEfGhIj", name: "Call" });
+  });
+
+  it("an owner's update can't undo a hide or bring back a stopped share", async () => {
+    const deps = fresh();
+    const { id, editToken } = await share(deps);
+    const owner = await share(deps);
+    expect((await call(deps, `/api/share/${id}/hide`, { method: "POST", token: env.ADMIN_TOKEN })).status).toBe(200);
+    // The owner updates and adds a picture after the hide: it stays hidden.
+    expect((await call(deps, `/api/share/${id}`, { method: "PUT", token: editToken, body: { project: createPreset("family") } })).status).toBe(200);
+    expect((await call(deps, `/api/share/${id}/image`, { method: "PUT", raw: jpeg(1200, 630) as BodyInit, type: "image/jpeg", token: editToken })).status).toBe(200);
+    expect((await call(deps, `/api/share/${id}`)).status).toBe(404);
+    // A share stopped while a write is on its way (right after the handler read
+    // it) doesn't come back: the write finds it gone and tidies up.
+    const base = deps.kv!;
+    const key = `dh:v1:share:${owner.id}`;
+    let stopNext = false;
+    const racing: Deps = {
+      ...deps,
+      kv: {
+        ...base,
+        async get(k) {
+          const value = await base.get(k);
+          if (stopNext && k === key) {
+            stopNext = false;
+            await base.del(k);
+          }
+          return value;
+        },
+      },
+    };
+    stopNext = true;
+    const late = await call(racing, `/api/share/${owner.id}/image`, { method: "PUT", raw: jpeg(1200, 630) as BodyInit, type: "image/jpeg", token: owner.editToken });
+    expect(late.status).toBe(404);
+    expect(await base.get(key)).toBeNull();
+    expect(await deps.blobs!.get(`shares/${owner.id}.jpg`)).toBeNull();
+  });
+
+  it("limits picture uploads per device and connection", async () => {
+    const deps = fresh();
+    const { id, editToken } = await share(deps);
+    const put = () => call(deps, `/api/share/${id}/image`, { method: "PUT", raw: jpeg(1200, 630) as BodyInit, type: "image/jpeg", token: editToken });
+    for (let i = 0; i < 40; i++) expect((await put()).status).toBe(200);
+    expect((await put()).status).toBe(429);
+  });
+
+  it("counts reports and views per network: one person's IPv6 range is one voice", async () => {
+    const deps = fresh();
+    const { id } = await share(deps);
+    for (const ip of ["2001:db8:1:1::1", "2001:db8:1:2::1", "2001:db8:1:3::1", "2001:db8:1:4::1"])
+      await call(deps, `/api/share/${id}/report`, { method: "POST", ip });
+    expect((await call(deps, `/api/share/${id}`)).status).toBe(200);
   });
 
   it("counts views and remixes once per connection", async () => {
@@ -142,6 +205,8 @@ describe("share links", () => {
     await call(deps, `/api/share/${id}/report`, { method: "POST", ip: "3.3.3.3" });
     expect((await call(deps, `/api/share/${id}`)).status).toBe(404);
     expect((await call(deps, `/api/share/${id}/unhide`, { method: "POST" })).status).toBe(403);
+    // A short admin secret isn't accepted at all.
+    expect((await route(new Request(`${ORIGIN}/api/share/${id}/unhide`, { method: "POST", headers: { host: "home.example", authorization: "Bearer short-secret-0123456789abc" } }), { ...env, ADMIN_TOKEN: "short-secret-0123456789abc" }, deps)).status).toBe(403);
     expect((await call(deps, `/api/share/${id}/unhide`, { method: "POST", token: env.ADMIN_TOKEN })).status).toBe(200);
     expect((await call(deps, `/api/share/${id}`)).status).toBe(200);
     expect((await call(deps, `/api/share/${id}/hide`, { method: "POST", token: env.ADMIN_TOKEN })).status).toBe(200);

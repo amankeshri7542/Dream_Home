@@ -75,6 +75,32 @@
     font-weight: 600;
     color: var(--dh-ink);
   }
+  /* Note, conversation and examples scroll; the header and the input never leave the screen. */
+  .dh-talk-head,
+  .dh-talk-tools,
+  .dh-talk-input,
+  .dh-talk-foot {
+    flex-shrink: 0;
+  }
+  .dh-talk-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* Short screens: the examples become one row to swipe through. */
+  @media (max-height: 720px) {
+    .dh-talk .dh-talk-examples {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .dh-talk .dh-talk-examples button {
+      flex: none;
+    }
+  }
   .dh-talk-note {
     display: flex;
     align-items: flex-start;
@@ -105,13 +131,11 @@
   }
   .dh-talk-log {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     flex-direction: column;
     gap: 8px;
-    min-height: 0;
     margin: 0;
     padding: 4px 14px;
-    overflow-y: auto;
     list-style: none;
   }
   .dh-talk-log:empty {

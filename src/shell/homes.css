@@ -94,7 +94,8 @@
     position: absolute;
     top: calc(var(--dh-topbar-h, 56px) + 8px);
     left: 50%;
-    z-index: var(--dh-z-chrome);
+    /* Above the score ring it covers for a moment; below an open Home score. */
+    z-index: calc(var(--dh-z-chrome) + 2);
     display: flex;
     align-items: center;
     gap: 10px;

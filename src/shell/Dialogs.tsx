@@ -11,6 +11,7 @@ import { MyHomesDialog } from "./MyHomes";
 import { ShareSheet } from "../share/ShareSheet";
 import { Icon } from "../ui/icons";
 import { Kbd, Segmented } from "../ui/primitives";
+import { InstallRow } from "../pwa/PwaUi";
 
 export const SHORTCUTS: { keys: string[]; action: string; group: string }[] = [
   { keys: ["Ctrl/⌘", "Z"], action: "Undo", group: "Anywhere" },
@@ -230,18 +231,7 @@ export function DialogHost({
               Keyboard shortcuts
               <Icon.right size={17} aria-hidden />
             </button>
-            <details className="plain-details">
-              <summary>Keep it on your phone</summary>
-              <p className="field-note">
-                Open this app’s link in your phone’s browser. On Android, use the
-                browser menu → Add to home screen. On iPhone, use Safari’s Share
-                menu → Add to Home Screen.
-              </p>
-              <p className="field-note">
-                Your work stays in that browser. Download a project backup before
-                changing phones or clearing browser data.
-              </p>
-            </details>
+            <InstallRow />
             <p className="privacy-note">
               A concept to discuss with your architect. No engineering or
               local-rule checks. No account, saved on this device.

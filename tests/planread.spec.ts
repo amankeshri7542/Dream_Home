@@ -129,6 +129,11 @@ test("from the first screen: a plan photo is read, checked, fixed and made 3D", 
   await noOverflow(page);
   if (shots) await page.screenshot({ path: "docs/screenshots/planread/check-390.png" });
 
+  // The tools fold away to give the plan the screen, and come back.
+  await check.getByRole("button", { name: "Hide the plan tools" }).click();
+  await expect(check.getByRole("group", { name: "Line up the photo" })).toHaveCount(0);
+  await check.getByRole("button", { name: "Show the plan tools" }).click();
+
   // Line the photo up a little.
   const x = Number(await plan.locator("image.plan-underlay").getAttribute("x"));
   await check.getByRole("button", { name: "Move the photo right" }).click();
@@ -162,11 +167,17 @@ test("with the free reading used, draw it yourself over the photo", async ({ pag
   await expect(page.getByRole("button", { name: "Read my plan" })).toHaveCount(0);
   await page.getByRole("button", { name: "Draw it yourself" }).click();
   const check = page.getByRole("region", { name: "Check your plan" });
-  await expect(check).toContainText("Your photo is under the plan.");
+  await expect(check).toContainText("Your photo is under the plan, ready to trace.");
   await expect(page.getByRole("region", { name: "Floor plan" }).locator("image.plan-underlay")).toHaveCount(1);
   expect((await stored(page)).floors[0].rooms).toEqual([]);
   expect(sent).toHaveLength(0);
   if (shots) await page.screenshot({ path: "docs/screenshots/planread/draw-1440.png" });
+  // The empty house has one obvious next step.
+  await check.getByRole("button", { name: "Add a room" }).click();
+  await expect(page.getByRole("region", { name: "Add room" })).toBeVisible();
+  // Already tracing a plan: no "start from a plan" link here.
+  await expect(page.getByRole("button", { name: /Start a new home from a photo of it/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await check.getByRole("button", { name: "Make it 3D" }).click();
   await expect(check).toHaveCount(0);
 });

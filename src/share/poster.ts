@@ -33,7 +33,8 @@ function toJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null
   return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
 }
 
-export async function makePoster(project: Project, snapshot: Blob | null): Promise<Blob | null> {
+/** `name`: what the link shows (the cleaned name, or "A Dream Home" when the sharer hid it). */
+export async function makePoster(project: Project, snapshot: Blob | null, name = project.name): Promise<Blob | null> {
   const { width: W, height: H } = POSTER;
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -83,9 +84,9 @@ export async function makePoster(project: Project, snapshot: Blob | null): Promi
   ctx.fillStyle = "#fffaf3";
   ctx.textBaseline = "alphabetic";
   ctx.font = '650 46px "Fraunces Variable", Georgia, serif';
-  let name = project.name;
-  while (ctx.measureText(name).width > W - 200 && name.length > 4) name = `${name.slice(0, -2).trimEnd()}…`;
-  ctx.fillText(name, x + 84, y + 34);
+  let shown = name;
+  while (ctx.measureText(shown).width > W - 200 && shown.length > 4) shown = `${shown.slice(0, -2).trimEnd()}…`;
+  ctx.fillText(shown, x + 84, y + 34);
   ctx.font = '600 24px "Figtree Variable", system-ui, sans-serif';
   ctx.fillStyle = "rgba(255, 250, 243, 0.88)";
   ctx.fillText("A 3D home on Dream Home · tap to walk inside", x + 86, y + 66);

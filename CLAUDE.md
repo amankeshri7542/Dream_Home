@@ -93,6 +93,11 @@ git diff --check
   - `runActions` (`runTools.ts`) is pure: it chains edits into one project (one undo step, "Voice: …"), asks first for `isDestructive` tools or growing the house, and returns views for the sheet to show.
   - Navigation phrases are answered by `matchLocal` (`local.ts`), English, Hinglish and Devanagari, with no AI call. Add common phrases there, not to the prompt.
   - `TalkSheet` is lazy; `TalkButton` is the only eager part. Tests mock `/api/command` and fake `SpeechRecognition` (see `tests/talk.spec.ts`).
+- **Installable and offline** (`src/pwa/`, `scripts/pwa/`):
+  - `src/pwa/sw.js` is plain JS; the build plugin (`scripts/pwa/plugin.mjs`) writes `dist/sw.js` with the app-shell and file lists. It never caches `/api/` or `/h/`; keep it that way.
+  - `startPwa` (`pwa.ts`, called in `main.tsx`) registers it in production builds only, so dev and the browser tests never see a worker; `tests/preview` covers offline and install.
+  - The app's own lookups of cached files ignore `Vary`. New files the shell needs at first paint are picked up automatically through the entry and App chunks.
+  - `npm run icons` redraws `public/icons/` from the house mark.
 - **Looks and lived-in details:**
   - A look's outside bundle, room palettes, garden and card text live in `src/domain/looks.ts`; card pictures are `public/looks/<id>.webp` (`npm run looks:thumbs`).
   - Lived-in details are derived, never saved: `livedInDecor` (`src/domain/livedIn.ts`) places them, `src/scene/life/LivedIn.tsx` draws them in Explore and Photo only. Their models come from `public/models/life.glb` (sizes in `src/domain/catalog/life.json`).
@@ -102,6 +107,7 @@ git diff --check
 - **Server (`server/`):**
   - Every `/api/*` request goes through `server/router.ts`. Handlers take `(request, env, deps)` so tests inject a fake Claude and store.
   - Use the helpers in `server/http.ts` (`json`, `fail`, `readBody` with a cap, `clientIp`, `deviceOf`) and the limiter in `server/limiter.ts` (add a kind to `DEFAULT_RULES`).
+  - A paid AI call reserves with its worst case (`worstCaseUsd`), then `settle`s to the real cost, or calls `failed(…, billOf(error))`. Give every call a deadline.
   - On Vercel without KV, paid work is refused.
   - After changing `server/` or `src/ai/`, run `npm run build:api` and commit `api/index.js`.
 - **Claude API:**
@@ -126,7 +132,8 @@ git diff --check
 | `src/insights/` | cities, the real sun, sunlight per room, Vastu, the Home score and badges; the Sunlight sheet and pickers |
 | `src/planread/` | start from a builder's plan: the reading, its sanitiser, reading → home, photo prep, the two steps and the check panel |
 | `src/voice/` | talk to your home: the tool set and its checks, the context, the local matcher, the runner, the Talk button and sheet |
-| `src/share/` | share sheet, the `/h/:id` viewer, Remix |
+| `src/pwa/` | the service worker, update and install banners |
+| `src/share/` | share sheet, the `/h/:id` viewer, Remix, the public-name cleaner shared with the server |
 | `src/homes/` | My homes shelf (IndexedDB) and move links |
 | `src/ai/` | the AI brief, prompts, strict schemas, built-in planner, plan → home builder |
 | `src/onboarding/` | title screen, template gallery, tour |

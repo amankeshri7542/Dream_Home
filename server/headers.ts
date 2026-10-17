@@ -36,10 +36,19 @@ export const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
 };
 
+/** The service worker is always checked for a new version (never kept by the browser or CDN). */
+export const SERVICE_WORKER_HEADERS: Record<string, string> = { "Cache-Control": "no-cache" };
+
 /** The `headers` block of vercel.json. */
 export const vercelHeaders = () => [
   {
     source: "/(.*)",
     headers: Object.entries(SECURITY_HEADERS).map(([key, value]) => ({ key, value })),
   },
+  {
+    source: "/sw.js",
+    headers: Object.entries(SERVICE_WORKER_HEADERS).map(([key, value]) => ({ key, value })),
+  },
+  // Shared homes are for the people they're sent to, not search results.
+  { source: "/h/(.*)", headers: [{ key: "X-Robots-Tag", value: "noindex" }] },
 ];

@@ -14,10 +14,15 @@ export function CatalogPanel() {
         floorId={activeFloor.id}
         unit={unit}
         onClose={() => dispatch({ type: "close-panel" })}
-        onFromPlan={() => {
-          dispatch({ type: "close-panel" });
-          dispatch({ type: "overlay", overlay: "plan" });
-        }}
+        // Not while the floor plan is open (tracing a plan photo, or editing in 2D).
+        onFromPlan={
+          state.lens
+            ? undefined
+            : () => {
+                dispatch({ type: "close-panel" });
+                dispatch({ type: "overlay", overlay: "plan" });
+              }
+        }
         onExpand={() => {
           dispatch({ type: "open-panel", panel: "plot" });
           dispatch({

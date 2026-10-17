@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import vercel from "../vercel.json" with { type: "json" };
 import { plannerHomePlan } from "../src/ai/planner";
 import type { HomeBrief } from "../src/ai/brief";
-import { DesignRefused, costOf, priceOf, supportsFallback, type CallClaude } from "./claude";
+import Anthropic from "@anthropic-ai/sdk";
+import { BilledError, DesignRefused, billOf, costOf, priceOf, supportsFallback, type CallClaude } from "./claude";
 import { limiterFor } from "./context";
 import { handleDesign } from "./design";
 import { CONTENT_SECURITY_POLICY, SECURITY_HEADERS, vercelHeaders } from "./headers";
@@ -196,6 +197,40 @@ describe("limiter", () => {
     expect(await limiter.left("read", DEVICE)).toBe(Infinity);
   });
 
+  it("charges a call's worst case up front, so calls at the same time can't overshoot the budget", async () => {
+    const store = memoryStore();
+    const limiter = new Limiter(store, 1);
+    // Three calls of up to $0.40 each: the third would take the day past $1.
+    expect((await limiter.reserve("home", "device-aaaaaaaaaaaaaaaa", "1.1.1.1", 0.4)).ok).toBe(true);
+    expect((await limiter.reserve("home", "device-bbbbbbbbbbbbbbbb", "1.1.1.2", 0.4)).ok).toBe(true);
+    expect(await limiter.reserve("home", "device-cccccccccccccccc", "1.1.1.3", 0.4)).toMatchObject({ ok: false, reason: "busy" });
+    // The first two cost $0.05 each in the end: room again.
+    await limiter.settle(0.4, 0.05);
+    await limiter.settle(0.4, 0.05);
+    expect((await limiter.reserve("home", "device-cccccccccccccccc", "1.1.1.3", 0.4)).ok).toBe(true);
+  });
+
+  it("after a failed call: the device gets its use back; the connection only when nothing was spent", async () => {
+    const store = memoryStore();
+    const limiter = new Limiter(store, 10, { ...DEFAULT_RULES, plan: { device: 1, window: "life", ip: 2, costly: true } });
+    const spent = () => store.get(`dh:v1:spend:${new Date().toISOString().slice(0, 10)}`);
+    // Billed (a refusal): its real cost stays; the connection's use too.
+    await limiter.reserve("plan", DEVICE, "ip", 0.2);
+    await limiter.failed("plan", DEVICE, "ip", 0.2, 0.03);
+    expect(await spent()).toBe(300);
+    expect(await limiter.left("plan", DEVICE)).toBe(1);
+    // Never reached the model: everything comes back.
+    await limiter.reserve("plan", DEVICE, "ip", 0.2);
+    await limiter.failed("plan", DEVICE, "ip", 0.2, 0);
+    expect(await spent()).toBe(300);
+    // Unknown (a timeout): the worst case stays charged.
+    await limiter.reserve("plan", DEVICE, "ip", 0.2);
+    await limiter.failed("plan", DEVICE, "ip", 0.2, null);
+    expect(await spent()).toBe(2300);
+    // Two uses of the connection's two are gone (the billed one and the timeout), so a loop stops here.
+    expect(await limiter.reserve("plan", DEVICE, "ip", 0.2)).toMatchObject({ ok: false, reason: "busy" });
+  });
+
   it("reads limit overrides from the environment", () => {
     const rules = rulesFrom({ LIMIT_COMMAND_DEVICE: "40", LIMIT_PLAN_IP: "0", LIMIT_SHARE_DEVICE: "-3", LIMIT_ROOM_IP: "x" });
     expect(rules.command.device).toBe(40);
@@ -213,19 +248,33 @@ describe("limiter", () => {
       { key: "dev", max: 3, ttl: 60 },
       { key: "ip", max: 8, ttl: 30 },
     ];
-    expect(await store.reserve({ key: "spend", max: 100 }, counters)).toEqual({ ok: true, values: [1, 1] });
+    expect(await store.reserve({ key: "spend", max: 100, charge: 7 }, counters)).toEqual({ ok: true, values: [1, 1] });
     expect(await store.reserve({ key: "spend", max: 100 }, counters)).toEqual({ ok: false, blocked: "budget" });
     expect(await store.reserve(null, counters)).toEqual({ ok: false, blocked: 1 });
     const body = JSON.parse((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
-    expect(body).toEqual([["EVAL", RESERVE_SCRIPT, 3, "spend", "dev", "ip", 100, 3, 60, 8, 30]]);
+    expect(body).toEqual([["EVAL", RESERVE_SCRIPT, 3, "spend", "dev", "ip", 100, 7, 3, 60, 8, 30]]);
     const noBudget = JSON.parse((fetcher.mock.calls[2] as unknown as [string, RequestInit])[1].body as string);
-    expect(noBudget[0].slice(6)).toEqual([-1, 3, 60, 8, 30]);
+    expect(noBudget[0].slice(6)).toEqual([-1, 0, 3, 60, 8, 30]);
+    // The script charges the budget in the same step as the counters.
+    expect(RESERVE_SCRIPT).toContain("spent + charge > budget");
+    expect(RESERVE_SCRIPT).toContain("redis.call('INCRBY', KEYS[1], charge)");
   });
 
   it("surfaces Upstash errors instead of guessing", async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify([{ error: "ERR script" }])));
     const store = restStore("https://kv.example", "token", fetcher as unknown as typeof fetch);
     await expect(store.reserve(null, [{ key: "k", max: 1, ttl: 1 }])).rejects.toThrow("ERR script");
+  });
+});
+
+describe("what a failed call cost", () => {
+  it("reads it from the error", () => {
+    expect(billOf(new BilledError("refused", 0.02))).toBe(0.02);
+    expect(billOf(new Anthropic.APIConnectionError({ message: "no network" }))).toBe(0);
+    expect(billOf(Anthropic.APIError.generate(529, { type: "error" }, "overloaded", new Headers()))).toBe(0);
+    expect(billOf(new Anthropic.APIConnectionTimeoutError())).toBeNull();
+    expect(billOf(new Anthropic.APIUserAbortError())).toBeNull();
+    expect(billOf(new Error("who knows"))).toBeNull();
   });
 });
 

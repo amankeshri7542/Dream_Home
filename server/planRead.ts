@@ -4,7 +4,7 @@
 // never stored or logged; only the call's usage and cost are. The app always
 // offers "Draw it yourself" on the photo when reading isn't possible.
 import { IMAGE, READING_SCHEMA, READING_SYSTEM, readingUserText, sanitizeReading } from "../src/planread/reading";
-import { BilledError, callClaude as realCallClaude } from "./claude";
+import { billOf, callClaude as realCallClaude, worstCaseUsd } from "./claude";
 import { aiConfigured, limiterFor, type Deps } from "./context";
 import { BodyTooLarge, clientIp, deviceOf, fail, json, readBytes, type Env } from "./http";
 import { jpegSize } from "./share";
@@ -48,9 +48,12 @@ export async function handlePlanRead(request: Request, env: Env, deps: Deps = {}
   if (!live || !limiter) return fail("offline", "Plan reading isn’t switched on yet.");
 
   const ip = clientIp(request);
+  const model = env.PLAN_MODEL || PLAN_MODEL;
+  // The picture (up to ~4.8k tokens) and the instructions, and the answer's cap.
+  const estimate = worstCaseUsd(model, 7_000, 12_000);
   let verdict;
   try {
-    verdict = await limiter.reserve("plan", device, ip);
+    verdict = await limiter.reserve("plan", device, ip, estimate);
   } catch (error) {
     console.error("limit store", error instanceof Error ? error.message : error);
     return fail("busy", "Plan reading is busy right now.");
@@ -67,7 +70,7 @@ export async function handlePlanRead(request: Request, env: Env, deps: Deps = {}
   try {
     const answer = await call({
       apiKey: env.ANTHROPIC_API_KEY!,
-      model: env.PLAN_MODEL || PLAN_MODEL,
+      model,
       system: READING_SYSTEM,
       user: readingUserText({ plot: plot ? `${plot[1]} × ${plot[2]} ${plot[3]}` : undefined, road: ROAD.has(road) ? road : undefined }),
       image: { mediaType: "image/jpeg", data: base64(bytes) },
@@ -77,13 +80,12 @@ export async function handlePlanRead(request: Request, env: Env, deps: Deps = {}
       label: "plan-read",
       timeoutMs: 55_000,
     });
-    await limiter.spend(answer.costUsd).catch(() => undefined);
+    await limiter.settle(estimate, answer.costUsd).catch(() => undefined);
     return json({ ok: true, reading: sanitizeReading(answer.json), left: verdict.left });
   } catch (error) {
     // The reason only: never the photo or what was read.
     console.error("plan read failed", error instanceof Error ? error.name : "error");
-    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => undefined);
-    await limiter.refund("plan", device, ip).catch(() => undefined);
+    await limiter.failed("plan", device, ip, estimate, billOf(error)).catch(() => undefined);
     return fail("busy", "Couldn’t read the plan this time.", verdict.left + 1);
   }
 }

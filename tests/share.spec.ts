@@ -122,7 +122,7 @@ test("a viewer can report a home", async ({ page, request }) => {
   });
   const { id } = await created.json();
   await page.goto(`/h/${id}`);
-  await page.getByRole("button", { name: "More about this home" }).click();
   await page.getByRole("button", { name: "Report this home" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Report this home" }).click();
   await expect(page.getByRole("heading", { name: "Thank you" })).toBeVisible();
 });

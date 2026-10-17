@@ -63,7 +63,6 @@ test("reel: films a tiny MP4 with music, then the scene goes idle", async ({ pag
   await expect(studio.getByRole("radio", { name: "Festive" })).toHaveAttribute("aria-checked", "true");
   await studio.getByRole("radio", { name: "Golden" }).click();
   await expect(studio.getByRole("radio", { name: "Warm morning" })).toHaveAttribute("aria-checked", "true");
-  await studio.getByRole("switch", { name: "Show link at the end" }).click();
   await studio.getByRole("button", { name: "Make my video" }).click();
   await expect(studio.getByRole("button", { name: "Cancel" })).toBeVisible();
   await expect(studio.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 90_000 });
@@ -93,7 +92,6 @@ test("reel: Cancel stops filming and the scene goes idle", async ({ page }) => {
   await seed(page, createPreset("compact"));
   await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
   const studio = await openStudio(page);
-  await studio.getByRole("switch", { name: "Show link at the end" }).click();
   await studio.getByRole("button", { name: "Make my video" }).click();
   // Filming shows its frames as they're made.
   await expect(studio.getByRole("status")).toContainText(/Filming|Walking|Opening/, { timeout: 20_000 });
@@ -112,7 +110,6 @@ test("reel: a browser that can't encode video is offered a photo instead", async
   await seed(page, createPreset("compact"));
   await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
   const studio = await openStudio(page);
-  await studio.getByRole("switch", { name: "Show link at the end" }).click();
   await studio.getByRole("button", { name: "Make my video" }).click();
   await expect(studio.getByText("This browser can’t make videos yet.")).toBeVisible({ timeout: 20_000 });
   await studio.getByRole("button", { name: "Take a photo instead" }).click();
@@ -137,6 +134,8 @@ test("reel: from Share on a phone, the video ends with the home's new link", asy
     expect(box.x + box.width).toBeLessThanOrEqual(mobile.width);
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
+  // A new link only when asked for (it's off until the home is shared).
+  await studio.getByRole("switch", { name: "Show link at the end" }).click();
   await expect(studio.getByText("Makes a link: anyone with it can see this home in 3D")).toBeVisible();
   await studio.getByRole("radio", { name: "Quick 8 s" }).click();
   await studio.getByRole("button", { name: "Make my video" }).click();
@@ -190,7 +189,6 @@ for (const mood of ["Golden", "Diwali"])
     await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
     const studio = await openStudio(page);
     await studio.getByRole("radio", { name: mood, exact: true }).click();
-    await studio.getByRole("switch", { name: "Show link at the end" }).click();
     await studio.getByRole("button", { name: "Make my video" }).click();
     await expect(studio.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 280_000 });
     const frames = await page.evaluate(() => (window as unknown as { __dreamHomeReelFrames: { kind: string; jpeg: string }[] }).__dreamHomeReelFrames);
@@ -221,7 +219,6 @@ for (const device of ["desktop", "phone"] as const)
     await page.getByRole("button", { name: "Share your home", exact: true }).click();
     await page.getByRole("dialog", { name: "Share your home" }).getByRole("button", { name: "Make a video" }).click();
     const studio = page.getByRole("dialog", { name: "Video studio" });
-    await studio.getByRole("switch", { name: "Show link at the end" }).click();
     await studio.getByRole("button", { name: "Make my video" }).click();
     await expect(studio.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 380_000 });
     const filmed = (await stats(page))!;

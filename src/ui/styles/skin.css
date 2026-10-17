@@ -250,6 +250,18 @@
     justify-content: space-between;
     gap: 12px;
     font-weight: 650;
+    /* Readable labels (the old pale green failed contrast). */
+    color: var(--dh-ink-soft);
+    font-size: calc(14px * var(--dh-text));
+  }
+  /* Small print that's still easy to read (the old pale green failed contrast). */
+  .dh-app .privacy-note {
+    color: var(--dh-ink-muted);
+    font-size: calc(13px * var(--dh-text));
+    line-height: 1.5;
+  }
+  .dh-app .overview-content > p:not(.privacy-note) {
+    color: var(--dh-ink-soft);
   }
   /* Label above, choices across the full width (Text size). */
   .dh-app .menu-unit.is-stacked {
@@ -272,6 +284,16 @@
   /* Catalog */
   .dh-catalog .sheet-heading {
     margin: 0 -4px 8px;
+  }
+  /* Short screens: a slimmer "Add" footer, so the choices above it stay in view. */
+  @media (max-height: 760px) {
+    .dh-catalog .catalog-footer {
+      padding: 8px 14px;
+    }
+    .dh-catalog .catalog-footer p {
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
   }
   .dh-app .catalog-tabs button,
   .dh-app .size-choices button,

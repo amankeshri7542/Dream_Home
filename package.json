@@ -17,6 +17,7 @@
     "assets:blender": "node scripts/assets/build.mjs --step blender",
     "assets:pack": "node scripts/assets/build.mjs --step pack",
     "looks:thumbs": "node scripts/looks/thumbs.mjs",
+    "icons": "node scripts/pwa/icons.mjs",
     "test:preview": "playwright test -c playwright.preview.config.ts"
   },
   "dependencies": {

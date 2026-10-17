@@ -39,6 +39,13 @@ export default function ViewerApp({ id }: { id: string }) {
   const [place, setPlace] = useState("");
   const [walkFloor, setWalkFloor] = useState<string | null>(null);
   const [sheet, setSheet] = useState<null | "in-app" | "replace" | "problem" | "report" | "reported">(null);
+  // Escape closes the open sheet, as everywhere else.
+  useEffect(() => {
+    if (!sheet) return;
+    const close = (e: KeyboardEvent) => e.key === "Escape" && setSheet(null);
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [sheet]);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const desktop = useMemo(() => window.matchMedia?.("(min-width: 900px)").matches ?? false, []);
@@ -112,7 +119,7 @@ export default function ViewerApp({ id }: { id: string }) {
           <span>Dream Home</span>
         </a>
         {state.kind === "ready" && (
-          <IconButton icon={Icon.more} tone="plain" label="More about this home" onClick={() => setSheet("report")} />
+          <IconButton icon={Icon.warning} tone="plain" label="Report this home" onClick={() => setSheet("report")} />
         )}
       </header>
 

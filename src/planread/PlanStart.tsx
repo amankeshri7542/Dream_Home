@@ -189,7 +189,7 @@ export default function PlanStart({ onBack, onDone }: { onBack: () => void; onDo
                 aria-label="Choose a picture of your plan"
                 onChange={(e) => void choose(e.target.files?.[0])}
               />
-              <p className="dh-ai-small">The photo stays on this phone; only the reading uses it, and it isn’t kept.</p>
+              <p className="dh-ai-small">If the AI reads your plan, the photo is sent once for that and isn’t kept. Drawing it yourself keeps it on this phone.</p>
             </>
           )}
           {step === 1 && (

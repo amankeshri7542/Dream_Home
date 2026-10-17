@@ -188,8 +188,8 @@ export function RoomStudio({ desktop }: { desktop: boolean }) {
           if (Math.abs(dx) > 48 && Math.abs(dx) > 2 * Math.abs(dy)) step(dx < 0 ? 1 : -1);
         }}
       >
-        <IconButton icon={Icon.home} tone="plain" label="Back to home" onClick={() => dispatch({ type: "leave-room" })} />
-        {!small && <IconButton icon={Icon.left} tone="plain" label="Previous room" onClick={() => step(-1)} />}
+        <IconButton icon={Icon.home} tone="plain" className="is-home" label="Back to home" onClick={() => dispatch({ type: "leave-room" })} />
+        {!small && <IconButton icon={Icon.left} tone="plain" className="is-prev" label="Previous room" onClick={() => step(-1)} />}
         <span className="dh-chip-icon" style={{ background: ROOM_META[room.kind].color }} aria-hidden>
           <RoomGlyph size={20} />
         </span>
@@ -208,20 +208,22 @@ export function RoomStudio({ desktop }: { desktop: boolean }) {
         <IconButton
           icon={Icon.sunlight}
           tone="plain"
+          className="is-sun"
           label={`Sunlight in ${room.name}`}
           onClick={() => dispatch({ type: "overlay", overlay: "sunlight" })}
         />
         <IconButton
           icon={Icon.photo}
           tone="plain"
+          className="is-photo"
           label={`Take a photo of ${room.name}`}
           onClick={() => dispatch({ type: "overlay", overlay: "photo" })}
         />
         {small ? (
           // Tucked down beside the floor plan: one tap brings the tools back.
-          <IconButton icon={Icon.expand} tone="plain" label="Show details" onClick={() => dispatch({ type: "sheet", snap: "medium" })} />
+          <IconButton icon={Icon.expand} tone="plain" className="is-next" label="Show details" onClick={() => dispatch({ type: "sheet", snap: "medium" })} />
         ) : (
-          <IconButton icon={Icon.right} tone="plain" label="Next room" onClick={() => step(1)} />
+          <IconButton icon={Icon.right} tone="plain" className="is-next" label="Next room" onClick={() => step(1)} />
         )}
       </div>
       <div className="dh-inspector-scroll" key={piece ? `piece:${selected?.target.id}` : `tab:${state.roomTab}:${room.id}`}>

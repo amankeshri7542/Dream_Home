@@ -16,6 +16,16 @@ const UNKNOWN: Price = { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 }
 export const priceOf = (model: string) => PRICES.find(([prefix]) => model.startsWith(prefix))?.[1] ?? UNKNOWN;
 
 /**
+ * A call's worst case in USD: every input token written to the cache (the
+ * dearest input rate) and every allowed output token. Charged to the daily
+ * budget up front, then settled to the real cost.
+ */
+export const worstCaseUsd = (model: string, inputTokens: number, maxTokens: number) => {
+  const p = priceOf(model);
+  return (inputTokens * Math.max(p.input, p.cacheWrite) + maxTokens * p.output) / 1e6;
+};
+
+/**
  * Server-side refusal fallback ("default") is offered for the Opus line and
  * Sonnet 5.5 on the Claude API; Haiku rejects it.
  */
@@ -49,6 +59,19 @@ export class BilledError extends Error {
 }
 export class DesignRefused extends BilledError {}
 
+/**
+ * What a failed call cost: its bill when Anthropic answered (a refusal or a
+ * cut-off answer), 0 when it never reached the model (an error answer, or no
+ * connection), and null when nobody knows (a timeout part-way through).
+ */
+export function billOf(error: unknown): number | null {
+  if (error instanceof BilledError) return error.costUsd;
+  if (error instanceof Anthropic.APIConnectionTimeoutError || error instanceof Anthropic.APIUserAbortError) return null;
+  if (error instanceof Anthropic.APIConnectionError) return 0;
+  if (error instanceof Anthropic.APIError && typeof error.status === "number") return 0;
+  return null;
+}
+
 type TokenUsage = {
   input_tokens: number;
   output_tokens: number;
@@ -77,6 +100,8 @@ export function costOf(usage: Usage, model: string = MODEL): number {
 export const callClaude: CallClaude = async (call) => {
   const model = call.model ?? MODEL;
   const client = new Anthropic({ apiKey: call.apiKey, timeout: call.timeoutMs ?? 100_000, maxRetries: 1 });
+  // The SDK's timeout stops counting once a stream starts, so this one bounds the whole answer.
+  const deadline = { signal: AbortSignal.timeout(call.timeoutMs ?? 100_000) };
   const message = await client.beta.messages
     .stream({
       model,
@@ -97,7 +122,7 @@ export const callClaude: CallClaude = async (call) => {
             : call.user,
         },
       ],
-    })
+    }, deadline)
     .finalMessage();
   const costUsd = costOf(message.usage as Usage, message.model ?? model);
   console.info(
@@ -144,7 +169,7 @@ export const callTools: CallTools = async (call) => {
     tools: call.tools.map((tool) => ({ ...tool, input_schema: tool.input_schema as Anthropic.Tool.InputSchema })),
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: call.user }],
-  });
+  }, { signal: AbortSignal.timeout(call.timeoutMs ?? 20_000) });
   const costUsd = costOf(message.usage as Usage, message.model ?? call.model);
   // Usage only: never what was said or done.
   console.info(JSON.stringify({ ai: call.label, model: message.model, stop: message.stop_reason, usage: message.usage, costUsd }));

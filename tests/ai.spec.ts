@@ -5,6 +5,7 @@ import type { HomeBrief } from "../src/ai/brief";
 import { plannerHomePlan } from "../src/ai/planner";
 import { mobile, noOverflow, roomTab, seed, stored, tool, undo } from "./support/dreamHome";
 
+const shots = !!process.env.DH_SHOTS;
 const brief: HomeBrief = {
   plot: { w: 30, d: 50 },
   facing: "north",
@@ -170,4 +171,28 @@ test("a 20 × 40 plot gently says how many bedrooms fit", async ({ page }) => {
   for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "More bedrooms" }).click();
   await page.getByRole("radiogroup", { name: "Floors" }).getByRole("radio", { name: "1" }).click();
   await expect(page.getByText(/A 20 × 40 ft plot fits about \d bedroom/)).toBeVisible();
+});
+
+test("at 320 px in Extra large, the design notes keep Try another and Keep it in reach", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.addInitScript(() => {
+    const prefs = JSON.parse(localStorage.getItem("dream-home.preferences.v1") ?? "{}");
+    localStorage.setItem("dream-home.preferences.v1", JSON.stringify({ ...prefs, textSize: "extra" }));
+  });
+  await mockApi(page, () => ({ ok: false, reason: "limit", message: "Used up", left: 0 }), { home: 0, room: 4 });
+  await openDesigner(page);
+  await page.setViewportSize({ width: 320, height: 640 });
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Design my home" }).click();
+  const notes = page.getByRole("region", { name: "Designed for you" });
+  await notes.getByRole("button", { name: "Show all design notes" }).click();
+  if (shots) await page.screenshot({ path: "docs/screenshots/ai-notes-320-xl.png" });
+  for (const name of ["Try another", "Keep it"]) {
+    const button = notes.getByRole("button", { name });
+    await expect(button).toBeInViewport({ ratio: 1 });
+    // Not hidden under anything (or scrolled out of the card).
+    const box = (await button.boundingBox())!;
+    expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.textContent ?? "", [box.x + box.width / 2, box.y + box.height / 2])).toContain(name);
+  }
+  await noOverflow(page);
 });

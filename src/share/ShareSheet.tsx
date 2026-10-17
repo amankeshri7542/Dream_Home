@@ -12,6 +12,8 @@ import { deleteShare, shareStats, updateShare } from "./api";
 import { fingerprint, forgetLink, linkFor, saveLink, shareUrl, type ShareLink } from "./links";
 import { addPicture, publishHome } from "./publish";
 import "./share.css";
+import { pwa } from "../pwa/pwa";
+import { feedback } from "../ui/feedback";
 
 export const SHARE_TEXT = "See our dream home in 3D 🏠";
 
@@ -58,6 +60,8 @@ export function ShareSheet({
     setBusy("");
     if (!res.ok) return setProblem(res.message);
     setLink(res.link);
+    feedback.success();
+    pwa.shared();
   };
 
   const update = async () => {
@@ -71,7 +75,7 @@ export function ShareSheet({
       return setProblem(res.message);
     }
     setBusy("Adding a picture…");
-    await addPicture(project, link, capture);
+    await addPicture(project, { ...link, ...options }, capture);
     const next = { ...link, ...options, updatedAt: res.updatedAt, fingerprint: print };
     saveLink(homeId, next);
     setLink(next);
@@ -90,7 +94,7 @@ export function ShareSheet({
     forgetLink(homeId);
     setLink(null);
     setStats(null);
-    notify("Sharing stopped. The old link no longer opens this home.");
+    notify("Sharing stopped. Within a minute, the old link won’t open this home.");
   };
 
   const copy = async () => {

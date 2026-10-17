@@ -5,7 +5,7 @@
 import { parseHomeBrief, parseRoomBrief, type DesignResponse, type HomePlan, type RoomPlan } from "../src/ai/brief";
 import { HOME_SYSTEM, ROOM_SYSTEM, homeUserMessage, roomUserMessage } from "../src/ai/prompt";
 import { HOME_PLAN_SCHEMA, ROOM_PLAN_SCHEMA, sanitizeHomePlan, sanitizeRoomPlan } from "../src/ai/schema";
-import { BilledError, DesignRefused, callClaude as realCallClaude } from "./claude";
+import { DesignRefused, MODEL, billOf, callClaude as realCallClaude, worstCaseUsd } from "./claude";
 import { aiConfigured, limiterFor, type Deps } from "./context";
 import { BodyTooLarge, clientIp, deviceOf, fail, json, readBody, type Env } from "./http";
 
@@ -51,9 +51,12 @@ export async function handleDesign(request: Request, env: Env, deps: Deps = {}):
   if (!live || !limiter) return fail("offline", "The AI designer isn’t switched on yet.");
 
   const ip = clientIp(request);
+  const model = env.AI_MODEL || MODEL;
+  // About 8k tokens of instructions and schema, and the answer's cap.
+  const estimate = worstCaseUsd(model, 10_000, kind === "home" ? 16_000 : 6_000);
   let verdict;
   try {
-    verdict = await limiter.reserve(kind, device, ip);
+    verdict = await limiter.reserve(kind, device, ip, estimate);
   } catch (error) {
     console.error("limit store", error);
     return fail("busy", "The AI designer is busy right now.");
@@ -69,7 +72,7 @@ export async function handleDesign(request: Request, env: Env, deps: Deps = {}):
       kind === "home"
         ? await call({
             apiKey: env.ANTHROPIC_API_KEY!,
-            model: env.AI_MODEL,
+            model,
             system: HOME_SYSTEM,
             user: homeUserMessage(parsed.brief as never, variant),
             schema: HOME_PLAN_SCHEMA,
@@ -78,21 +81,21 @@ export async function handleDesign(request: Request, env: Env, deps: Deps = {}):
           })
         : await call({
             apiKey: env.ANTHROPIC_API_KEY!,
-            model: env.AI_MODEL,
+            model,
             system: ROOM_SYSTEM,
             user: roomUserMessage(parsed.brief as never, variant),
             schema: ROOM_PLAN_SCHEMA,
             effort: "low",
             maxTokens: 6_000,
           });
-    await limiter.spend(answer.costUsd).catch(() => undefined);
+    await limiter.settle(estimate, answer.costUsd).catch(() => undefined);
     const plan = kind === "home" ? sanitizeHomePlan(answer.json) : sanitizeRoomPlan(answer.json);
     return json({ ok: true, plan, source: "ai", left: verdict.left } satisfies DesignResponse<HomePlan | RoomPlan>);
   } catch (error) {
-    console.error("design failed", error instanceof Error ? error.message : error);
-    // A refused or cut-off answer is still billed: count it against today's budget.
-    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => undefined);
-    await limiter.refund(kind, device, ip).catch(() => undefined);
+    // The reason only: never the brief or the answer.
+    console.error("design failed", error instanceof Error ? error.name : "error");
+    // A refused or cut-off answer is still billed; a timeout keeps its worst case.
+    await limiter.failed(kind, device, ip, estimate, billOf(error)).catch(() => undefined);
     return error instanceof DesignRefused
       ? fail("busy", "The AI designer couldn’t work with that note. Try changing it.", verdict.left + 1)
       : fail("busy", "The AI designer didn’t answer in time.", verdict.left + 1);

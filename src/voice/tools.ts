@@ -122,8 +122,8 @@ export function cleanAction(call: { name: unknown; input: unknown }, refs: Refs)
   if (!input) return null;
   const out: Record<string, string | number> = {};
   for (const [key, value] of Object.entries(input)) {
+    if (!Object.hasOwn(def.properties, key)) return null;
     const prop = def.properties[key];
-    if (!prop) return null;
     if (prop.type === "number") {
       const [lo, hi] = RANGES[key] ?? [0, 1000];
       if (typeof value !== "number" || !Number.isFinite(value) || value < lo || value > hi) return null;

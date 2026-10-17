@@ -196,7 +196,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 12px;
     border: 0;
     border-radius: var(--dh-radius-pill);

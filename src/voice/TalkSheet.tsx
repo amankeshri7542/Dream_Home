@@ -13,6 +13,7 @@ import { matchLocal, speaksHindi } from "./local";
 import { runActions, type ViewIntent } from "./runTools";
 import { TEXT_MAX, type VoiceAction } from "./tools";
 import "./talk.css";
+import { feedback } from "../ui/feedback";
 
 type Message = { id: number; who: "you" | "home"; text: string; tone?: "error" };
 type Pending = { said: string; reply: string; actions: VoiceAction[]; refs: RefMap; ask: string };
@@ -28,8 +29,45 @@ type Recognition = {
 };
 type RecognitionClass = new () => Recognition;
 
-const EXAMPLES = ["Make the kitchen bigger", "Bedroom ko neela karo", "Add a pooja room near the entrance", "Show me the house at night", "Undo"];
-const OFF = "Talking to your home isn’t switched on yet. I can still undo, show night or day, open a room, explore and show Vastu.";
+/** The sheet's own words in each language (the rest of the app is English). */
+const WORDS = {
+  en: {
+    examples: ["Make the kitchen bigger", "Bedroom ko neela karo", "Add a pooja room near the entrance", "Show me the house at night", "Undo"],
+    off: "Talking to your home isn’t switched on yet. I can still undo, show night or day, open a room, explore and show Vastu.",
+    note: "Your browser turns speech into text (Google or Apple may process the audio). Dream Home receives only the text and doesn’t keep it.",
+    noSpeech: "Tip: tap the 🎤 on your keyboard to speak.",
+    listening: "Listening… tap the microphone to stop.",
+    idle: "Tap the microphone and speak, or type.",
+    left: (n: number) => ` ${n} left today.`,
+    placeholder: "Say or type a change…",
+    listeningPlaceholder: "Listening…",
+    thinking: "Thinking…",
+    yes: "Yes, do it",
+    no: "No",
+    unchanged: "OK, nothing changed.",
+    missed: "Sorry, I didn’t catch that. Try “make the kitchen bigger”.",
+    done: "Done.",
+    couldNot: "",
+  },
+  hi: {
+    examples: ["रसोई बड़ी करो", "बेडरूम को नीला करो", "दरवाज़े के पास पूजा का कमरा जोड़ो", "घर रात में दिखाओ", "अनडू"],
+    off: "घर से बात करना अभी चालू नहीं है। फिर भी मैं अनडू, रात या दिन, कमरा खोलना, घूमना और वास्तु दिखा सकता हूँ।",
+    note: "आपका ब्राउज़र आवाज़ को शब्दों में बदलता है (Google या Apple आवाज़ सुन सकते हैं)। Dream Home को सिर्फ़ शब्द मिलते हैं, और वह उन्हें रखता नहीं।",
+    noSpeech: "सुझाव: बोलने के लिए कीबोर्ड पर 🎤 दबाएँ।",
+    listening: "सुन रहे हैं… रोकने के लिए माइक दबाएँ।",
+    idle: "माइक दबाकर बोलिए, या लिखिए।",
+    left: (n: number) => ` आज ${n} बाकी।`,
+    placeholder: "बोलिए या लिखिए…",
+    listeningPlaceholder: "सुन रहे हैं…",
+    thinking: "सोच रहे हैं…",
+    yes: "हाँ, कर दो",
+    no: "नहीं",
+    unchanged: "ठीक है, कुछ नहीं बदला।",
+    missed: "माफ़ कीजिए, समझ नहीं आया। जैसे: “रसोई बड़ी करो”।",
+    done: "हो गया।",
+    couldNot: "यह नहीं हो पाया। ",
+  },
+} as const;
 
 function speechClass(): RecognitionClass | null {
   const w = window as unknown as { SpeechRecognition?: RecognitionClass; webkitSpeechRecognition?: RecognitionClass };
@@ -39,6 +77,7 @@ function speechClass(): RecognitionClass | null {
 export default function TalkSheet({ onClose }: { onClose: () => void }) {
   const editor = useEditor();
   const { prefs, setPrefs, dispatch } = editor;
+  const w = WORDS[prefs.talkLang];
   const latest = useRef(editor);
   latest.current = editor;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -114,8 +153,9 @@ export default function TalkSheet({ onClose }: { onClose: () => void }) {
   };
 
   const carryOut = (said: string, actions: VoiceAction[], reply: string, refs: RefMap, confirmed: boolean) => {
-    const { project, unit, activeFloor, run, undo, redo } = latest.current;
-    const out = runActions(project, actions, refs, { unit, activeFloorId: activeFloor.id, confirmed });
+    const { project, unit, activeFloor, run, undo, redo, prefs: p } = latest.current;
+    const lang = speaksHindi(said, p.talkLang) ? "hi" : "en";
+    const out = runActions(project, actions, refs, { unit, activeFloorId: activeFloor.id, confirmed, lang });
     if (out.confirm) {
       setPending({ said, reply, actions, refs, ask: out.confirm });
       return;
@@ -124,10 +164,11 @@ export default function TalkSheet({ onClose }: { onClose: () => void }) {
     for (const h of out.history) (h === "undo" ? undo : redo)();
     const label = `Voice: ${said.length > 48 ? `${said.slice(0, 47)}…` : said}`;
     if (out.changed) run({ ok: true, project: out.project }, label, { notice: reply || "Done. Undo brings it back.", undoable: true });
-    if (out.history.length || out.changed || out.views.length) say("home", reply || (out.changed ? "Done." : ""));
+    if (out.history.length || out.changed || out.views.length) say("home", reply || (out.changed ? WORDS[lang].done : ""));
     for (const note of out.notes) say("home", note);
-    if (out.failure) say("home", out.failure, "error");
+    if (out.failure) say("home", `${WORDS[lang].couldNot}${out.failure}`, "error");
     if (out.views.length) {
+      if (!out.changed) feedback.click();
       for (const v of out.views) show(v);
       // Anything but a new overlay: close the sheet so the change can be seen,
       // and keep the reply in sight as a message.
@@ -158,7 +199,7 @@ export default function TalkSheet({ onClose }: { onClose: () => void }) {
       if (!local.actions.length) return say("home", reply);
       return carryOut(said, local.actions, reply, refs, false);
     }
-    if (credits && !credits.live) return say("home", OFF);
+    if (credits && !credits.live) return say("home", WORDS[hindi ? "hi" : "en"].off);
     setBusy(true);
     const controller = new AbortController();
     abort.current = controller;
@@ -171,7 +212,7 @@ export default function TalkSheet({ onClose }: { onClose: () => void }) {
       return say("home", answer.message, "error");
     }
     setCredits((c) => ({ live: c?.live ?? true, left: answer.left }));
-    if (!answer.actions.length) return say("home", answer.reply || "Sorry, I didn’t catch that. Try “make the kitchen bigger”.");
+    if (!answer.actions.length) return say("home", answer.reply || WORDS[hindi ? "hi" : "en"].missed);
     carryOut(said, answer.actions, answer.reply, refs, false);
   };
 
@@ -241,58 +282,59 @@ export default function TalkSheet({ onClose }: { onClose: () => void }) {
           Read aloud
         </button>
       </div>
-      {!prefs.talkNoteSeen && Speech && (
-        <p className="dh-talk-note">
-          <Icon.info size={16} aria-hidden />
-          <span>
-            Your browser turns speech into text (Google or Apple may process the audio). Dream Home receives only the text and doesn’t keep it.
-          </span>
-          <button type="button" onClick={() => setPrefs({ talkNoteSeen: true })}>
-            OK
-          </button>
-        </p>
-      )}
-      <ol className="dh-talk-log" ref={list} aria-live="polite" aria-label="Conversation">
-        {messages.map((m) => (
-          <li key={m.id} className={`is-${m.who} ${m.tone ? `is-${m.tone}` : ""}`}>
-            <span className="dh-visually-hidden">{m.who === "you" ? "You said: " : "Home: "}</span>
-            {m.text}
-          </li>
-        ))}
-        {busy && (
-          <li className="is-home is-busy" aria-busy="true">
-            Thinking…
-          </li>
-        )}
-      </ol>
-      {pending && (
-        <div className="dh-talk-confirm" role="group" aria-label="Confirm the change" aria-live="polite">
-          <p>{pending.ask}</p>
-          <div>
-            <Button variant="primary" onClick={() => carryOut(pending.said, pending.actions, pending.reply, pending.refs, true)}>
-              Yes, do it
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setPending(null);
-                say("home", "OK, nothing changed.");
-              }}
-            >
-              No
-            </Button>
-          </div>
-        </div>
-      )}
-      {!messages.length && !pending && (
-        <div className="dh-talk-examples" role="group" aria-label="Try saying">
-          {EXAMPLES.map((e) => (
-            <button key={e} type="button" onClick={() => void send(e)}>
-              “{e}”
+      {/* The only part that scrolls: the input below always stays on screen. */}
+      <div className="dh-talk-body">
+        {!prefs.talkNoteSeen && Speech && (
+          <p className="dh-talk-note">
+            <Icon.info size={16} aria-hidden />
+            <span>{w.note}</span>
+            <button type="button" onClick={() => setPrefs({ talkNoteSeen: true })}>
+              OK
             </button>
+          </p>
+        )}
+        <ol className="dh-talk-log" ref={list} aria-live="polite" aria-label="Conversation">
+          {messages.map((m) => (
+            <li key={m.id} className={`is-${m.who} ${m.tone ? `is-${m.tone}` : ""}`}>
+              <span className="dh-visually-hidden">{m.who === "you" ? "You said: " : "Home: "}</span>
+              {m.text}
+            </li>
           ))}
-        </div>
-      )}
+          {busy && (
+            <li className="is-home is-busy" aria-busy="true">
+              {w.thinking}
+            </li>
+          )}
+        </ol>
+        {pending && (
+          <div className="dh-talk-confirm" role="group" aria-label="Confirm the change" aria-live="polite">
+            <p>{pending.ask}</p>
+            <div>
+              <Button variant="primary" onClick={() => carryOut(pending.said, pending.actions, pending.reply, pending.refs, true)}>
+                {w.yes}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setPending(null);
+                  say("home", w.unchanged);
+                }}
+              >
+                {w.no}
+              </Button>
+            </div>
+          </div>
+        )}
+        {!messages.length && !pending && (
+          <div className="dh-talk-examples" role="group" aria-label="Try saying">
+            {w.examples.map((e) => (
+              <button key={e} type="button" onClick={() => void send(e)}>
+                “{e}”
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <form
         className="dh-talk-input"
         onSubmit={(e) => {
@@ -317,14 +359,14 @@ export default function TalkSheet({ onClose }: { onClose: () => void }) {
           maxLength={TEXT_MAX}
           enterKeyHint="send"
           aria-label="What would you like to change?"
-          placeholder={listening ? "Listening…" : prefs.talkLang === "hi" ? "बोलिए या लिखिए…" : "Say or type a change…"}
+          placeholder={listening ? w.listeningPlaceholder : w.placeholder}
           onChange={(e) => setDraft(e.target.value)}
         />
         <IconButton icon={Icon.send} tone="plain" label="Send" type="submit" disabled={!draft.trim() || busy} />
       </form>
       <p className="dh-talk-foot">
-        {!Speech ? "Tip: tap the 🎤 on your keyboard to speak." : listening ? "Listening… tap the microphone to stop." : "Tap the microphone and speak, or type."}
-        {left !== null && ` ${left} left today.`}
+        {!Speech ? w.noSpeech : listening ? w.listening : w.idle}
+        {left !== null && w.left(left)}
       </p>
     </section>
   );

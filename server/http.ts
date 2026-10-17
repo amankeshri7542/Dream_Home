@@ -112,9 +112,11 @@ function ipv6Groups(ip: string): number[] | null {
 
 /**
  * Who is calling, for per-connection limits. IPv6 users get a whole /64 (one
- * home or phone; the low bits rotate freely), IPv4 the exact address.
+ * home or phone; the low bits rotate freely), IPv4 the exact address. Counts
+ * that anyone could inflate from a big address range (reports, views) use a
+ * /48, a whole site's allocation.
  */
-export function clientIp(request: Request): string {
+export function clientIp(request: Request, v6Prefix: 48 | 64 = 64): string {
   const raw = (
     request.headers.get("x-forwarded-for")?.split(",")[0] ||
     request.headers.get("x-real-ip") ||
@@ -127,9 +129,9 @@ export function clientIp(request: Request): string {
   if (groups.slice(0, 5).every((g) => g === 0) && groups[5] === 0xffff)
     return [groups[6] >> 8, groups[6] & 255, groups[7] >> 8, groups[7] & 255].join(".");
   return `${groups
-    .slice(0, 4)
+    .slice(0, v6Prefix / 16)
     .map((g) => g.toString(16))
-    .join(":")}::/64`;
+    .join(":")}::/${v6Prefix}`;
 }
 
 export const deviceOf = (request: Request) => {

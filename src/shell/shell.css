@@ -857,7 +857,9 @@
   .dh-app.is-compact:has(.dh-inspector:is([data-snap="medium"], [data-snap="expanded"]))
     .dh-camera-hud,
   .dh-app.is-compact:has(.dh-inspector:is([data-snap="medium"], [data-snap="expanded"]))
-    .dh-hide-chrome {
+    .dh-hide-chrome,
+  /* The talk sheet too: on short phones it would push them into the top bar. */
+  .dh-app.is-compact:has(.dh-talk) .dh-camera-hud {
     display: none;
   }
   /* Phones: the elevator rides on the left under the checklist, clear of the
@@ -1259,7 +1261,7 @@
     color: var(--dh-ink);
   }
   .dh-checklist-pop li button {
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 12px;
     border: 0;
     border-radius: var(--dh-radius-pill);
@@ -1355,7 +1357,7 @@
     align-items: center;
     gap: 5px;
     flex: none;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 14px;
     border: 1px solid var(--dh-line);
     border-radius: var(--dh-radius-pill);

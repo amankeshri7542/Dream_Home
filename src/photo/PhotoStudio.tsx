@@ -21,6 +21,7 @@ import {
   type ShapeId,
 } from "./settings";
 import "./photo.css";
+import { feedback } from "../ui/feedback";
 
 export type PhotoSettings = { framing: Framing; mood: MoodId; aspect: number; watermark: boolean };
 
@@ -100,6 +101,11 @@ export function PhotoStudio({
   const [livedIn, setLivedIn] = useState(state.view.livedIn !== false);
   const [phase, setPhase] = useState<Phase>({ kind: "setup" });
   const url = useMemo(() => (phase.kind === "done" ? URL.createObjectURL(phase.blob) : ""), [phase]);
+  // A finished photo gets the happy sound.
+  useEffect(() => {
+    if (phase.kind === "done") feedback.success();
+  }, [phase.kind]);
+
   useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url]);
   const onSceneRef = useRef(onScene);
   onSceneRef.current = onScene;

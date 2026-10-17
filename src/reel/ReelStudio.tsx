@@ -33,6 +33,7 @@ import {
 } from "./settings";
 import "../photo/photo.css";
 import "./reel.css";
+import { feedback } from "../ui/feedback";
 
 type Phase =
   | { kind: "setup" }
@@ -70,10 +71,16 @@ export default function ReelStudio({
   const [musicPicked, setMusicPicked] = useState(false);
   const [livedIn, setLivedIn] = useState(state.view.livedIn !== false);
   const existing = linkFor(homes.activeId);
-  const [showLink, setShowLink] = useState(true);
+  // A new public link only when asked for; a home already shared ends with its link.
+  const [showLink, setShowLink] = useState(!!existing);
   const [phase, setPhase] = useState<Phase>({ kind: "setup" });
   const progress = useSyncExternalStore(feed.subscribe, feed.get, feed.get);
   const url = useMemo(() => (phase.kind === "done" ? URL.createObjectURL(phase.blob) : ""), [phase]);
+  // A finished video gets the happy sound.
+  useEffect(() => {
+    if (phase.kind === "done") feedback.success();
+  }, [phase.kind]);
+
   useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url]);
   const latest = useRef({ onScene, onCancel, filming: false });
   latest.current = { onScene, onCancel, filming: phase.kind === "filming" };

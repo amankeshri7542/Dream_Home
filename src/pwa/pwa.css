@@ -1,0 +1,9 @@
+@layer components {
+  /* Update and install banners share the move banner's place and look. */
+  .dh-pwa-banner {
+    flex-wrap: wrap;
+  }
+  .dh-pwa-banner p {
+    min-width: 12em;
+  }
+}

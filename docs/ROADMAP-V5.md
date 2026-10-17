@@ -14,7 +14,8 @@ work can resume after any interruption. Update it at the end of every phase.
   - M5: a city and the way the home faces give the real sun; the Sunlight sheet (seasons, hour slider, sun per room, tips); opt-in Vastu with swaps; the Home score ring and badges, on the reel's end card and shared homes too.
   - M6: start from a photo of the builder's plan. The AI (Sonnet 5.5) reads it once per device; the homeowner checks the rooms over the faint photo on the 2D plan, fixes them, then "Make it 3D". "Draw it yourself" works with no reading at all.
   - M7: talk to your home. A Talk button (phones: above the Home bar and in the room's header; desktop: the top bar) opens a chat sheet; speak or type in English, Hindi or Hinglish. Haiku 5.5 turns a request into calls from a closed set of 30 tools, run as one undo step; big changes ask first; navigation is answered on the phone without the AI.
-- **Next phase: M8.** PWA, usability and security review, docs. First-load budget: about 4 KB gzip left of the +30 KB.
+- **v5 is complete** (M8 shipped 18 Oct 2026): installable and offline, reviewed for usability and security, documented. First-load budget: 1.5 KB gzip left of the +30 KB.
+- **Next:** the owner's setup (below), the live AI checks, and real-phone checks of the reel in WhatsApp and Instagram, the share preview in WhatsApp, Hindi speech, and installing on Android and iPhone. Usability follow-ups are listed in the M8 decisions.
 - **Live checks still owed (need KV connected, below, and the owner's go-ahead):** one real plan reading with the sample plan (about ₹4–8; the sample and a one-reading script are ready), and a few real voice commands (about ₹0.1 each).
 - **Waiting for the owner's review (not merged):** three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist).
 - **Owner actions pending** (sharing, the AI designer, plan reading and talking are off on the live site until these are done):
@@ -208,6 +209,79 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Nothing said is kept or logged:** usage and cost only; a failed call logs the error's name. A unit test checks.
   - **Size:** M7 adds 0.6 KB gzip to the first load (225.6 → 226.2 KB, same method). The sheet, the runner and the tool set load on first tap (10.9 KB).
 
+- **18 Oct 2026 (M8):**
+  - **A hand-written service worker, not `vite-plugin-pwa`.** About 120 lines (`src/pwa/sw.js`) plus a small build plugin (`scripts/pwa/plugin.mjs`) that writes `dist/sw.js` with this build's file lists. It follows §5 exactly and adds no dependency (Workbox and its build tooling are a large supply chain for this). What it does:
+    - keeps the app shell at install: the entry and the editor's first chunks, their styles, the Latin fonts, the manifest and an icon (15 files);
+    - keeps other built files, models and pictures as they're used (models by `?v=`, which replaces the old copy);
+    - never touches `/api/` or `/h/`.
+  - **The first visit counts too:** the worker takes over only after the page has loaded, so the page then sends it the list of files it already loaded (again at 5 s and 20 s, for files still on their way), and the worker keeps them from the HTTP cache. The app, its 3D included, then opens offline after one visit (`test:preview` proves it).
+  - **Cache lookups ignore `Vary`:** `vite preview` sends `Vary: Origin`, and module scripts carry an Origin header the install requests didn't, so lookups missed.
+  - **Updates wait for a tap:** a new version shows "A new version of Dream Home is ready. Your home is saved. [Update]". The page reloads only when the person asked (not when the very first worker takes over), and checks for a new version whenever the app comes back to the front. `/sw.js` is sent with `Cache-Control: no-cache`.
+  - **Installing:** a manifest (standalone, paper background) and icons drawn from the house mark (`npm run icons`: any, maskable and the iPhone home-screen icon). The nudge shows from the second visit or after a first share. It uses Chrome's own prompt where there is one and the Share → Add to Home Screen steps on iPhone; "Not now" hides it for two weeks. More → "Install Dream Home" replaces "Keep it on your phone". Banners sit above the score ring they briefly cover.
+  - **Found on the way:**
+    - `:root[data-quality="battery"]` never matched (the tier is on the scene). Writing the tier onto `<html>` cost 3 idle frames, because something watches the root's attributes, so it's now CSS only (`:root:has(.scene-v2[data-quality="battery"])`).
+    - On phones the camera buttons hide while Talk is open, since on short screens the sheet pushed them into the top bar.
+    - On tablets the Talk button kept its round shape (fixed in a follow-up commit to M7).
+  - **Game feel:** the happy sound now also plays when a photo or video is ready, a link is made, and a plan becomes 3D; Talk's view changes click softly. The empty "Draw it yourself" house gets a direct "Add a room".
+  - **Accessibility:** axe now covers every v5 sheet at 390 and 1440 px. It found two real contrast failures in More (the pale green "Measurements" and "Text size" labels and the small print), now in the ink colours.
+  - **Performance:** first-load JS is +28.5 KB gzip over v4 (199.5 → 228.0 KB, both measured by summing the entry's and the editor's static chunks with node's gzip), within the +30 KB budget. The viewer reaches 3D in about 1.1 s on a warm cache on the Mac. Draw-call and idle-frame budgets hold.
+  - **Security review** (a fresh subagent over `server/`, `vercel.json`, share, voice, plan reading, the service worker and moving homes) found no high issues and four medium ones, all fixed:
+    - **The daily budget is a hard cap now:**
+      - each AI call charges its worst case in the atomic reserve and settles to the real cost;
+      - after a refusal or cut-off answer the device gets its use back but the connection's stays taken (no refusal loops);
+      - a call that never reached the model gives everything back; a timeout keeps its worst case;
+      - streams get a real deadline (`AbortSignal.timeout`), since the SDK's timeout stops counting once a stream starts.
+    - **Link pictures are limited** (a new `image` kind: 40 per device and 120 per connection a day), and view and remix counts take a `read` use.
+    - **An owner's update can't undo a hide or a delete:** owner writes re-read the record and write only if it still exists (`SET … XX`), keeping its hidden state. A write that finds the share gone removes the file it just stored.
+    - **The link's picture shows the name only when the link does** (`posterName`, cleaned by the same `publicName` the server uses, now in `src/share/names.ts`).
+  - **Low findings fixed:**
+    - the remixed-from name is cleaned;
+    - `publicName` catches digits in any script and anything shaped like a web address;
+    - reports and views count IPv6 per /48;
+    - a stopped share's cache drops in about a minute (and the message says so);
+    - `X-Robots-Tag: noindex` on `/h/…`;
+    - the admin secret must be 32+ characters;
+    - `cleanAction` checks own fields only;
+    - the plan photo's privacy line is accurate when the AI reads it;
+    - the design route logs only the error's name.
+  - **Left as documented limits** (`docs/SECURITY.md`): shared homes need KV to be read; no global cap on making links; the LAN dev server with a real key; dev-only `npm audit` advisories (vitest 3 and two transitive build tools; production has none).
+  - **The reel's link** is now off by default unless the home is already shared, so making a video never makes a public link unasked (the usability review raised it too). When it's on, "Show my home's name" stays on, since the video already carries the home's title.
+  - **Usability review:** a fresh subagent played an 8-year-old, a busy parent and a grandparent (Extra large text, Hindi) at 320, 360, 390, 768, 1280 and 1440 px, through first launch → AI or template → room editing → Talk → photo → video → share → viewer → Remix. Every finding was checked against screenshots and the DOM.
+    - **P0, fixed:** with Large or Extra large text, Talk's microphone and text box were off the screen. Now only the note, conversation and examples scroll (the examples are one swipeable row on short screens). A new test, with a microphone, covers 320 and 390 px in Extra large.
+    - **P1, fixed:**
+      - **The room tray on phones:** two rows. Home and the room's tools (Talk, Sunlight, Photo) on the first; ‹ the room's name › on the second, so the arrows read as previous and next room, not "back". The name is never cut.
+      - **The tray's height:** medium is taller (46% of the screen, 56% with bigger text), and tapping a tab raises a tucked-down tray.
+      - **Talk in हिंदी:** examples, the note, the footer, confirmations ("मैं Bedroom 2 हटा दूँगा। ठीक है?") and "already so" notes are in Hindi. A reason from the home's own checks keeps its English detail after "यह नहीं हो पाया।".
+      - **The AI brief's must-haves:** says "We've ticked what most families want. Tap to add or remove."
+      - **Draw it yourself on a phone:**
+        - the plan tools fold away to give the plan the screen;
+        - an empty floor shows no "Tap a room" hint;
+        - the "Add a room" step stays.
+      - **"Designed for you":** "Try another" and "Keep it" are pinned to the card's bottom; on narrow phones the card takes the full width, with the camera buttons and floor rail out of the way while it's open (a test at 320 px Extra large).
+    - **P2, fixed:**
+      - **Taps and layout:**
+        - every chip, segmented switch and "Try it" button is at least 44 px, and the desktop Home bar too;
+        - the four-across chips go 2 × 2 with bigger text on phones;
+        - the Add room footer is slimmer on short screens;
+        - the "start from a plan" link is hidden while the floor plan is open.
+      - **Words:**
+        - "Empty the room" offers Undo, and its empty state points up to Add furniture;
+        - "Make it nice" keeps the room's name as written;
+        - My homes shows one "Open now" badge;
+        - "Welcome back" has one big button.
+      - **The viewer:** the report button is labelled "Report this home" and its sheet closes with Escape.
+    - **P2, left for later** (the review's screenshots are in the session scratchpad):
+      - the tour starting under the build animation;
+      - the Home score chip's wording ("75 · 1/5 ideas");
+      - Photo and Video being hard to find from Home on phones;
+      - room labels hidden where they'd overlap;
+      - the home's name cut short in the top bar;
+      - the Vastu switch being part of undo;
+      - the viewer opening on a small closed-up exterior;
+      - three wordings for "back" and icon-only desktop controls;
+      - the Home score panel and Sunlight sheet framing on desktop;
+      - 3D room labels shorter than 44 px.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
@@ -218,7 +292,7 @@ work can resume after any interruption. Update it at the end of every phase.
 - [x] **M5** Location, real sun, sunlight, Vastu, Home score
 - [x] **M6** Builder's plan → 3D
 - [x] **M7** Talk to your home (voice + chat, Haiku 5.5)
-- [ ] **M8** PWA, usability and security review, docs
+- [x] **M8** PWA, usability and security review, docs
 
 ## Log
 - **2026-10-17, M0a:**
@@ -356,3 +430,30 @@ work can resume after any interruption. Update it at the end of every phase.
     - `tests/preview/security.spec.ts`: the Talk sheet under the production CSP, and the bundled `/api/command` answering offline and refusing a bad request.
   - **Gate:** typecheck, lint, 960 unit tests, build, `check:api`, 132 browser tests (36 screenshot- and timing-only skipped), 6 preview tests, `diff --check`: all green.
   - **Found in the live check:** on tablets the Talk button stretched into a bar (the tablet rule that widens the Home bar caught it). Fixed in `shell.css`; `talk.spec.ts` now checks it's a 64 px round button above the Home bar at 390 and 768 px.
+- **2026-10-18, M8:**
+  - **New:**
+    - `src/pwa/` (`sw.js`, `pwa.ts`, `PwaUi.tsx`, `pwa.css`), `scripts/pwa/` (`plugin.mjs`, `icons.mjs`);
+    - `public/manifest.webmanifest`, `public/icons/`;
+    - `src/share/names.ts` (`publicName`, shared with the server).
+  - **Changed:**
+    - **Server:** `server/limiter.ts` (pre-charged budget, `settle`, `failed`, the `image` kind), `server/claude.ts` (`worstCaseUsd`, `billOf`, deadlines), `server/design.ts`, `planRead.ts`, `command.ts`, `share.ts` (owner writes only if the share still exists, picture limits, metered view counts, cleaned remix names, shorter caches, 32-character admin secret), `kv.ts` (`onlyIfExists`), `http.ts` (`clientIp` by /48), `headers.ts` and `vercel.json` (`/sw.js` no-cache, `/h/` noindex), `api/index.js`.
+    - **App:**
+      - the Talk sheet (scrolling middle, Hindi words), the room tray (two-row header, taller, tabs raise it), the plan check (fold, empty hint);
+      - design notes (pinned actions), the AI brief copy and chips, the poster's name, the reel link default, the viewer's report button;
+      - My homes, "Welcome back", "Empty the room", "Make it nice", touch targets, menu contrast, the battery style, success sounds.
+  - **Tests:**
+    - Unit:
+      - `src/pwa/pwa.test.ts` (6): visits, the nudge, snoozing, update only on a tap, the first visit's files;
+      - `platform.test.ts`: the pre-charge, settling, failed calls, `billOf`;
+      - `share.test.ts`: names, remix names, the hide/delete race, picture limits, /48 reports, the admin secret;
+      - `voice.test.ts`: Hindi confirmations;
+      - `src/share/share.test.ts`: the poster's name.
+    - Browser:
+      - `tests/pwa.spec.ts` (3): Chrome's install prompt on the second visit; iPhone steps and Not now; the nudge after a first share;
+      - `a11y.spec.ts`: every v5 sheet and the plan's steps at 390 and 1440 px;
+      - `talk.spec.ts`: Extra large with a microphone, Hindi words, the round button;
+      - `ai.spec.ts`: the design notes at 320 px Extra large;
+      - `planread.spec.ts`: folding the tools, the empty house's next step;
+      - `interiors.spec.ts`: the battery style.
+    - `tests/preview/security.spec.ts` (7): offline after one visit with the API never cached, the manifest and icons.
+  - **Gate:** typecheck, lint, 974 unit tests, build, `check:api`, 142 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.

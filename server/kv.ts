@@ -3,7 +3,8 @@
 
 export type KeyValue = {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string, opts?: { ttl?: number; onlyIfNew?: boolean }): Promise<boolean>;
+  /** `onlyIfNew`: only when the key doesn't exist (NX); `onlyIfExists`: only when it does (XX). */
+  set(key: string, value: string, opts?: { ttl?: number; onlyIfNew?: boolean; onlyIfExists?: boolean }): Promise<boolean>;
   del(...keys: string[]): Promise<void>;
   incr(key: string): Promise<number>;
   /** Adds to a set; returns the set's size. */
@@ -26,6 +27,7 @@ export function memoryKv(): KeyValue {
     },
     async set(key, value, opts = {}) {
       if (opts.onlyIfNew && live(key)) return false;
+      if (opts.onlyIfExists && !live(key)) return false;
       values.set(key, { v: value, until: opts.ttl ? Date.now() + opts.ttl * 1000 : Infinity });
       return true;
     },
@@ -76,6 +78,7 @@ export function restKv(url: string, token: string, fetcher: typeof fetch = fetch
       const command: (string | number)[] = ["SET", key, value];
       if (opts.ttl) command.push("EX", opts.ttl);
       if (opts.onlyIfNew) command.push("NX");
+      if (opts.onlyIfExists) command.push("XX");
       const [v] = await run([command]);
       return v === "OK";
     },

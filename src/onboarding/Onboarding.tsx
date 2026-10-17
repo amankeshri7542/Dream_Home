@@ -12,9 +12,9 @@ import "./onboarding.css";
 import "../ai/ai.css";
 
 /** The big "Design it for me" button: the AI designer (title screen and gallery). */
-function AiEntry({ onClick }: { onClick: () => void }) {
+function AiEntry({ onClick, quiet = false }: { onClick: () => void; quiet?: boolean }) {
   return (
-    <button type="button" className="dh-ai-entry" onClick={onClick}>
+    <button type="button" className={`dh-ai-entry ${quiet ? "dh-ready-entry" : ""}`} onClick={onClick}>
       <Icon.sparkle size={26} aria-hidden />
       <span>
         <strong>Design it for me</strong>
@@ -117,7 +117,8 @@ export function TitleScreen({
               </Button>
             )}
             <p className="dh-title-question">Or start another home:</p>
-            <AiEntry onClick={onAi} />
+            {/* "Continue my home" is the one big button here. */}
+            <AiEntry quiet onClick={onAi} />
             <ReadyHomeEntry onClick={onNew} />
           </>
         ) : (

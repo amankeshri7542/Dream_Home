@@ -90,6 +90,12 @@
   .dh-ai-chips.is-four {
     grid-template-columns: repeat(4, 1fr);
   }
+  /* Bigger text on a phone: two by two, so no word is clipped. */
+  @media (max-width: 430px) {
+    :root:is([data-text="large"], [data-text="extra"]) .dh-ai-chips.is-four {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
   .dh-ai-chips.is-inline {
     display: flex;
     flex-wrap: wrap;
@@ -457,10 +463,30 @@
     color: var(--dh-ink-soft);
     font-size: calc(13.5px * var(--dh-text));
   }
+  /* Always in view, even when the notes scroll. */
   .dh-ai-notes-actions {
+    position: sticky;
+    /* Down over the card's own padding, so nothing shows beneath. */
+    bottom: -12px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    margin-bottom: -12px;
+    padding: 6px 0 12px;
+    background: var(--dh-glass-solid);
+    box-shadow: 0 -10px 10px -4px var(--dh-glass-solid);
+  }
+  :root:is([data-text="large"], [data-text="extra"]) .dh-ai-notes {
+    max-height: 42dvh;
+  }
+  /* Narrow phones: the full width, with the camera buttons and floor rail out of the way. */
+  @media (max-width: 400px) {
+    .dh-ai-notes {
+      right: calc(8px + var(--dh-safe-right));
+    }
+    .dh-app.is-compact:has(.dh-ai-notes) :is(.dh-camera-hud, .dh-floors) {
+      display: none;
+    }
   }
 
   /* "Make it nice" in Decorate. */

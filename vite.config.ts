@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { SECURITY_HEADERS } from "./server/headers";
+import { serviceWorker } from "./scripts/pwa/plugin.mjs";
 
 // Node's request and response, typed loosely: the project doesn't ship Node typings.
 type NodeRequest = AsyncIterable<Uint8Array> & {
@@ -75,7 +76,7 @@ function localApi(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), localApi()],
+  plugins: [react(), localApi(), serviceWorker()],
   build: { chunkSizeWarningLimit: 1200 },
   server: {
     port: 5173,

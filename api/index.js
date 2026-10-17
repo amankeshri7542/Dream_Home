@@ -3631,8 +3631,8 @@ function cleanAction(call, refs) {
   if (!input) return null;
   const out = {};
   for (const [key, value] of Object.entries(input)) {
+    if (!Object.hasOwn(def.properties, key)) return null;
     const prop = def.properties[key];
-    if (!prop) return null;
     if (prop.type === "number") {
       const [lo, hi] = RANGES[key] ?? [0, 1e3];
       if (typeof value !== "number" || !Number.isFinite(value) || value < lo || value > hi) return null;
@@ -3712,6 +3712,10 @@ var PRICES = [
 ];
 var UNKNOWN = { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 };
 var priceOf = (model) => PRICES.find(([prefix]) => model.startsWith(prefix))?.[1] ?? UNKNOWN;
+var worstCaseUsd = (model, inputTokens, maxTokens) => {
+  const p = priceOf(model);
+  return (inputTokens * Math.max(p.input, p.cacheWrite) + maxTokens * p.output) / 1e6;
+};
 var supportsFallback = (model) => model.startsWith("claude-opus-") || model.startsWith("claude-sonnet-5-5");
 var BilledError = class extends Error {
   constructor(message, costUsd = 0) {
@@ -3722,6 +3726,13 @@ var BilledError = class extends Error {
 };
 var DesignRefused = class extends BilledError {
 };
+function billOf(error) {
+  if (error instanceof BilledError) return error.costUsd;
+  if (error instanceof Anthropic.APIConnectionTimeoutError || error instanceof Anthropic.APIUserAbortError) return null;
+  if (error instanceof Anthropic.APIConnectionError) return 0;
+  if (error instanceof Anthropic.APIError && typeof error.status === "number") return 0;
+  return null;
+}
 var tokenCost = (u, p) => (u.input_tokens * p.input + u.output_tokens * p.output + (u.cache_creation_input_tokens ?? 0) * p.cacheWrite + (u.cache_read_input_tokens ?? 0) * p.cacheRead) / 1e6;
 function costOf(usage, model = MODEL) {
   if (usage.iterations?.length)
@@ -3731,6 +3742,7 @@ function costOf(usage, model = MODEL) {
 var callClaude = async (call) => {
   const model = call.model ?? MODEL;
   const client = new Anthropic({ apiKey: call.apiKey, timeout: call.timeoutMs ?? 1e5, maxRetries: 1 });
+  const deadline = { signal: AbortSignal.timeout(call.timeoutMs ?? 1e5) };
   const message = await client.beta.messages.stream({
     model,
     max_tokens: call.maxTokens,
@@ -3748,7 +3760,7 @@ var callClaude = async (call) => {
         ] : call.user
       }
     ]
-  }).finalMessage();
+  }, deadline).finalMessage();
   const costUsd = costOf(message.usage, message.model ?? model);
   console.info(
     // Usage only: never the prompt, the picture or the answer.
@@ -3775,7 +3787,7 @@ var callTools = async (call) => {
     tools: call.tools.map((tool) => ({ ...tool, input_schema: tool.input_schema })),
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: call.user }]
-  });
+  }, { signal: AbortSignal.timeout(call.timeoutMs ?? 2e4) });
   const costUsd = costOf(message.usage, message.model ?? call.model);
   console.info(JSON.stringify({ ai: call.label, model: message.model, stop: message.stop_reason, usage: message.usage, costUsd }));
   if (message.stop_reason === "refusal") throw new DesignRefused("The helper declined.", costUsd);
@@ -3894,14 +3906,14 @@ function ipv6Groups(ip) {
   const groups = [...left, ...Array(tail === void 0 ? 0 : missing2).fill("0"), ...right].map((g) => parseInt(g, 16));
   return groups.length === 8 && groups.every((g) => g >= 0 && g <= 65535) ? groups : null;
 }
-function clientIp(request) {
+function clientIp(request, v6Prefix = 64) {
   const raw = (request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "").trim();
   if (!raw) return "local";
   const groups = ipv6Groups(raw);
   if (!groups) return raw.slice(0, 64);
   if (groups.slice(0, 5).every((g) => g === 0) && groups[5] === 65535)
     return [groups[6] >> 8, groups[6] & 255, groups[7] >> 8, groups[7] & 255].join(".");
-  return `${groups.slice(0, 4).map((g) => g.toString(16)).join(":")}::/64`;
+  return `${groups.slice(0, v6Prefix / 16).map((g) => g.toString(16)).join(":")}::/${v6Prefix}`;
 }
 var deviceOf = (request) => {
   const device = request.headers.get("x-dream-device") ?? "";
@@ -3939,6 +3951,7 @@ function memoryKv() {
     },
     async set(key, value, opts = {}) {
       if (opts.onlyIfNew && live(key)) return false;
+      if (opts.onlyIfExists && !live(key)) return false;
       values.set(key, { v: value, until: opts.ttl ? Date.now() + opts.ttl * 1e3 : Infinity });
       return true;
     },
@@ -3988,6 +4001,7 @@ function restKv(url, token, fetcher = fetch) {
       const command = ["SET", key, value];
       if (opts.ttl) command.push("EX", opts.ttl);
       if (opts.onlyIfNew) command.push("NX");
+      if (opts.onlyIfExists) command.push("XX");
       const [v] = await run([command]);
       return v === "OK";
     },
@@ -4014,13 +4028,15 @@ function restKv(url, token, fetcher = fetch) {
 }
 
 // server/limiter.ts
-var KINDS = ["home", "room", "command", "plan", "share", "report", "read"];
+var KINDS = ["home", "room", "command", "plan", "share", "image", "report", "read"];
 var DEFAULT_RULES = {
   home: { device: FREE_HOME_DESIGNS, window: "life", ip: 8, costly: true },
   room: { device: FREE_ROOM_MAKEOVERS, window: "life", ip: 30, costly: true },
   command: { device: 15, window: "day", ip: 60, costly: true },
   plan: { device: 1, window: "life", ip: 3, costly: true },
   share: { device: 20, window: "day", ip: 60, costly: false },
+  // A link's preview picture (sent after making or updating a link).
+  image: { device: 40, window: "day", ip: 120, costly: false },
   report: { device: 10, window: "day", ip: 20, costly: false },
   read: { device: 0, window: "day", ip: 600, costly: false }
 };
@@ -4056,24 +4072,39 @@ function memoryStore() {
     },
     // No await between the checks and the writes, so this is atomic in JS.
     async reserve(budget, counters) {
-      if (budget && (live(budget.key)?.n ?? 0) >= budget.max) return { ok: false, blocked: "budget" };
+      const charge = budget?.charge ?? 0;
+      if (budget) {
+        const spent = live(budget.key)?.n ?? 0;
+        if (spent >= budget.max || spent + charge > budget.max) return { ok: false, blocked: "budget" };
+      }
       const full = counters.findIndex((c) => (live(c.key)?.n ?? 0) + 1 > c.max);
       if (full >= 0) return { ok: false, blocked: full };
-      return { ok: true, values: counters.map((c) => addNow(c.key, 1, c.ttl)) };
+      const values2 = counters.map((c) => addNow(c.key, 1, c.ttl));
+      if (budget && charge > 0) addNow(budget.key, charge, SPEND_TTL);
+      return { ok: true, values: values2 };
     }
   };
 }
+var SPEND_TTL = 2 * 24 * 3600;
 var RESERVE_SCRIPT = `
 local budget = tonumber(ARGV[1])
-if budget >= 0 and tonumber(redis.call('GET', KEYS[1]) or '0') >= budget then return {1} end
+local charge = tonumber(ARGV[2])
+if budget >= 0 then
+  local spent = tonumber(redis.call('GET', KEYS[1]) or '0')
+  if spent >= budget or spent + charge > budget then return {1} end
+end
 local n = #KEYS - 1
 for i = 1, n do
-  if tonumber(redis.call('GET', KEYS[i + 1]) or '0') + 1 > tonumber(ARGV[2 * i]) then return {2, i} end
+  if tonumber(redis.call('GET', KEYS[i + 1]) or '0') + 1 > tonumber(ARGV[2 * i + 1]) then return {2, i} end
 end
 local out = {0}
 for i = 1, n do
   out[i + 1] = redis.call('INCR', KEYS[i + 1])
-  if redis.call('TTL', KEYS[i + 1]) < 0 then redis.call('EXPIRE', KEYS[i + 1], tonumber(ARGV[2 * i + 1])) end
+  if redis.call('TTL', KEYS[i + 1]) < 0 then redis.call('EXPIRE', KEYS[i + 1], tonumber(ARGV[2 * i + 2])) end
+end
+if budget >= 0 and charge > 0 then
+  redis.call('INCRBY', KEYS[1], charge)
+  if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ${SPEND_TTL}) end
 end
 return out`;
 function restStore(url, token, fetcher = fetch) {
@@ -4103,7 +4134,7 @@ function restStore(url, token, fetcher = fetch) {
     },
     async reserve(budget, counters) {
       const keys3 = [budget?.key ?? "dh:v1:no-budget", ...counters.map((c) => c.key)];
-      const args = [budget ? budget.max : -1, ...counters.flatMap((c) => [c.max, c.ttl])];
+      const args = [budget ? budget.max : -1, budget?.charge ?? 0, ...counters.flatMap((c) => [c.max, c.ttl])];
       const [answer] = await run([["EVAL", RESERVE_SCRIPT, keys3.length, ...keys3, ...args]]);
       const out = answer.result.map(Number);
       if (out[0] === 0) return { ok: true, values: out.slice(1) };
@@ -4153,11 +4184,15 @@ var Limiter = class {
     const used = await this.store.get(this.keys(kind, device, "-").device);
     return Math.max(0, rule.device - used);
   }
-  /** Takes one use, or says why not. Call `refund` if the work then fails. */
-  async reserve(kind, device, ip) {
+  /**
+   * Takes one use, or says why not. For AI work, `estimateUsd` (the call's
+   * worst case) is charged to today's budget at once, so calls running at the
+   * same time can't overshoot it; `settle` or `failed` then corrects it.
+   */
+  async reserve(kind, device, ip, estimateUsd = 0) {
     const rule = this.rules[kind];
     const k = this.keys(kind, device, ip);
-    const budget = rule.costly ? { key: k.spend, max: Math.round(this.budgetUsd * UNITS_PER_USD) } : null;
+    const budget = rule.costly ? { key: k.spend, max: Math.round(this.budgetUsd * UNITS_PER_USD), charge: Math.ceil(Math.max(0, estimateUsd) * UNITS_PER_USD) } : null;
     const counters = this.counters(kind, device, ip);
     const result = await this.store.reserve(budget, counters);
     if (result.ok) return { ok: true, left: rule.device > 0 ? Math.max(0, rule.device - result.values[0]) : Infinity };
@@ -4165,12 +4200,31 @@ var Limiter = class {
     const deviceFull = rule.device > 0 && result.blocked === 0;
     return deviceFull ? { ok: false, reason: "limit", left: 0 } : { ok: false, reason: "busy", left: await this.left(kind, device) };
   }
-  async refund(kind, device, ip) {
-    for (const c of this.counters(kind, device, ip)) await this.store.add(c.key, -1, c.ttl);
+  /** Gives the use back: the device's, and the connection's unless `ip: false`. */
+  async refund(kind, device, ip, { ip: alsoIp = true } = {}) {
+    const k = this.keys(kind, device, ip);
+    for (const c of this.counters(kind, device, ip)) if (alsoIp || c.key !== k.ip) await this.store.add(c.key, -1, c.ttl);
   }
   async spend(usd) {
     if (!(usd > 0)) return;
-    await this.store.add(this.keys("home", "-", "-").spend, Math.ceil(usd * UNITS_PER_USD), 2 * DAY);
+    await this.store.add(this.keys("home", "-", "-").spend, Math.ceil(usd * UNITS_PER_USD), SPEND_TTL);
+  }
+  /** Swaps the worst case charged at `reserve` for what the call really cost. */
+  async settle(estimateUsd, actualUsd) {
+    const delta = Math.ceil(Math.max(0, actualUsd) * UNITS_PER_USD) - Math.ceil(Math.max(0, estimateUsd) * UNITS_PER_USD);
+    if (delta) await this.store.add(this.keys("home", "-", "-").spend, delta, SPEND_TTL);
+  }
+  /**
+   * After a failed AI call. `billedUsd`: what Anthropic charged (a refusal or
+   * a cut-off answer), 0 when the call never reached the model, null when
+   * nobody knows (a timeout): then the worst case stays charged.
+   * The device gets its use back either way (the person didn't get an
+   * answer); the connection only when nothing was spent, so a loop of
+   * failing requests from one place still runs into its daily limit.
+   */
+  async failed(kind, device, ip, estimateUsd, billedUsd) {
+    if (billedUsd !== null) await this.settle(estimateUsd, billedUsd);
+    await this.refund(kind, device, ip, { ip: billedUsd === 0 });
   }
 };
 function budgetFrom(env) {
@@ -4240,9 +4294,11 @@ async function handleCommand(request, env, deps = {}) {
     return fail("invalid", "This home couldn\u2019t be described. Try again.", void 0, 400);
   if (!live || !limiter) return fail("offline", "Talking to your home isn\u2019t switched on yet.");
   const ip = clientIp(request);
+  const model = env.COMMAND_MODEL || COMMAND_MODEL;
+  const estimate = worstCaseUsd(model, 6e3, 600);
   let verdict;
   try {
-    verdict = await limiter.reserve("command", device, ip);
+    verdict = await limiter.reserve("command", device, ip, estimate);
   } catch (error) {
     console.error("limit store", error instanceof Error ? error.message : error);
     return fail("busy", "Your home\u2019s helper is busy right now.");
@@ -4253,7 +4309,7 @@ async function handleCommand(request, env, deps = {}) {
   try {
     const answer = await call({
       apiKey: env.ANTHROPIC_API_KEY,
-      model: env.COMMAND_MODEL || COMMAND_MODEL,
+      model,
       system: COMMAND_SYSTEM,
       user: commandUserText(context, said, lang),
       tools: TOOL_DEFS,
@@ -4261,7 +4317,7 @@ async function handleCommand(request, env, deps = {}) {
       label: "command",
       timeoutMs: 2e4
     });
-    await limiter.spend(answer.costUsd).catch(() => void 0);
+    await limiter.settle(estimate, answer.costUsd).catch(() => void 0);
     const refs = refsOf(context);
     const checked = answer.calls.slice(0, MAX_ACTIONS * 2).map((c) => cleanAction(c, refs));
     const actions = checked.filter((a) => a !== null).slice(0, MAX_ACTIONS);
@@ -4275,8 +4331,7 @@ async function handleCommand(request, env, deps = {}) {
     });
   } catch (error) {
     console.error("command failed", error instanceof Error ? error.name : "error");
-    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => void 0);
-    await limiter.refund("command", device, ip).catch(() => void 0);
+    await limiter.failed("command", device, ip, estimate, billOf(error)).catch(() => void 0);
     return fail("busy", "Couldn\u2019t do that just now. Try again in a moment.", verdict.left + 1);
   }
 }
@@ -4589,9 +4644,11 @@ async function handleDesign(request, env, deps = {}) {
   if (!parsed.ok) return fail("invalid", parsed.error, void 0, 400);
   if (!live || !limiter) return fail("offline", "The AI designer isn\u2019t switched on yet.");
   const ip = clientIp(request);
+  const model = env.AI_MODEL || MODEL;
+  const estimate = worstCaseUsd(model, 1e4, kind === "home" ? 16e3 : 6e3);
   let verdict;
   try {
-    verdict = await limiter.reserve(kind, device, ip);
+    verdict = await limiter.reserve(kind, device, ip, estimate);
   } catch (error) {
     console.error("limit store", error);
     return fail("busy", "The AI designer is busy right now.");
@@ -4602,7 +4659,7 @@ async function handleDesign(request, env, deps = {}) {
   try {
     const answer = kind === "home" ? await call({
       apiKey: env.ANTHROPIC_API_KEY,
-      model: env.AI_MODEL,
+      model,
       system: HOME_SYSTEM,
       user: homeUserMessage(parsed.brief, variant),
       schema: HOME_PLAN_SCHEMA,
@@ -4610,20 +4667,19 @@ async function handleDesign(request, env, deps = {}) {
       maxTokens: 16e3
     }) : await call({
       apiKey: env.ANTHROPIC_API_KEY,
-      model: env.AI_MODEL,
+      model,
       system: ROOM_SYSTEM,
       user: roomUserMessage(parsed.brief, variant),
       schema: ROOM_PLAN_SCHEMA,
       effort: "low",
       maxTokens: 6e3
     });
-    await limiter.spend(answer.costUsd).catch(() => void 0);
+    await limiter.settle(estimate, answer.costUsd).catch(() => void 0);
     const plan = kind === "home" ? sanitizeHomePlan(answer.json) : sanitizeRoomPlan(answer.json);
     return json({ ok: true, plan, source: "ai", left: verdict.left });
   } catch (error) {
-    console.error("design failed", error instanceof Error ? error.message : error);
-    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => void 0);
-    await limiter.refund(kind, device, ip).catch(() => void 0);
+    console.error("design failed", error instanceof Error ? error.name : "error");
+    await limiter.failed(kind, device, ip, estimate, billOf(error)).catch(() => void 0);
     return error instanceof DesignRefused ? fail("busy", "The AI designer couldn\u2019t work with that note. Try changing it.", verdict.left + 1) : fail("busy", "The AI designer didn\u2019t answer in time.", verdict.left + 1);
   }
 }
@@ -5392,6 +5448,13 @@ function sameSecret(a, b) {
   return diff === 0;
 }
 
+// src/share/names.ts
+var HIDDEN_NAME = "A Dream Home";
+function publicName(name, fallback = HIDDEN_NAME) {
+  const cleaned = name.replace(/(?:https?:\/\/|www\.)\S+/giu, "").replace(/[\p{L}\p{N}.+_-]+@[\p{L}\p{N}-]+\.[\p{L}\p{N}.-]+/gu, "").replace(new RegExp("[\\p{L}\\p{N}-]+(?:\\.[\\p{L}\\p{N}-]+)*\\.\\p{L}{2,}\\b\\S*", "gu"), "").replace(new RegExp("\\+?\\p{Nd}[\\p{Nd}\\s().-]{6,}\\p{Nd}", "gu"), (run) => run.replace(new RegExp("\\P{Nd}", "gu"), "").length >= 8 ? "" : run).replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 60).trim();
+  return cleaned.length >= 2 ? cleaned : fallback;
+}
+
 // server/share.ts
 var LIMITS2 = {
   /** A home as JSON, as sent. */
@@ -5411,10 +5474,6 @@ var keys2 = (id) => ({
   seen: (what, ip) => `dh:v1:share:${id}:seen:${what}:${ip}`
 });
 var files = (id) => ({ project: `shares/${id}.json.gz`, image: `shares/${id}.jpg` });
-function publicName(name, fallback = "A Dream Home") {
-  const cleaned = name.replace(/\b(?:https?:\/\/|www\.)\S+/gi, "").replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g, "").replace(/\b[\w-]+\.(?:com|in|net|org|io|co|me|ly|app|xyz|info|biz)\b\S*/gi, "").replace(/\+?\d[\d\s().-]{6,}\d/g, (run) => run.replace(/\D/g, "").length >= 8 ? "" : run).replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 60).trim();
-  return cleaned.length >= 2 ? cleaned : fallback;
-}
 function jpegSize(bytes) {
   if (bytes.length < 4 || bytes[0] !== 255 || bytes[1] !== 216 || bytes[2] !== 255) return null;
   let i = 2;
@@ -5455,7 +5514,7 @@ async function prepare(request) {
   }
   const plot = { ...project.plot };
   if (body.showCity !== true) delete plot.location;
-  project = { ...project, plot, name: body.showName === false ? "A Dream Home" : publicName(project.name) };
+  project = { ...project, plot, name: body.showName === false ? HIDDEN_NAME : publicName(project.name) };
   const gz = await gzip(JSON.stringify(project));
   if (gz.byteLength > LIMITS2.storedBytes) return fail("too-big", "This home is too big to share.", void 0, 413);
   return { project, gz };
@@ -5470,8 +5529,13 @@ async function readMeta(kv, id) {
   }
 }
 var writeMeta = (kv, id, meta) => kv.set(keys2(id).meta, JSON.stringify(meta));
+async function updateMeta(kv, id, patch) {
+  const fresh = await readMeta(kv, id);
+  if (!fresh) return false;
+  return kv.set(keys2(id).meta, JSON.stringify({ ...fresh, ...patch, hidden: fresh.hidden, hiddenReason: fresh.hiddenReason }), { onlyIfExists: true });
+}
 var bearer = (request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
-var isAdmin = (request, env) => !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 24 && sameSecret(bearer(request), env.ADMIN_TOKEN);
+var isAdmin = (request, env) => !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 32 && sameSecret(bearer(request), env.ADMIN_TOKEN);
 async function isOwner(request, meta) {
   const token = bearer(request);
   return token.length >= 32 && sameSecret(await sha256(token), meta.tokenHash);
@@ -5520,11 +5584,14 @@ async function handleShare(request, env, deps, params = []) {
       const prepared = await prepare(request);
       if (prepared instanceof Response) return prepared;
       await blobs.put(files(id).project, prepared.gz, "application/gzip");
-      await writeMeta(kv, id, { ...meta, name: prepared.project.name, updatedAt: now, bytes: prepared.gz.byteLength });
+      if (!await updateMeta(kv, id, { name: prepared.project.name, updatedAt: now, bytes: prepared.gz.byteLength })) {
+        await blobs.remove(files(id).project).catch(() => void 0);
+        return missing();
+      }
       return json({ ok: true, id, updatedAt: now });
     }
     case "image":
-      return image(request, kv, blobs, id);
+      return image(request, env, deps, kv, blobs, id);
     case "stats": {
       const meta = await readMeta(kv, id);
       if (!meta) return missing();
@@ -5535,9 +5602,11 @@ async function handleShare(request, env, deps, params = []) {
     case "view":
     case "remix": {
       if (request.method !== "POST") return fail("invalid", "Use POST.", void 0, 405);
+      const verdict = await limiterFor(env, deps)?.reserve("read", "-", clientIp(request)).catch(() => null);
+      if (verdict && !verdict.ok) return json({ ok: true });
       const meta = await readMeta(kv, id).catch(() => null);
       if (!meta || meta.hidden) return missing();
-      const first = await kv.set(keys2(id).seen(action, clientIp(request)), "1", { ttl: action === "view" ? 6 * 3600 : DAY2, onlyIfNew: true }).catch(() => false);
+      const first = await kv.set(keys2(id).seen(action, clientIp(request, 48)), "1", { ttl: action === "view" ? 6 * 3600 : DAY2, onlyIfNew: true }).catch(() => false);
       if (first) await kv.incr(action === "view" ? keys2(id).views : keys2(id).remixes).catch(() => void 0);
       return json({ ok: true });
     }
@@ -5591,7 +5660,7 @@ async function create(request, env, deps, kv, blobs) {
     appVersion: (env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7),
     image: false,
     hidden: false,
-    ...prepared.project.remixOf ? { remixOf: prepared.project.remixOf } : {}
+    ...prepared.project.remixOf ? { remixOf: { id: prepared.project.remixOf.id, name: publicName(prepared.project.remixOf.name) } } : {}
   };
   await writeMeta(kv, id, meta);
   return json({ ok: true, id, editToken: token, updatedAt: now }, 201);
@@ -5616,11 +5685,12 @@ async function read(request, env, deps, kv, blobs, id) {
       "X-Content-Type-Options": "nosniff",
       "X-Robots-Tag": "noindex",
       // A viral link is served by the CDN, not one function call per visitor.
-      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=300"
+      // A stopped or hidden share disappears within about a minute.
+      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=30"
     }
   });
 }
-async function image(request, kv, blobs, id) {
+async function image(request, env, deps, kv, blobs, id) {
   const meta = await readMeta(kv, id);
   if (!meta) return missing();
   if (request.method === "GET") {
@@ -5632,7 +5702,7 @@ async function image(request, kv, blobs, id) {
         "Content-Type": "image/jpeg",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "default-src 'none'; img-src 'self'; sandbox",
-        "Cache-Control": "public, max-age=300, s-maxage=600"
+        "Cache-Control": "public, max-age=60, s-maxage=60"
       }
     });
   }
@@ -5641,6 +5711,8 @@ async function image(request, kv, blobs, id) {
     return fail("forbidden", "Only the person who shared this home can change its picture.", void 0, 403);
   if (!(request.headers.get("content-type") ?? "").startsWith("image/jpeg"))
     return fail("invalid", "Send the picture as a JPEG.", void 0, 415);
+  const limited = await reserve(request, env, deps, "image");
+  if (limited) return limited;
   let bytes;
   try {
     bytes = await readBytes(request, LIMITS2.imageBytes);
@@ -5651,7 +5723,10 @@ async function image(request, kv, blobs, id) {
   if (!size || size.width > LIMITS2.imageSide || size.height > LIMITS2.imageSide || !size.width || !size.height)
     return fail("invalid", "That picture isn\u2019t a JPEG of a sensible size.", void 0, 400);
   await blobs.put(files(id).image, bytes, "image/jpeg");
-  await writeMeta(kv, id, { ...meta, image: true });
+  if (!await updateMeta(kv, id, { image: true })) {
+    await blobs.remove(files(id).image).catch(() => void 0);
+    return missing();
+  }
   return json({ ok: true });
 }
 async function report(request, env, deps, kv, id) {
@@ -5660,7 +5735,7 @@ async function report(request, env, deps, kv, id) {
   if (limited) return limited;
   const meta = await readMeta(kv, id);
   if (!meta) return missing();
-  const reporters = await kv.addToSet(keys2(id).reports, clientIp(request));
+  const reporters = await kv.addToSet(keys2(id).reports, clientIp(request, 48));
   const [views] = await kv.counts(keys2(id).views);
   if (!meta.hidden && reporters >= 3 && reporters >= views * 0.05) {
     await writeMeta(kv, id, { ...meta, hidden: true, hiddenReason: "reports" });
@@ -5880,9 +5955,11 @@ async function handlePlanRead(request, env, deps = {}) {
     return fail("invalid", "That photo isn't a JPEG of a sensible size.", void 0, 400);
   if (!live || !limiter) return fail("offline", "Plan reading isn\u2019t switched on yet.");
   const ip = clientIp(request);
+  const model = env.PLAN_MODEL || PLAN_MODEL;
+  const estimate = worstCaseUsd(model, 7e3, 12e3);
   let verdict;
   try {
-    verdict = await limiter.reserve("plan", device, ip);
+    verdict = await limiter.reserve("plan", device, ip, estimate);
   } catch (error) {
     console.error("limit store", error instanceof Error ? error.message : error);
     return fail("busy", "Plan reading is busy right now.");
@@ -5896,7 +5973,7 @@ async function handlePlanRead(request, env, deps = {}) {
   try {
     const answer = await call({
       apiKey: env.ANTHROPIC_API_KEY,
-      model: env.PLAN_MODEL || PLAN_MODEL,
+      model,
       system: READING_SYSTEM,
       user: readingUserText({ plot: plot ? `${plot[1]} \xD7 ${plot[2]} ${plot[3]}` : void 0, road: ROAD.has(road) ? road : void 0 }),
       image: { mediaType: "image/jpeg", data: base64(bytes) },
@@ -5906,12 +5983,11 @@ async function handlePlanRead(request, env, deps = {}) {
       label: "plan-read",
       timeoutMs: 55e3
     });
-    await limiter.spend(answer.costUsd).catch(() => void 0);
+    await limiter.settle(estimate, answer.costUsd).catch(() => void 0);
     return json({ ok: true, reading: sanitizeReading(answer.json), left: verdict.left });
   } catch (error) {
     console.error("plan read failed", error instanceof Error ? error.name : "error");
-    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => void 0);
-    await limiter.refund("plan", device, ip).catch(() => void 0);
+    await limiter.failed("plan", device, ip, estimate, billOf(error)).catch(() => void 0);
     return fail("busy", "Couldn\u2019t read the plan this time.", verdict.left + 1);
   }
 }

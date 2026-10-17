@@ -7,6 +7,7 @@ import "./builder.css";
 import "./studio.css";
 import "./ui/styles/skin.css";
 import "./ui/styles/textsize.css";
+import { startPwa } from "./pwa/pwa";
 // A new version was deployed while this page was open, so its old lazy chunks
 // are gone: reload once (not in a loop) to pick up the new one.
 window.addEventListener("vite:preloadError", (event) => {
@@ -21,6 +22,9 @@ window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
   window.location.reload();
 });
+
+// Installable and offline (the service worker registers in production builds).
+startPwa();
 
 // A share link (/h/:id) opens the light viewer; everything else, the editor.
 // Both load on demand, so someone opening a link never downloads the editor.

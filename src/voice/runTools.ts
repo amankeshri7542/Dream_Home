@@ -54,7 +54,7 @@ export type RunOutcome = {
   history: ("undo" | "redo")[];
 };
 
-type Ctx = { refs: RefMap; unit: "ft" | "m"; activeFloorId: string; grow: boolean };
+type Ctx = { refs: RefMap; unit: "ft" | "m"; activeFloorId: string; grow: boolean; lang: "en" | "hi" };
 /** A step's result; "grow" means it would work once the house grows. */
 type Step = { ok: true; project: Project } | { ok: false; message: string } | { ok: "grow"; project: Project };
 
@@ -279,25 +279,43 @@ function viewOf(a: VoiceAction, ctx: Ctx): ViewIntent | null {
   return null;
 }
 
+type Lang = "en" | "hi";
+
 /** Why an edit changed nothing: it was already so. */
 function alreadySo(p: Project, a: VoiceAction, ctx: Ctx): string {
   const ref = typeof a.input.room === "string" ? ctx.refs.rooms.get(a.input.room) : undefined;
-  const name = (ref && findRoom(p, ref.floorId, ref.roomId)?.name) || "It";
+  const name = (ref && findRoom(p, ref.floorId, ref.roomId)?.name) || (ctx.lang === "hi" ? "यह" : "It");
+  if (ctx.lang === "hi") {
+    if (a.tool === "add_door") return `${name} में पहले से दरवाज़ा है।`;
+    if (a.tool === "furnish_room") return `${name} में पहले से फ़र्नीचर है।`;
+    if (a.tool === "resize_room") return `${name} पहले से इसी नाप का है।`;
+    return "यह पहले से हो चुका है।";
+  }
   if (a.tool === "add_door") return `${name} already has a door.`;
   if (a.tool === "furnish_room") return `${name} already has its furniture.`;
   if (a.tool === "resize_room") return `${name} is already that size.`;
   return "That was already done.";
 }
 
+const GROW: Record<Lang, string> = {
+  en: "There isn’t room for that, so I’ll make the house bigger first. OK?",
+  hi: "इसके लिए जगह नहीं है, तो पहले घर बड़ा कर दूँगा। ठीक है?",
+};
+
 /** What needs a yes first, in plain words; null when nothing does. */
-export function confirmText(project: Project, actions: readonly VoiceAction[], refs: RefMap): string | null {
+export function confirmText(project: Project, actions: readonly VoiceAction[], refs: RefMap, lang: Lang = "en"): string | null {
   const a = actions.find((x) => isDestructive(x.tool));
   if (!a) return null;
   const ref = typeof a.input.room === "string" ? refs.rooms.get(a.input.room) : undefined;
-  const name = (ref && findRoom(project, ref.floorId, ref.roomId)?.name) || "this room";
+  const name = (ref && findRoom(project, ref.floorId, ref.roomId)?.name) || (lang === "hi" ? "यह कमरा" : "this room");
+  const look = STYLE_PRESET_INFO[a.input.look as StylePreset]?.label ?? "new";
+  if (lang === "hi") {
+    if (a.tool === "remove_room") return `मैं ${name} हटा दूँगा। ठीक है?`;
+    if (a.tool === "empty_room") return `मैं ${name} का सारा फ़र्नीचर हटा दूँगा। ठीक है?`;
+    return `मैं पूरे घर को ${look} लुक दे दूँगा। ठीक है?`;
+  }
   if (a.tool === "remove_room") return `I’ll remove ${name}. OK?`;
   if (a.tool === "empty_room") return `I’ll take all the furniture out of ${name}. OK?`;
-  const look = STYLE_PRESET_INFO[a.input.look as StylePreset]?.label ?? "new";
   return `I’ll give the whole home the ${look} look. OK?`;
 }
 
@@ -309,21 +327,22 @@ export function runActions(
   project: Project,
   actions: readonly VoiceAction[],
   refs: RefMap,
-  opts: { unit: "ft" | "m"; activeFloorId: string; confirmed?: boolean },
+  opts: { unit: "ft" | "m"; activeFloorId: string; confirmed?: boolean; lang?: "en" | "hi" },
 ): RunOutcome {
+  const lang = opts.lang ?? "en";
   const outcome: RunOutcome = { project, changed: false, views: [], history: [], notes: [] };
   // Undo and redo stand alone; mixed into other changes they'd undo those.
   const history = actions.filter((a) => toolGroup(a.tool) === "history");
   if (history.length) {
     if (history.length === actions.length) outcome.history = history.map((a) => a.tool as "undo" | "redo");
-    else outcome.failure = "Say undo on its own, after the change.";
+    else outcome.failure = lang === "hi" ? "अनडू अलग से बोलिए, बदलाव के बाद।" : "Say undo on its own, after the change.";
     return outcome;
   }
   if (!opts.confirmed) {
-    const ask = confirmText(project, actions, refs);
+    const ask = confirmText(project, actions, refs, lang);
     if (ask) return { ...outcome, confirm: ask };
   }
-  const ctx: Ctx = { refs, unit: opts.unit, activeFloorId: opts.activeFloorId, grow: !!opts.confirmed };
+  const ctx: Ctx = { refs, unit: opts.unit, activeFloorId: opts.activeFloorId, grow: !!opts.confirmed, lang };
   let p = project;
   for (const a of actions) {
     if (toolGroup(a.tool) === "view") {
@@ -333,7 +352,7 @@ export function runActions(
     }
     const step = editStep(p, a, ctx);
     if (step.ok === "grow")
-      return { ...outcome, project, views: [], confirm: "There isn’t room for that, so I’ll make the house bigger first. OK?" };
+      return { ...outcome, project, views: [], confirm: GROW[lang] };
     if (!step.ok) {
       outcome.failure = step.message;
       break;

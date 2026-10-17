@@ -1,13 +1,17 @@
 # Dream Home
 
 A warm, playful 3D sandbox for building the home you keep imagining. Pick a
-starting home, move rooms like puzzle pieces, place doors and windows, furnish
-every room, style the roof and garden — then walk right in and take a photo.
+starting home (or start from a photo of your builder's plan), move rooms like
+puzzle pieces, place doors and windows, furnish every room, style the roof and
+garden — then walk right in, see where the sun reaches, take a photo, make a
+short video and share a link anyone can open in 3D. Talk to it in English,
+Hindi or Hinglish. It installs on a phone and opens offline.
 React, TypeScript, Vite, React Three Fiber and Three.js, with furniture modelled
-in Blender. No account; everything saves on your device. An optional **AI
-designer** (Claude Opus 5.5 through one small server function) designs a whole
-furnished home from four taps; without it, a built-in planner does the same job
-offline.
+in Blender. No account; everything saves on your device. The optional AI
+features (Claude, through one small server function) design a whole furnished
+home from four taps, read a builder's plan, and understand spoken requests;
+without them, a built-in planner, "Draw it yourself" and the phone's own
+answers do the job.
 
 [Open Dream Home](https://dream-home-liard-nine.vercel.app/)
 
@@ -24,11 +28,18 @@ Open [localhost:5173](http://localhost:5173). `npm run build` creates `dist/`;
 `npm run preview` serves it locally. GitHub's `main` branch is the Vercel
 deployment source.
 
-### The AI designer (optional)
+### The AI features and the server (optional)
 
 Copy `.env.example` to `.env.local` (never committed), set
 `ANTHROPIC_API_KEY=...` and run `npm run dev`: the dev server also serves
-`/api/*` from `server/*.ts`. Without a key the app uses its built-in planner.
+`/api/*` from `server/*.ts`. Without a key the app uses its built-in planner,
+"Draw it yourself" for plans, and the phone's own answers for talking.
+
+| Feature | Model (env override) | Free limit per device |
+|---|---|---|
+| AI home designer, room makeovers | `claude-opus-5-5` (`AI_MODEL`) | 3 homes, 10 rooms |
+| Reading a builder's plan | `claude-sonnet-5-5` (`PLAN_MODEL`) | 1 |
+| Talk to your home | `claude-haiku-5-5` (`COMMAND_MODEL`) | 15 a day |
 
 On Vercel, set the same variables in Project → Settings → Environment
 Variables. **A deployed site needs the Upstash Redis / Vercel KV integration**
@@ -37,9 +48,22 @@ because per-instance memory can't enforce the per-device limits or the daily
 budget (`AI_DAILY_BUDGET_USD`, default 10). `AI_DISABLED=1` switches every AI
 feature off at once. `.env.example` lists every variable and limit.
 
-After changing `server/` or `src/ai/`, run `npm run build:api` to regenerate the
-committed `api/index.js` (`npm run build` does it too; `npm run check:api`
-fails if it's stale).
+Share links also need a **Vercel Blob** store connected to the project
+(`BLOB_READ_WRITE_TOKEN`); `ADMIN_TOKEN` lets the site owner hide or delete a
+shared home ([admin runbook](docs/SECURITY.md)).
+
+After changing `server/`, `src/ai/`, `src/voice/tools.ts` or
+`src/planread/reading.ts`, run `npm run build:api` to regenerate the committed
+`api/index.js` (`npm run build` does it too; `npm run check:api` fails if it's
+stale).
+
+### Owner setup (Vercel)
+
+1. Connect the **Upstash Redis / Vercel KV** integration to the project (limits, the AI budget and share records).
+2. Create a **Vercel Blob** store and connect it (shared homes and their pictures).
+3. Set `ADMIN_TOKEN` to a long random secret; keep `ANTHROPIC_API_KEY` and, if you like, `AI_DAILY_BUDGET_USD`.
+4. Redeploy.
+5. When `home.amankeshri.com` works (a CNAME `home` → the value Vercel shows), set `PUBLIC_ORIGIN` and `VITE_PUBLIC_ORIGIN` to it and redeploy. Keep the old address working: its "Move my home" banner carries homes across.
 
 > The project lives in an iCloud-synced folder on the author's machine, so
 > `node_modules` is a symlink to an un-synced `node_modules.nosync`. If
@@ -71,7 +95,7 @@ fails if it's stale).
    **Outside**, **Explore** and **✨ AI design**. Add room is one sheet with
    three sides: *Add new* (rooms, balconies, courtyards and stairs; when the
    house is full it offers **Grow house & add** in one tap), *Your rooms* and
-   *Set aside* (rooms waiting to be placed back). The floor plan, view presets
+   *For later* (rooms kept for later, waiting to be placed back). The floor plan, view presets
    and *Fit home* sit at the right edge; phones pinch to zoom.
 4. **Step into a room** — tap any room, or its name in the picture, and it
    becomes the hero: the camera flies in, the walls around it drop to low
@@ -85,8 +109,8 @@ fails if it's stale).
    - **Colours** — wall paint, an accent wall and the floor (oak, walnut,
      herringbone, tile, terrazzo, marble, stone, slate, concrete, carpet).
    - **Layout** — Move (drag the room right in 3D; drop it on another room to
-     swap, or on *Set aside*), Edit in 2D (drag to move, pull a dot to resize),
-     Rotate, Duplicate, Set aside and More (*Add attached bathroom*, Remove),
+     swap, or on *For later*), Edit in 2D (drag to move, pull a dot to resize),
+     Rotate, Duplicate, Keep for later and More (*Add attached bathroom*, Remove),
      plus exact sizes, position and use.
    - **Doors** — every door and window: add doors, French and sliding doors,
      archways, windows and picture windows; slide, resize, move or flip them,
@@ -142,6 +166,32 @@ fails if it's stale).
    sharing* at any time; the city and name are private unless chosen. Plan
    images per floor and a JSON backup are under *More ways to share*.
 
+10. **Video** — *Make a video* films a 15 s (or 8 s) vertical MP4 of the home:
+    a title, a tour through the rooms with their names, generated music, and
+    an end card with the home's link and a QR code. It's made on the phone,
+    ready for WhatsApp status or Instagram.
+11. **Sunlight, Vastu and the Home score** — set the city and which way the
+    main door faces, and the 3D view uses the real sun for that place and
+    season. The *Sunlight* sheet slides through the day and says which rooms
+    get morning or hot afternoon sun, with tips. Vastu is opt-in, as friendly
+    tips with one-tap swaps. The Home score ring adds up the essentials,
+    "make it yours" ideas, sunlight and Vastu, and badges celebrate milestones.
+12. **Start from your builder's plan** — take a photo or screenshot of the
+    plan, pick the plot size and which side the road is on, and the AI reads
+    the rooms (one free reading per device). Check them on the 2D plan over the
+    faint photo, fix anything, and *Make it 3D*. *Draw it yourself* works
+    without the AI: the same screen over an empty house.
+13. **Talk to your home** — the round *Talk* button (in a room's header too)
+    opens a chat: tap the microphone and speak, or type, in English, Hindi or
+    Hinglish — "make the kitchen bigger", "bedroom ko neela karo", "add a
+    pooja room near the entrance". Each request is one undo step; removing a
+    room or changing the whole look asks first. Undo, night, day, opening a
+    room, explore and Vastu are answered on the phone itself, even offline.
+14. **Install it** — after a second visit (or a first share) Dream Home offers
+    to install itself (on iPhone it shows the Add to Home Screen steps; More
+    has them too). Installed or not, it opens offline after one visit; a new
+    version waits for a tap on *Update*.
+
 **Never lost:** every change can be undone (with a description of what it
 undid), removing a room asks first and offers *Keep for later instead*, and the
 browser/phone Back button closes the top panel instead of leaving the app.
@@ -185,6 +235,17 @@ and vibration** confirm each change (switchable in More).
   geometry (junctions, openings, cutaway section fill, stairs, roofs, porch),
   GLB furniture and garden props, quality tiers with lazy post-processing, and a
   debug bridge (`window.__dreamHome`) for tests.
+- `src/homes/`, `src/share/`, `src/photo/`, `src/reel/` — My homes (IndexedDB)
+  and move links; share links, the light `/h/:id` viewer and Remix; the
+  offline photo renderer and studio; the video reel (shot list, filming,
+  compositor, music, QR end card).
+- `src/insights/`, `src/planread/`, `src/voice/` — cities, the real sun,
+  sunlight per room, Vastu and the Home score; reading a builder's plan and
+  turning it into a home; Talk to your home (the closed tool set and its
+  checks, shared with the server, the local matcher and the runner).
+- `src/pwa/`, `scripts/pwa/` — the service worker (`src/pwa/sw.js`, written
+  into `dist/sw.js` with the build's file lists), the update and install
+  banners; `npm run icons` redraws the app icons.
 - `scripts/blender/` — headless Blender scripts that model the furniture,
   garden, street and lived-in kits; `npm run assets` rebuilds `public/models`
   and `public/thumbs` (`-- --step life` just the lived-in kit; requires Blender

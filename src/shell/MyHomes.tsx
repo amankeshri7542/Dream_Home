@@ -88,7 +88,13 @@ export function MyHomesDialog({
                 <div className="dh-home-info">
                   <strong>{active ? project.name : h.name}</strong>
                   <span>{summary(h)}</span>
-                  <span>{active ? "Open now" : editedWhen(h.updatedAt)}</span>
+                  {active ? (
+                    <span className="dh-home-badge">
+                      <Icon.check size={16} aria-hidden /> Open now
+                    </span>
+                  ) : (
+                    <span>{editedWhen(h.updatedAt)}</span>
+                  )}
                 </div>
                 {confirming === h.id ? (
                   <div className="dh-home-confirm" role="group" aria-label={`Delete ${h.name}?`}>
@@ -100,11 +106,7 @@ export function MyHomesDialog({
                       Delete
                     </Button>
                   </div>
-                ) : active ? (
-                  <span className="dh-home-badge">
-                    <Icon.check size={16} aria-hidden /> Open
-                  </span>
-                ) : (
+                ) : active ? null : (
                   <div className="dh-home-actions">
                     <Button variant="primary" aria-label={`Open ${h.name}`} disabled={busy} onClick={() => void open(h)}>
                       Open

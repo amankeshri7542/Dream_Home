@@ -136,3 +136,12 @@ describe("reading shared homes", () => {
     expect(() => parseShared({ name: "not a home" })).toThrow();
   });
 });
+
+describe("the link's picture", () => {
+  it("shows the home's name only when the link does, cleaned the same way", async () => {
+    const { posterName } = await import("./publish");
+    const home = { ...createPreset("compact"), name: "Sharma Niwas, call 98765 43210" };
+    expect(posterName(home, true)).toBe("Sharma Niwas, call");
+    expect(posterName(home, false)).toBe("A Dream Home");
+  });
+});

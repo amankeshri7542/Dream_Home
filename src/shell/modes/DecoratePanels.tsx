@@ -224,7 +224,7 @@ export function DecorateRoomPanel({
               ))}
               {!items.length && (
                 <p className="dh-note">
-                  This room is empty. Add something below!
+                  This room is empty. Add something from Add furniture above!
                 </p>
               )}
             </div>
@@ -252,7 +252,8 @@ export function DecorateRoomPanel({
                     clearFurniture(project, floorId, room.id),
                     `Empty ${room.name}`,
                     {
-                      notice: `${room.name} is empty now. Undo brings everything back.`,
+                      notice: `${room.name} is empty now.`,
+                      undoable: true,
                     },
                   )
                 }

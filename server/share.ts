@@ -22,6 +22,7 @@ import { gunzip, gzip, randomId, randomToken, sameSecret, sha256 } from "./bytes
 import { blobsFor, kvFor, limiterFor, type Deps } from "./context";
 import { BodyTooLarge, clientIp, deviceOf, fail, json, readBody, readBytes, type Env } from "./http";
 import type { KeyValue } from "./kv";
+import { HIDDEN_NAME, publicName } from "../src/share/names";
 
 export const LIMITS = {
   /** A home as JSON, as sent. */
@@ -56,24 +57,7 @@ const keys = (id: string) => ({
 });
 const files = (id: string) => ({ project: `shares/${id}.json.gz`, image: `shares/${id}.jpg` });
 
-/**
- * A name that's safe to show anyone: no links, phone numbers or e-mail
- * addresses (a shared home must never become a scam advert on our domain).
- */
-export function publicName(name: string, fallback = "A Dream Home"): string {
-  const cleaned = name
-    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, "")
-    .replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g, "")
-    .replace(/\b[\w-]+\.(?:com|in|net|org|io|co|me|ly|app|xyz|info|biz)\b\S*/gi, "")
-    // Phone numbers: runs of 8 or more digits (spaces and dashes allowed), not "Plot 12 - 2024".
-    .replace(/\+?\d[\d\s().-]{6,}\d/g, (run) => (run.replace(/\D/g, "").length >= 8 ? "" : run))
-    .replace(/[<>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 60)
-    .trim();
-  return cleaned.length >= 2 ? cleaned : fallback;
-}
+export { publicName };
 
 /** Width and height from a JPEG's start-of-frame marker, or null if it isn't a JPEG. */
 export function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
@@ -122,7 +106,7 @@ async function prepare(request: Request): Promise<Prepared | Response> {
   }
   const plot = { ...project.plot };
   if (body.showCity !== true) delete plot.location;
-  project = { ...project, plot, name: body.showName === false ? "A Dream Home" : publicName(project.name) };
+  project = { ...project, plot, name: body.showName === false ? HIDDEN_NAME : publicName(project.name) };
   const gz = await gzip(JSON.stringify(project));
   if (gz.byteLength > LIMITS.storedBytes) return fail("too-big", "This home is too big to share.", undefined, 413);
   return { project, gz };
@@ -138,10 +122,20 @@ async function readMeta(kv: KeyValue, id: string): Promise<ShareMeta | null> {
   }
 }
 const writeMeta = (kv: KeyValue, id: string, meta: ShareMeta) => kv.set(keys(id).meta, JSON.stringify(meta));
+/**
+ * An owner's change, applied to a fresh copy of the record and only if it
+ * still exists: an admin's or reports' hide made meanwhile stays, and a share
+ * stopped meanwhile doesn't come back. False when it's gone.
+ */
+async function updateMeta(kv: KeyValue, id: string, patch: Partial<ShareMeta>): Promise<boolean> {
+  const fresh = await readMeta(kv, id);
+  if (!fresh) return false;
+  return kv.set(keys(id).meta, JSON.stringify({ ...fresh, ...patch, hidden: fresh.hidden, hiddenReason: fresh.hiddenReason }), { onlyIfExists: true });
+}
 
 const bearer = (request: Request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
 const isAdmin = (request: Request, env: Env) =>
-  !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 24 && sameSecret(bearer(request), env.ADMIN_TOKEN);
+  !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 32 && sameSecret(bearer(request), env.ADMIN_TOKEN);
 async function isOwner(request: Request, meta: ShareMeta) {
   const token = bearer(request);
   return token.length >= 32 && sameSecret(await sha256(token), meta.tokenHash);
@@ -195,11 +189,15 @@ export async function handleShare(request: Request, env: Env, deps: Deps, params
       const prepared = await prepare(request);
       if (prepared instanceof Response) return prepared;
       await blobs.put(files(id).project, prepared.gz, "application/gzip");
-      await writeMeta(kv, id, { ...meta, name: prepared.project.name, updatedAt: now, bytes: prepared.gz.byteLength });
+      if (!(await updateMeta(kv, id, { name: prepared.project.name, updatedAt: now, bytes: prepared.gz.byteLength }))) {
+        // Stopped while this was on its way: don't leave its home behind.
+        await blobs.remove(files(id).project).catch(() => undefined);
+        return missing();
+      }
       return json({ ok: true, id, updatedAt: now });
     }
     case "image":
-      return image(request, kv, blobs, id);
+      return image(request, env, deps, kv, blobs, id);
     case "stats": {
       const meta = await readMeta(kv, id);
       if (!meta) return missing();
@@ -210,11 +208,14 @@ export async function handleShare(request: Request, env: Env, deps: Deps, params
     case "view":
     case "remix": {
       if (request.method !== "POST") return fail("invalid", "Use POST.", undefined, 405);
+      // Counted against the connection's daily reads, so a loop can't run up store writes.
+      const verdict = await limiterFor(env, deps)?.reserve("read", "-", clientIp(request)).catch(() => null);
+      if (verdict && !verdict.ok) return json({ ok: true });
       const meta = await readMeta(kv, id).catch(() => null);
       if (!meta || meta.hidden) return missing();
-      // Once per connection per few hours, so a reload storm doesn't count.
+      // Once per network (IPv6 by /48) per few hours, so a reload storm or a big address range doesn't count.
       const first = await kv
-        .set(keys(id).seen(action, clientIp(request)), "1", { ttl: action === "view" ? 6 * 3600 : DAY, onlyIfNew: true })
+        .set(keys(id).seen(action, clientIp(request, 48)), "1", { ttl: action === "view" ? 6 * 3600 : DAY, onlyIfNew: true })
         .catch(() => false);
       if (first) await kv.incr(action === "view" ? keys(id).views : keys(id).remixes).catch(() => undefined);
       return json({ ok: true });
@@ -238,7 +239,7 @@ export async function handleShare(request: Request, env: Env, deps: Deps, params
 }
 
 /** Takes one use of `kind` for this device and connection, or answers why not. */
-async function reserve(request: Request, env: Env, deps: Deps, kind: "share" | "report"): Promise<Response | null> {
+async function reserve(request: Request, env: Env, deps: Deps, kind: "share" | "image" | "report"): Promise<Response | null> {
   const device = deviceOf(request);
   if (!device) return fail("invalid", "Missing device id.", undefined, 400);
   const limiter = limiterFor(env, deps);
@@ -273,7 +274,7 @@ async function create(request: Request, env: Env, deps: Deps, kv: KeyValue, blob
     appVersion: (env.VERCEL_GIT_COMMIT_SHA ?? "dev").slice(0, 7),
     image: false,
     hidden: false,
-    ...(prepared.project.remixOf ? { remixOf: prepared.project.remixOf } : {}),
+    ...(prepared.project.remixOf ? { remixOf: { id: prepared.project.remixOf.id, name: publicName(prepared.project.remixOf.name) } } : {}),
   };
   await writeMeta(kv, id, meta);
   return json({ ok: true, id, editToken: token, updatedAt: now }, 201);
@@ -301,12 +302,13 @@ async function read(request: Request, env: Env, deps: Deps, kv: KeyValue, blobs:
       "X-Content-Type-Options": "nosniff",
       "X-Robots-Tag": "noindex",
       // A viral link is served by the CDN, not one function call per visitor.
-      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=300",
+      // A stopped or hidden share disappears within about a minute.
+      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=30",
     },
   });
 }
 
-async function image(request: Request, kv: KeyValue, blobs: BlobStore, id: string) {
+async function image(request: Request, env: Env, deps: Deps, kv: KeyValue, blobs: BlobStore, id: string) {
   const meta = await readMeta(kv, id);
   if (!meta) return missing();
   if (request.method === "GET") {
@@ -318,7 +320,7 @@ async function image(request: Request, kv: KeyValue, blobs: BlobStore, id: strin
         "Content-Type": "image/jpeg",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "default-src 'none'; img-src 'self'; sandbox",
-        "Cache-Control": "public, max-age=300, s-maxage=600",
+        "Cache-Control": "public, max-age=60, s-maxage=60",
       },
     });
   }
@@ -327,6 +329,8 @@ async function image(request: Request, kv: KeyValue, blobs: BlobStore, id: strin
     return fail("forbidden", "Only the person who shared this home can change its picture.", undefined, 403);
   if (!(request.headers.get("content-type") ?? "").startsWith("image/jpeg"))
     return fail("invalid", "Send the picture as a JPEG.", undefined, 415);
+  const limited = await reserve(request, env, deps, "image");
+  if (limited) return limited;
   let bytes: Uint8Array;
   try {
     bytes = await readBytes(request, LIMITS.imageBytes);
@@ -337,7 +341,10 @@ async function image(request: Request, kv: KeyValue, blobs: BlobStore, id: strin
   if (!size || size.width > LIMITS.imageSide || size.height > LIMITS.imageSide || !size.width || !size.height)
     return fail("invalid", "That picture isn’t a JPEG of a sensible size.", undefined, 400);
   await blobs.put(files(id).image, bytes, "image/jpeg");
-  await writeMeta(kv, id, { ...meta, image: true });
+  if (!(await updateMeta(kv, id, { image: true }))) {
+    await blobs.remove(files(id).image).catch(() => undefined);
+    return missing();
+  }
   return json({ ok: true });
 }
 
@@ -347,8 +354,8 @@ async function report(request: Request, env: Env, deps: Deps, kv: KeyValue, id: 
   if (limited) return limited;
   const meta = await readMeta(kv, id);
   if (!meta) return missing();
-  // Distinct connections, not device ids (which anyone can invent).
-  const reporters = await kv.addToSet(keys(id).reports, clientIp(request));
+  // Distinct networks (IPv6 by /48), not device ids (which anyone can invent).
+  const reporters = await kv.addToSet(keys(id).reports, clientIp(request, 48));
   const [views] = await kv.counts(keys(id).views);
   if (!meta.hidden && reporters >= 3 && reporters >= views * 0.05) {
     await writeMeta(kv, id, { ...meta, hidden: true, hiddenReason: "reports" });

@@ -27,6 +27,7 @@ import { Icon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
 import { DialogHost, ProjectFileInput, addHome } from "./Dialogs";
 import { ImportFromLink, MoveBanner } from "./MoveHomes";
+import { InstallNudge, UpdateBanner } from "../pwa/PwaUi";
 import { REMIXED_KEY } from "../share/remix";
 import { ConfirmDialog, Notifications } from "./Feedback";
 import { CameraHud, FloorSwitcher, ViewOptions } from "./Hud";
@@ -44,6 +45,7 @@ import { TopBar } from "./TopBar";
 import { TalkButton } from "../voice/TalkButton";
 import "./shell.css";
 import "./studio/studio.css";
+import { feedback } from "../ui/feedback";
 
 // The video studio loads only when opened (the filming itself loads later still).
 const ReelStudio = lazy(() => import("../reel/ReelStudio"));
@@ -168,7 +170,7 @@ export function AppShell() {
       unsure: plan.unsure,
       notes: read
         ? plan.notes
-        : ["Your photo is under the plan. Add rooms with Add room, then move and resize them to match the drawing.", ...plan.notes],
+        : ["Your photo is under the plan, ready to trace.", ...plan.notes],
     });
   };
   // The check belongs to the home it was made for.
@@ -186,6 +188,7 @@ export function AppShell() {
     dispatch({ type: "select", target: null });
     dispatch({ type: "camera", command: { type: "fit", subject: "home", view: "hero" } });
     constructionReveal();
+    feedback.success();
     dispatch({ type: "notify", text: "Your plan is in 3D! Tap any room to make it yours.", tone: "success" });
   };
   const [photoRequest, setPhotoRequest] = useState<{ id: number } | null>(null);
@@ -524,6 +527,8 @@ export function AppShell() {
           {/* Hidden in a room, but still mounted so finishing the home celebrates. */}
           {!design && <ChecklistPill hidden={!!state.focus} />}
           {!state.focus && <MoveBanner />}
+          {!state.focus && <InstallNudge />}
+          <UpdateBanner />
           {!explore && !state.focus && <FloorSwitcher />}
           <CameraHud />
           {!explore && (

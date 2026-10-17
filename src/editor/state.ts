@@ -526,6 +526,8 @@ export function editorReducer(
         panel: null,
         // The floor plan is a layout tool: only the Layout tab keeps it open.
         lens: action.tab === "layout" ? state.lens : false,
+        // A tab tapped on a tucked-down tray brings its tools into view.
+        sheet: state.sheet === "peek" ? "medium" : state.sheet,
         viewOptions: false,
         view: { ...modeView(mode, state.view), floor: state.focus.floorId },
       };

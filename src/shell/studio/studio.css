@@ -2,12 +2,16 @@
   /* ------------------------------------------------------------------ */
   /* Room Studio: the hero room's tray (phone) or panel (desktop)        */
   /* ------------------------------------------------------------------ */
-  /* A shorter tray than other sheets, so the room stays the hero above it. */
+  /* A shorter tray than other sheets, so the room stays the hero above it;
+     taller with bigger text, so the tools still show. */
   .dh-inspector.dh-studio.is-sheet[data-snap="medium"] {
-    height: min(40dvh, 360px);
+    height: min(46dvh, 400px);
+  }
+  :root:is([data-text="large"], [data-text="extra"]) .dh-inspector.dh-studio.is-sheet[data-snap="medium"] {
+    height: min(56dvh, 520px);
   }
   .dh-inspector.dh-studio.is-sheet[data-snap="peek"] {
-    max-height: 96px;
+    max-height: 128px;
   }
   .dh-studio-head {
     display: flex;
@@ -28,32 +32,42 @@
     flex: 1;
     min-width: 0;
   }
-  /* Phones: the room glyph steps aside for the name. On narrow phones and with
-     bigger text, the name takes its own line under the buttons. */
-  @media (max-width: 480px) {
-    .dh-studio.is-sheet .dh-studio-head .dh-chip-icon {
-      display: none;
-    }
+  /* Phones (the tray): two rows. Home on the left and the room's tools on
+     the right; then ‹ the room's name ›, so the arrows plainly mean the
+     previous and next room, and the name is never squeezed. */
+  .dh-studio.is-sheet .dh-studio-head {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    grid-template-areas:
+      "home . talk sun photo"
+      "prev title title title next";
+    align-items: center;
+    gap: 0 2px;
   }
-  @media (max-width: 379px) {
-    .dh-studio.is-sheet .dh-studio-head {
-      flex-wrap: wrap;
-      justify-content: space-between;
-    }
-    .dh-studio.is-sheet .dh-studio-title {
-      order: 10;
-      flex-basis: 100%;
-      padding: 0 6px;
-    }
+  .dh-studio.is-sheet .dh-studio-head .is-home {
+    grid-area: home;
   }
-  :root:is([data-text="large"], [data-text="extra"]) .dh-studio.is-sheet .dh-studio-head {
-    flex-wrap: wrap;
-    justify-content: space-between;
+  .dh-studio.is-sheet .dh-studio-head .dh-talk-btn {
+    grid-area: talk;
   }
-  :root:is([data-text="large"], [data-text="extra"]) .dh-studio.is-sheet .dh-studio-title {
-    order: 10;
-    flex-basis: 100%;
-    padding: 0 6px;
+  .dh-studio.is-sheet .dh-studio-head .is-sun {
+    grid-area: sun;
+  }
+  .dh-studio.is-sheet .dh-studio-head .is-photo {
+    grid-area: photo;
+  }
+  .dh-studio.is-sheet .dh-studio-head .is-prev {
+    grid-area: prev;
+  }
+  .dh-studio.is-sheet .dh-studio-head .is-next {
+    grid-area: next;
+  }
+  .dh-studio.is-sheet .dh-studio-title {
+    grid-area: title;
+    text-align: center;
+  }
+  .dh-studio.is-sheet .dh-studio-head .dh-chip-icon {
+    display: none;
   }
   /* One line each, so the tray keeps its room for tools on small phones. */
   .dh-studio-title h2,
@@ -169,7 +183,7 @@
   }
   .dh-topbar .dh-homebar .dh-tool {
     flex-direction: row;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 14px;
     gap: 7px;
     border-radius: var(--dh-radius-pill);

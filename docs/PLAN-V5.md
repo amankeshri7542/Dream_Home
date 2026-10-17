@@ -718,6 +718,11 @@ Crossfades between shots happen in the compositor.
   - Speech can't run in CI; test the typed path, and mock `SpeechRecognition` with a fake that emits a transcript.
 
 ### M8: Polish, PWA, usability and security review, docs
+✅ Done on 18 Oct 2026 (see the roadmap log). Differences from the text below:
+- a small hand-written service worker instead of `vite-plugin-pwa`, following §5's rules with no new dependency; the first visit's files are kept too, so the app opens offline after one visit;
+- the install nudge also appears in More (as "Install Dream Home") and after a first share; "Not now" hides it for two weeks;
+- the security review's medium findings changed the limiter: each AI call now charges its worst case up front and settles to the real cost, so the daily budget is a hard cap.
+
 - **PWA** with `vite-plugin-pwa`:
   - manifest (name, short name "Dream Home", icons generated from the house logo, `theme_color`, `display: standalone`, `start_url: /`);
   - precache the app shell only; GLBs use runtime `CacheFirst`, with `?v=` ignored (§5); thumbnails are cached on demand;
@@ -798,4 +803,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b, M1, M2, M3, M4, M5 and M6 shipped on 17 Oct 2026, M7 on 18 Oct. The next phase is **M8** (PWA, usability and security review, docs).
+- M0a, M0b, M1, M2, M3, M4, M5 and M6 shipped on 17 Oct 2026, M7 and M8 on 18 Oct. v5 is complete; what's left is the owner's setup (§7) and real-phone checks.

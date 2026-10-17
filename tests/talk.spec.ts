@@ -113,10 +113,13 @@ test("the Talk button is a round button above the Home bar on phones and tablets
   for (const size of [mobile, { width: 768, height: 1024 }]) {
     await page.setViewportSize(size);
     const talk = page.getByRole("button", { name: "Talk to your home" });
-    await expect(talk).toBeVisible();
+    // The layout switches from desktop a moment after the resize.
+    await expect.poll(async () => {
+      const b = await talk.boundingBox();
+      return b && [Math.round(b.width), Math.round(b.height)];
+    }).toEqual([64, 64]);
     const box = (await talk.boundingBox())!;
     const bar = (await page.getByRole("toolbar", { name: "Home actions" }).boundingBox())!;
-    expect([Math.round(box.width), Math.round(box.height)]).toEqual([64, 64]);
     expect(box.y + box.height).toBeLessThanOrEqual(bar.y);
     expect(box.x + box.width).toBeGreaterThan(size.width - 80);
     await noOverflow(page);
@@ -196,11 +199,46 @@ test("without speech or the AI, typing and navigation still work, and it fits at
   await expect(sheet(page)).toContainText("Talking to your home isn’t switched on yet.");
   expect(sent).toHaveLength(0);
   await noOverflow(page);
+  // Nothing crowds the top bar while the sheet is open.
+  await expect(page.getByRole("button", { name: "Fit home" })).toBeHidden();
   if (shots) await page.screenshot({ path: "docs/screenshots/talk/offline-320-xl.png" });
   await say(page, "open bedroom 2");
   await expect(page.getByRole("heading", { name: "Bedroom 2", level: 2 })).toBeVisible();
   // The room's name keeps a line of its own beside the studio's buttons.
-  expect((await page.getByRole("heading", { name: "Bedroom 2", level: 2 }).boundingBox())!.width).toBeGreaterThan(200);
+  expect((await page.getByRole("heading", { name: "Bedroom 2", level: 2 }).boundingBox())!.width).toBeGreaterThan(150);
   await noOverflow(page);
   if (shots) await page.screenshot({ path: "docs/screenshots/talk/room-320-xl.png" });
+});
+
+test("with Extra large text and a microphone, the input stays on screen; हिंदी speaks Hindi", async ({ page }) => {
+  await fakeSpeech(page, "रसोई खोलो");
+  await mockCommand(page);
+  await seed(page, createPreset("family"));
+  await page.evaluate(() => {
+    const prefs = JSON.parse(localStorage.getItem("dream-home.preferences.v1")!);
+    localStorage.setItem("dream-home.preferences.v1", JSON.stringify({ ...prefs, textSize: "extra" }));
+  });
+  for (const size of [
+    { width: 320, height: 640 },
+    { width: 390, height: 800 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.reload();
+    await page.getByRole("button", { name: "Talk to your home" }).click();
+    await expect(sheet(page)).toContainText("Dream Home receives only the text"); // the privacy note is showing
+    for (const control of [sheet(page).getByRole("button", { name: "Speak" }), sheet(page).getByRole("textbox", { name: "What would you like to change?" })]) {
+      const box = (await control.boundingBox())!;
+      expect(box.y + box.height, `${size.width}px`).toBeLessThanOrEqual(size.height);
+    }
+    await noOverflow(page);
+    if (shots) await page.screenshot({ path: `docs/screenshots/talk/xl-mic-${size.width}.png` });
+    await sheet(page).getByRole("button", { name: "Close talk" }).click();
+  }
+  await page.getByRole("button", { name: "Talk to your home" }).click();
+  await sheet(page).getByRole("radio", { name: "हिंदी" }).click();
+  await expect(sheet(page).getByRole("group", { name: "Try saying" })).toContainText("रसोई बड़ी करो");
+  await expect(sheet(page)).toContainText("माइक दबाकर बोलिए, या लिखिए।");
+  await say(page, "remove bedroom 2");
+  await expect(sheet(page).getByRole("group", { name: "Confirm the change" })).toContainText("मैं Bedroom 2 हटा दूँगा। ठीक है?");
+  await expect(sheet(page).getByRole("button", { name: "हाँ, कर दो" })).toBeVisible();
 });

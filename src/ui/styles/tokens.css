@@ -153,7 +153,8 @@
       --dh-glass-bg: var(--dh-glass-solid);
     }
   }
-  :root[data-quality="battery"] {
+  /* The battery tier (set on the scene) makes panels solid: no see-through blur. */
+  :root:has(.scene-v2[data-quality="battery"]) {
     --dh-glass-bg: var(--dh-glass-solid);
   }
 }

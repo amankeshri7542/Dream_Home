@@ -43,7 +43,6 @@ test("the built app runs cleanly under its Content-Security-Policy", async ({ pa
   await page.evaluate(() => ((window as unknown as { __dreamHomeReelTest: unknown }).__dreamHomeReelTest = { width: 180, height: 320, seconds: 1, samples: 1 }));
   await page.getByRole("button", { name: "Make a video" }).click();
   const reel = page.getByRole("dialog", { name: "Video studio" });
-  await reel.getByRole("switch", { name: "Show link at the end" }).click();
   await reel.getByRole("button", { name: "Make my video" }).click();
   await expect(reel.getByRole("button", { name: "Save" })).toBeVisible({ timeout: 60000 });
   await expect.poll(() => reel.locator("video").evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
@@ -160,5 +159,35 @@ test("talking to your home works under the policy, and its API holds its line", 
   await talk.getByRole("textbox", { name: "What would you like to change?" }).fill("night");
   await talk.getByRole("button", { name: "Send" }).click();
   await expect(page.getByRole("status", { name: "Notifications" })).toContainText("Here's your home at night.");
+  expect(violations).toEqual([]);
+});
+
+test("installable, and it opens offline after one visit (the API is never cached)", async ({ page, context, request }) => {
+  const manifest = await (await request.get("/manifest.webmanifest")).json();
+  expect(manifest).toMatchObject({ name: "Dream Home", short_name: "Dream Home", display: "standalone", start_url: "/" });
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).headers()["content-type"]).toBe("image/png");
+  const sw = await request.get("/sw.js");
+  expect(await sw.text()).toContain('const SHELL = `dh-shell-${VERSION}`');
+
+  const violations = await watchCsp(page);
+  await freshVisit(page);
+  await renderedModel(page);
+  // The worker installs and takes over; the app shell and the models it used are kept.
+  await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.ready).active && !!navigator.serviceWorker.controller), { timeout: 15000 }).toBe(true);
+  await expect
+    .poll(() => page.evaluate(async () => (await caches.keys()).some((k) => k.startsWith("dh-shell-")) && (await (await caches.open("dh-kept-v1")).keys()).some((r) => r.url.includes("/models/"))))
+    .toBe(true);
+  // What loaded before the worker took over is kept too (the 3D code among it).
+  await expect
+    .poll(() => page.evaluate(async () => (await (await caches.open("dh-kept-v1")).keys()).some((r) => /\/assets\/Scene-[^/]+\.js$/.test(r.url))), { timeout: 30000 })
+    .toBe(true);
+  await page.waitForTimeout(21_000); // the last list the page sends
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Talk to your home" }).first()).toBeVisible({ timeout: 15000 });
+  await renderedModel(page);
+  // Never from the cache: the API fails offline.
+  expect(await page.evaluate(() => fetch("/api/design", { headers: { "x-dream-device": "device-0123456789abcdef" } }).then(() => "answered", () => "failed"))).toBe("failed");
+  await context.setOffline(false);
   expect(violations).toEqual([]);
 });

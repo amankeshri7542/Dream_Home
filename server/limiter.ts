@@ -6,7 +6,7 @@
 import { FREE_HOME_DESIGNS, FREE_ROOM_MAKEOVERS } from "../src/ai/brief";
 import type { Env } from "./http";
 
-export const KINDS = ["home", "room", "command", "plan", "share", "report", "read"] as const;
+export const KINDS = ["home", "room", "command", "plan", "share", "image", "report", "read"] as const;
 export type Kind = (typeof KINDS)[number];
 
 export type Rule = {
@@ -25,6 +25,8 @@ export const DEFAULT_RULES: Record<Kind, Rule> = {
   command: { device: 15, window: "day", ip: 60, costly: true },
   plan: { device: 1, window: "life", ip: 3, costly: true },
   share: { device: 20, window: "day", ip: 60, costly: false },
+  // A link's preview picture (sent after making or updating a link).
+  image: { device: 40, window: "day", ip: 120, costly: false },
   report: { device: 10, window: "day", ip: 20, costly: false },
   read: { device: 0, window: "day", ip: 600, costly: false },
 };
@@ -42,6 +44,8 @@ export function rulesFrom(env: Env): Record<Kind, Rule> {
 }
 
 export type Counter = { key: string; max: number; ttl: number };
+/** Today's AI spend: its counter, the maximum, and what this call charges up front (its worst case). */
+export type Budget = { key: string; max: number; charge?: number };
 export type Reservation =
   | { ok: true; values: number[] }
   /** `blocked`: "budget", or the index of the counter that was full. */
@@ -52,10 +56,11 @@ export type Store = {
   add(key: string, by: number, ttlSeconds: number): Promise<number>;
   get(key: string): Promise<number>;
   /**
-   * In one atomic step: unless the budget counter has reached its maximum or
-   * any counter is full, add 1 to every counter. Nothing changes otherwise.
+   * In one atomic step: unless the budget can't take `charge` more (or has
+   * reached its maximum) or any counter is full, add 1 to every counter and
+   * `charge` to the budget. Nothing changes otherwise.
    */
-  reserve(budget: { key: string; max: number } | null, counters: Counter[]): Promise<Reservation>;
+  reserve(budget: Budget | null, counters: Counter[]): Promise<Reservation>;
 };
 
 export function memoryStore(): Store {
@@ -80,31 +85,49 @@ export function memoryStore(): Store {
     },
     // No await between the checks and the writes, so this is atomic in JS.
     async reserve(budget, counters) {
-      if (budget && (live(budget.key)?.n ?? 0) >= budget.max) return { ok: false, blocked: "budget" };
+      const charge = budget?.charge ?? 0;
+      if (budget) {
+        const spent = live(budget.key)?.n ?? 0;
+        if (spent >= budget.max || spent + charge > budget.max) return { ok: false, blocked: "budget" };
+      }
       const full = counters.findIndex((c) => (live(c.key)?.n ?? 0) + 1 > c.max);
       if (full >= 0) return { ok: false, blocked: full };
-      return { ok: true, values: counters.map((c) => addNow(c.key, 1, c.ttl)) };
+      const values = counters.map((c) => addNow(c.key, 1, c.ttl));
+      if (budget && charge > 0) addNow(budget.key, charge, SPEND_TTL);
+      return { ok: true, values };
     },
   };
 }
 
+/** The spend counter outlives its day a little (it's keyed by date). */
+const SPEND_TTL = 2 * 24 * 3600;
+
 /**
  * KEYS[1] = budget counter, KEYS[2..] = counters. ARGV[1] = budget maximum
- * (-1: no budget), then a maximum and a TTL for each counter.
+ * (-1: no budget), ARGV[2] = what to charge the budget up front, then a
+ * maximum and a TTL for each counter.
  * Returns {0, v1, v2…} on success, {1} when over budget, {2, i} when counter i
  * (1-based) is full.
  */
 export const RESERVE_SCRIPT = `
 local budget = tonumber(ARGV[1])
-if budget >= 0 and tonumber(redis.call('GET', KEYS[1]) or '0') >= budget then return {1} end
+local charge = tonumber(ARGV[2])
+if budget >= 0 then
+  local spent = tonumber(redis.call('GET', KEYS[1]) or '0')
+  if spent >= budget or spent + charge > budget then return {1} end
+end
 local n = #KEYS - 1
 for i = 1, n do
-  if tonumber(redis.call('GET', KEYS[i + 1]) or '0') + 1 > tonumber(ARGV[2 * i]) then return {2, i} end
+  if tonumber(redis.call('GET', KEYS[i + 1]) or '0') + 1 > tonumber(ARGV[2 * i + 1]) then return {2, i} end
 end
 local out = {0}
 for i = 1, n do
   out[i + 1] = redis.call('INCR', KEYS[i + 1])
-  if redis.call('TTL', KEYS[i + 1]) < 0 then redis.call('EXPIRE', KEYS[i + 1], tonumber(ARGV[2 * i + 1])) end
+  if redis.call('TTL', KEYS[i + 1]) < 0 then redis.call('EXPIRE', KEYS[i + 1], tonumber(ARGV[2 * i + 2])) end
+end
+if budget >= 0 and charge > 0 then
+  redis.call('INCRBY', KEYS[1], charge)
+  if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ${SPEND_TTL}) end
 end
 return out`;
 
@@ -136,7 +159,7 @@ export function restStore(url: string, token: string, fetcher: typeof fetch = fe
     },
     async reserve(budget, counters) {
       const keys = [budget?.key ?? "dh:v1:no-budget", ...counters.map((c) => c.key)];
-      const args = [budget ? budget.max : -1, ...counters.flatMap((c) => [c.max, c.ttl])];
+      const args = [budget ? budget.max : -1, budget?.charge ?? 0, ...counters.flatMap((c) => [c.max, c.ttl])];
       const [answer] = await run([["EVAL", RESERVE_SCRIPT, keys.length, ...keys, ...args]]);
       const out = (answer.result as number[]).map(Number);
       if (out[0] === 0) return { ok: true, values: out.slice(1) };
@@ -191,11 +214,17 @@ export class Limiter {
     return Math.max(0, rule.device - used);
   }
 
-  /** Takes one use, or says why not. Call `refund` if the work then fails. */
-  async reserve(kind: Kind, device: string, ip: string): Promise<Verdict> {
+  /**
+   * Takes one use, or says why not. For AI work, `estimateUsd` (the call's
+   * worst case) is charged to today's budget at once, so calls running at the
+   * same time can't overshoot it; `settle` or `failed` then corrects it.
+   */
+  async reserve(kind: Kind, device: string, ip: string, estimateUsd = 0): Promise<Verdict> {
     const rule = this.rules[kind];
     const k = this.keys(kind, device, ip);
-    const budget = rule.costly ? { key: k.spend, max: Math.round(this.budgetUsd * UNITS_PER_USD) } : null;
+    const budget = rule.costly
+      ? { key: k.spend, max: Math.round(this.budgetUsd * UNITS_PER_USD), charge: Math.ceil(Math.max(0, estimateUsd) * UNITS_PER_USD) }
+      : null;
     const counters = this.counters(kind, device, ip);
     const result = await this.store.reserve(budget, counters);
     if (result.ok) return { ok: true, left: rule.device > 0 ? Math.max(0, rule.device - result.values[0]) : Infinity };
@@ -206,13 +235,34 @@ export class Limiter {
       : { ok: false, reason: "busy", left: await this.left(kind, device) };
   }
 
-  async refund(kind: Kind, device: string, ip: string) {
-    for (const c of this.counters(kind, device, ip)) await this.store.add(c.key, -1, c.ttl);
+  /** Gives the use back: the device's, and the connection's unless `ip: false`. */
+  async refund(kind: Kind, device: string, ip: string, { ip: alsoIp = true } = {}) {
+    const k = this.keys(kind, device, ip);
+    for (const c of this.counters(kind, device, ip)) if (alsoIp || c.key !== k.ip) await this.store.add(c.key, -1, c.ttl);
   }
 
   async spend(usd: number) {
     if (!(usd > 0)) return;
-    await this.store.add(this.keys("home", "-", "-").spend, Math.ceil(usd * UNITS_PER_USD), 2 * DAY);
+    await this.store.add(this.keys("home", "-", "-").spend, Math.ceil(usd * UNITS_PER_USD), SPEND_TTL);
+  }
+
+  /** Swaps the worst case charged at `reserve` for what the call really cost. */
+  async settle(estimateUsd: number, actualUsd: number) {
+    const delta = Math.ceil(Math.max(0, actualUsd) * UNITS_PER_USD) - Math.ceil(Math.max(0, estimateUsd) * UNITS_PER_USD);
+    if (delta) await this.store.add(this.keys("home", "-", "-").spend, delta, SPEND_TTL);
+  }
+
+  /**
+   * After a failed AI call. `billedUsd`: what Anthropic charged (a refusal or
+   * a cut-off answer), 0 when the call never reached the model, null when
+   * nobody knows (a timeout): then the worst case stays charged.
+   * The device gets its use back either way (the person didn't get an
+   * answer); the connection only when nothing was spent, so a loop of
+   * failing requests from one place still runs into its daily limit.
+   */
+  async failed(kind: Kind, device: string, ip: string, estimateUsd: number, billedUsd: number | null) {
+    if (billedUsd !== null) await this.settle(estimateUsd, billedUsd);
+    await this.refund(kind, device, ip, { ip: billedUsd === 0 });
   }
 }
 

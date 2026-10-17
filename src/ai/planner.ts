@@ -289,6 +289,6 @@ export function plannerRoomPlan(brief: RoomBrief, variant = 0): RoomPlan {
     layout: brief.items.length < 2 ? "fresh" : "keep",
     extras: EXTRAS[use] ?? [],
     ...featureWall(brief.kind === "bedroom" ? "master-bedroom" : use, paint),
-    notes: [`${look.name.replace(/ (home|house)$/i, "")} colours for your ${brief.name.toLowerCase()}.`],
+    notes: [`${look.name.replace(/ (home|house)$/i, "")} colours for ${brief.name}.`],
   };
 }

@@ -16,7 +16,7 @@ import {
   commandUserText,
   refsOf,
 } from "../src/voice/tools";
-import { BilledError, callTools as realCallTools } from "./claude";
+import { billOf, callTools as realCallTools, worstCaseUsd } from "./claude";
 import { aiConfigured, limiterFor, type Deps } from "./context";
 import { BodyTooLarge, clientIp, deviceOf, fail, json, readBody, type Env } from "./http";
 
@@ -55,9 +55,12 @@ export async function handleCommand(request: Request, env: Env, deps: Deps = {})
   if (!live || !limiter) return fail("offline", "Talking to your home isn’t switched on yet.");
 
   const ip = clientIp(request);
+  const model = env.COMMAND_MODEL || COMMAND_MODEL;
+  // The tools, instructions and home (about 5k tokens), and the answer's cap.
+  const estimate = worstCaseUsd(model, 6_000, 600);
   let verdict;
   try {
-    verdict = await limiter.reserve("command", device, ip);
+    verdict = await limiter.reserve("command", device, ip, estimate);
   } catch (error) {
     console.error("limit store", error instanceof Error ? error.message : error);
     return fail("busy", "Your home’s helper is busy right now.");
@@ -71,7 +74,7 @@ export async function handleCommand(request: Request, env: Env, deps: Deps = {})
   try {
     const answer = await call({
       apiKey: env.ANTHROPIC_API_KEY!,
-      model: env.COMMAND_MODEL || COMMAND_MODEL,
+      model,
       system: COMMAND_SYSTEM,
       user: commandUserText(context, said, lang),
       tools: TOOL_DEFS,
@@ -79,7 +82,7 @@ export async function handleCommand(request: Request, env: Env, deps: Deps = {})
       label: "command",
       timeoutMs: 20_000,
     });
-    await limiter.spend(answer.costUsd).catch(() => undefined);
+    await limiter.settle(estimate, answer.costUsd).catch(() => undefined);
     const refs = refsOf(context);
     const checked = answer.calls.slice(0, MAX_ACTIONS * 2).map((c) => cleanAction(c, refs));
     const actions = checked.filter((a) => a !== null).slice(0, MAX_ACTIONS);
@@ -94,8 +97,7 @@ export async function handleCommand(request: Request, env: Env, deps: Deps = {})
   } catch (error) {
     // The reason only: never what was said.
     console.error("command failed", error instanceof Error ? error.name : "error");
-    if (error instanceof BilledError) await limiter.spend(error.costUsd).catch(() => undefined);
-    await limiter.refund("command", device, ip).catch(() => undefined);
+    await limiter.failed("command", device, ip, estimate, billOf(error)).catch(() => undefined);
     return fail("busy", "Couldn’t do that just now. Try again in a moment.", verdict.left + 1);
   }
 }

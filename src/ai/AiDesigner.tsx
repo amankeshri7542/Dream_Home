@@ -313,7 +313,7 @@ export function AiDesigner({
 
           {step === 2 && (
             <>
-              <p className="dh-ai-lead">Tap everything you’d love to have.</p>
+              <p className="dh-ai-lead">We’ve ticked what most families want. Tap to add or remove.</p>
               <div className="dh-ai-musts">
                 {MUST_CHIPS.map((m) => (
                   <button key={m.id} type="button" aria-pressed={musts.includes(m.id)} onClick={() => toggle(m.id)}>

@@ -1,3 +1,33 @@
+# Dream Home v5 verification — 18 October 2026
+
+v5 (M0a–M8): share links and the viewer, Photo mode, regional looks and lived-in details, the video reel, the real sun with Sunlight, Vastu and the Home score, starting from a builder's plan, Talk to your home, and the installable, offline app. Checks were run locally on macOS (Apple M4) with Node 24 and Google Chrome, then on the live site after each push.
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | passed |
+| `npm run lint` | passed |
+| `npm test` (Vitest) | **974 tests** in 53 files passed |
+| `npm run build` | passed |
+| `npm run check:api` | passed (`api/index.js` matches `server/*.ts`) |
+| `npx playwright test` (Chrome, reduced motion) | **142 passed**, 36 skipped (screenshot and timing runs, `DH_SHOTS=1` / `DH_REEL_BENCH=1`) |
+| `npm run test:preview` (production build and headers) | **7 passed**: no CSP violations through every studio and sheet; the bundled API's guards; offline after one visit |
+| `git diff --check` | passed |
+
+What v5's checks cover (details per phase in [`ROADMAP-V5.md`](ROADMAP-V5.md)):
+- **Never live AI in tests:** every `/api/*` that calls Claude is mocked in browser tests and injected in unit tests. Real calls are made only with the owner's go-ahead.
+- **Security:** headers defined once and matched by `vercel.json`; the CSP checked on the production build with every lazy feature opened; same-site checks, body caps, atomic limits and budgets, fail-closed without KV, the kill switch; nothing said or read reaching the logs; every AI answer checked against its schema or tool and the home's refs.
+- **Accessibility:** axe (WCAG 2.1 A/AA, serious and critical fail) on Home, every room tab, Outside, Explore, the title screen and gallery, and every v5 sheet (share, viewer, photo, video, talk, the plan's steps and check, sunlight, the Home score with Vastu, My homes, settings) at 390 and 1440 px.
+- **Performance:**
+  - first-load JS: **228.0 KB gzip, +28.5 KB over v4** (199.5 KB, measured the same way on both builds), within the +30 KB budget; everything else loads on first use;
+  - the viewer reaches 3D in about 1.1 s on a warm cache (1.2 s cold) on the Mac; a mid-range phone still needs checking;
+  - Build ≤ 90 draw calls with 0 idle frames, Explore ≤ 160 (checked by `interiors.spec.ts` and `indian.spec.ts`).
+- **Phones first:** new screens checked at 320 (Extra large text), 360, 390, 768, 1280 and 1440 px, no horizontal scroll, screenshots under `docs/screenshots/` looked at by eye.
+- **Independent reviews (M8):** a usability review as three personas (an 8-year-old, a parent, a grandparent) and a security review, each by a fresh subagent. All P0, P1, high and medium findings are fixed; what's left is listed in the roadmap and `SECURITY.md`.
+
+Not verified here (needs the owner's phone or accounts): the reel in WhatsApp and Instagram, the share preview in WhatsApp, Hindi speech on a real phone, installing from Chrome on Android and Safari on iPhone, and the live AI features (they need KV connected and a go-ahead for real calls).
+
+---
+
 # Dream Home v4 verification — 17 October 2026
 
 Room Studio, doors that always work and designer interiors. Checks were run locally on macOS (Apple M4) with Node 24 and Google Chrome. Nothing was committed or pushed.

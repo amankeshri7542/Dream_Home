@@ -91,6 +91,10 @@ test("battery tier keeps the fake night glow (no lamp lights)", async ({ page })
   await page.getByRole("radio", { name: /Walk inside/ }).click();
   await page.waitForTimeout(1200);
   expect(await bridge(page, (dh) => dh.scene().getObjectByName("interior-lamps") ?? null)).toBeNull();
+  // The page's own panels follow the tier too: solid, no see-through blur.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--dh-glass-bg").trim())).toBe(
+    await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--dh-glass-solid").trim()),
+  );
 });
 
 // ---------------------------------------------------------------------------
