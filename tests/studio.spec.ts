@@ -23,9 +23,9 @@ async function inspectFirst(page: Page) {
   await openPlan(page);
   await page.locator(".plan-room").first().locator("rect").first().click();
   await roomTab(page, "Layout").click();
-  await expect(dock(page, "Set aside").locator).toBeVisible();
+  await expect(dock(page, "Keep for later").locator).toBeVisible();
 }
-// "Add room" opens the tray when rooms are waiting; "Set aside" is the drop target while moving.
+// "Add room" opens the tray when rooms are waiting; "Keep for later" is the drop target while moving.
 const trayButton = (page: Page) => homeAction(page, "Add room");
 async function planPoint(page: Page, x: number, z: number) {
   return page.locator(".plan-svg").evaluate(
@@ -91,9 +91,9 @@ test("room appearance, fixed corner resizing and tray survive reload and restore
   await expect
     .poll(async () => (await saved(page)).floors[0].rooms[0].bounds.x)
     .toBe(original.bounds.x + 20);
-  await dock(page, "Set aside").click();
+  await dock(page, "Keep for later").click();
   await expect(
-    page.getByRole("region", { name: "Room tray", exact: true }),
+    page.getByRole("region", { name: "Kept for later", exact: true }),
   ).toBeVisible();
   const staged = (await saved(page)).stagedRooms![0].room;
   expect(staged.floorFinish).toBe("stone");
@@ -133,7 +133,7 @@ test("mobile tap placement rejects occupied space then restores the piece in its
   const project = await seed(page);
   const original = project.floors[0].rooms[0];
   await inspectFirst(page);
-  await dock(page, "Set aside").click();
+  await dock(page, "Keep for later").click();
   await page
     .getByRole("button", {
       name: `Pick a spot for ${original.name}`,
@@ -176,7 +176,7 @@ test("room drag to tray and drag back commit only completed gestures", async ({
     room.bounds.x + room.bounds.w / 2,
     room.bounds.z + room.bounds.d / 2,
   );
-  const button = await dock(page, "Set aside").locator.boundingBox();
+  const button = await dock(page, "Keep for later").locator.boundingBox();
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(
@@ -189,7 +189,7 @@ test("room drag to tray and drag back commit only completed gestures", async ({
     .poll(async () => (await saved(page)).stagedRooms?.length)
     .toBe(1);
   const grip = page.getByRole("button", {
-    name: `Place ${room.name} from tray`,
+    name: `Place ${room.name} back`,
     exact: true,
   });
   const box = await grip.boundingBox();
@@ -215,7 +215,7 @@ test("3D remains reachable after placing a selected room", async ({ page }) => {
   const project = await seed(page);
   const canvas = await page.locator("canvas").elementHandle();
   await inspectFirst(page);
-  await dock(page, "Set aside").click();
+  await dock(page, "Keep for later").click();
   await page
     .getByRole("button", {
       name: `Find a spot for ${project.floors[0].rooms[0].name}`,

@@ -33,7 +33,7 @@
     height: auto;
   }
   .dh-looks button strong {
-    font-size: 14px;
+    font-size: calc(14px * var(--dh-text));
     line-height: 1.15;
   }
   .dh-looks button small {
@@ -41,7 +41,7 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
     line-height: 1.25;
     color: var(--dh-ink-2, #6b6158);
   }

@@ -51,12 +51,12 @@
   }
   .dh-app :is(.field-note, .supporting) {
     color: var(--dh-ink-muted);
-    font-size: 13.5px;
+    font-size: calc(13.5px * var(--dh-text));
     line-height: 1.45;
   }
   .dh-app .section-kicker {
     color: var(--dh-terracotta-700);
-    font-size: 11.5px;
+    font-size: calc(11.5px * var(--dh-text));
     font-weight: 750;
     letter-spacing: 0.08em;
   }
@@ -78,7 +78,7 @@
     outline-offset: 1px;
   }
   .dh-app .big-field input {
-    font-size: 18px;
+    font-size: calc(18px * var(--dh-text));
     font-weight: 650;
     font-variant-numeric: tabular-nums;
     color: var(--dh-ink);
@@ -135,7 +135,7 @@
   }
   .dh-app .switch-row small {
     color: var(--dh-ink-muted);
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
   }
   .dh-app .switch-row .toggle {
     position: relative;
@@ -200,7 +200,7 @@
   }
   .dh-app .room-card small {
     color: var(--dh-ink-muted);
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
   }
   .dh-app .room-color {
     display: grid;
@@ -250,6 +250,12 @@
     justify-content: space-between;
     gap: 12px;
     font-weight: 650;
+  }
+  /* Label above, choices across the full width (Text size). */
+  .dh-app .menu-unit.is-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
   .dh-app .help-item svg {
     color: var(--dh-terracotta-600);

@@ -1,12 +1,13 @@
 import { useRef } from "react";
 import GuidedStart from "../components/GuidedStart";
 import SharePlan from "../components/SharePlan";
-import { Dialog, DialogHeading } from "../components/Controls";
+import { Dialog, DialogHeading, Switch } from "../components/Controls";
 import { parseProject } from "../domain/model";
 import { download } from "../domain/export";
 import type { Project } from "../domain/types";
 import type { Unit } from "../domain/display";
-import { friendlyError, useEditor } from "../editor/EditorProvider";
+import { friendlyError, useEditor, type EditorApi } from "../editor/EditorProvider";
+import { MyHomesDialog } from "./MyHomes";
 import { Icon } from "../ui/icons";
 import { Kbd, Segmented } from "../ui/primitives";
 
@@ -29,17 +30,20 @@ export function DialogHost({
   fileInput,
   onReplayTour,
   onStartNew,
+  onHomeOpened,
 }: {
   fileInput: React.RefObject<HTMLInputElement | null>;
   onReplayTour: () => void;
   /** Opens the gallery of starting homes. */
   onStartNew: () => void;
+  /** A home from My homes was opened. */
+  onHomeOpened: () => void;
 }) {
   const editor = useEditor();
   const { state, dispatch, project, unit, setPrefs, error } = editor;
   const close = () => dispatch({ type: "overlay", overlay: null });
-  const useStarter = (next: Project, nextUnit: Unit) => {
-    editor.commit(next, "Start a new home", { select: null });
+  const useStarter = async (next: Project, nextUnit: Unit) => {
+    if (!(await addHome(editor, next, "Start a new home"))) return;
     setPrefs({ unit: nextUnit });
     dispatch({ type: "overlay", overlay: null });
     dispatch({ type: "close-panel" });
@@ -66,6 +70,8 @@ export function DialogHost({
           <SharePlan project={project} unit={unit} language="en" onClose={close} />
         </Dialog>
       );
+    case "homes":
+      return <MyHomesDialog onClose={close} onOpened={onHomeOpened} onStartNew={onStartNew} />;
     case "help":
       return <HelpDialog onClose={close} />;
     case "shortcuts":
@@ -113,6 +119,11 @@ export function DialogHost({
                 }}
               />
             </label>
+            <button className="menu-row" onClick={() => dispatch({ type: "overlay", overlay: "homes" })}>
+              <Icon.homes size={21} aria-hidden />
+              My homes ({editor.homes.list.length})
+              <Icon.right size={17} aria-hidden />
+            </button>
             <button
               className="menu-row"
               onClick={() => {
@@ -126,7 +137,7 @@ export function DialogHost({
             </button>
             <button className="menu-row" onClick={() => fileInput.current?.click()}>
               <Icon.upload size={21} aria-hidden />
-              Open a saved project
+              Open a saved file
               <Icon.right size={17} aria-hidden />
             </button>
             <button
@@ -154,6 +165,26 @@ export function DialogHost({
                 onChange={(value) => setPrefs({ unit: value })}
               />
             </div>
+            <div className="menu-unit is-stacked">
+              <span>Text size</span>
+              <Segmented
+                label="Text size"
+                value={editor.prefs.textSize}
+                options={[
+                  { value: "normal", label: "Normal" },
+                  { value: "large", label: "Large" },
+                  { value: "extra", label: "Extra large" },
+                ]}
+                onChange={(value) => setPrefs({ textSize: value })}
+              />
+            </div>
+            <Switch
+              label="Sounds & vibration"
+              description="Soft pops when things change"
+              icon={<Icon.sound size={21} aria-hidden />}
+              checked={editor.prefs.sounds}
+              onChange={() => setPrefs({ sounds: !editor.prefs.sounds })}
+            />
             <button className="menu-row" onClick={() => dispatch({ type: "overlay", overlay: "help" })}>
               <Icon.help size={21} aria-hidden />
               Tips & how to use
@@ -213,8 +244,8 @@ function HelpDialog({ onClose }: { onClose: () => void }) {
     },
     {
       icon: Icon.tray,
-      title: "Make space with the tray",
-      body: "Set a room aside while you rearrange. Place it back by tapping an empty spot, or let it find a place on its own.",
+      title: "Make space: keep rooms for later",
+      body: "Keep a room for later while you rearrange. Place it back by tapping an empty spot, or let it find a place on its own.",
     },
     {
       icon: Icon.undo,
@@ -282,6 +313,23 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+/**
+ * Adds a home to My homes and opens it. Browsers that keep only one home get an
+ * undoable replacement instead. False when it couldn't be added (told why).
+ */
+export async function addHome(editor: EditorApi, next: Project, label: string): Promise<boolean> {
+  const outcome = await editor.homes.create(next);
+  if (outcome === "ok") return true;
+  if (outcome === "unsupported") {
+    editor.commit(next, label, { select: null });
+    editor.notify("This browser keeps one home at a time. Undo brings back your previous home.");
+    return true;
+  }
+  editor.notify(editor.homes.explain(outcome), "error");
+  if (outcome === "full") editor.dispatch({ type: "overlay", overlay: "homes" });
+  return false;
+}
+
 /** Hidden file input for opening saved projects. */
 export function ProjectFileInput({
   inputRef,
@@ -305,12 +353,12 @@ export function ProjectFileInput({
         try {
           if (file.size > 1000000) throw new Error("Choose a project file smaller than 1 MB.");
           const next = parseProject(await file.text());
-          editor.commit(next, "Open a saved project", { select: null });
+          if (!(await addHome(editor, next, "Open a saved project"))) return;
           editor.dispatch({ type: "overlay", overlay: null });
           editor.dispatch({ type: "close-panel" });
           editor.dispatch({ type: "choose-floor", floor: "all" });
           editor.dispatch({ type: "camera", command: { type: "fit", subject: "home", view: "hero" } });
-          editor.notify("Home opened. Undo brings back your previous idea.", "success");
+          editor.notify(`${next.name} opened. Your other homes are safe in My homes.`, "success");
           onOpened?.();
         } catch (err) {
           editor.setError(err instanceof Error ? err.message : "Could not read this file.");

@@ -10,7 +10,7 @@ test("a first visit offers a title screen, a template gallery and a skippable to
   await expect(title).toBeVisible();
   // The 3D hero is already mounted behind the title card.
   await expect(page.locator("canvas")).toHaveCount(1);
-  await page.getByRole("button", { name: "Start a new home" }).click();
+  await page.getByRole("button", { name: /^Pick a ready home/ }).click();
   const gallery = page.getByRole("dialog", { name: "Choose a starting home" });
   await expect(gallery).toBeVisible();
   await gallery.getByRole("radio", { name: /Courtyard home/ }).click();
@@ -44,7 +44,7 @@ test("returning visitors can continue, and the sample home is one tap away", asy
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Try the sample home" }).click();
+  await page.getByRole("button", { name: "Just show me a sample home" }).click();
   const sample = await stored(page);
   expect(sample.floors[0].rooms.length).toBeGreaterThan(2);
   await page.getByRole("dialog", { name: "Quick tour" }).getByRole("button", { name: "Skip tour" }).click();

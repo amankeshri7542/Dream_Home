@@ -896,10 +896,10 @@ export function parseProject(text: string): Project {
       !Array.isArray(value.stagedRooms) ||
       value.stagedRooms.length > LIMITS.stagedRooms
     )
-      throw new Error("The room tray must contain at most 48 rooms.");
+      throw new Error("A home can keep at most 48 rooms for later.");
     for (const entry of value.stagedRooms) {
       if (!obj(entry) || !str(entry.sourceFloorId) || !obj(entry.room))
-        throw new Error("Project contains an invalid room tray item.");
+        throw new Error("Project contains an invalid room kept for later.");
       const r = entry.room;
       if (
         !str(r.id) ||
@@ -908,7 +908,7 @@ export function parseProject(text: string): Project {
         !rectangle(r.bounds) ||
         !nullableId(r.unitId)
       )
-        throw new Error("Project contains an invalid room in the tray.");
+        throw new Error("Project contains an invalid room kept for later.");
       checkRoomExtras(r);
     }
   }

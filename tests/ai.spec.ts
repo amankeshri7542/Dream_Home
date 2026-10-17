@@ -37,7 +37,7 @@ async function mockApi(page: Page, answer: (body: { kind: string; variant: numbe
 async function openDesigner(page: Page) {
   await page.setViewportSize(mobile);
   await page.goto("/");
-  await page.getByRole("button", { name: /Design my home with AI/ }).click();
+  await page.getByRole("button", { name: /^Design it for me/ }).click();
   return page.getByRole("dialog", { name: /Your plot/ });
 }
 

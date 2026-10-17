@@ -175,4 +175,9 @@ describe("preferences", () => {
     expect(normalizePreferences({}).streetLife).toBe(true);
     expect(normalizePreferences({ streetLife: false }).streetLife).toBe(false);
   });
+  it("keeps text size and sounds, with safe defaults", () => {
+    expect(normalizePreferences({})).toMatchObject({ textSize: "normal", sounds: true });
+    expect(normalizePreferences({ textSize: "extra", sounds: false })).toMatchObject({ textSize: "extra", sounds: false });
+    expect(normalizePreferences({ textSize: "huge" }).textSize).toBe("normal");
+  });
 });

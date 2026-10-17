@@ -64,14 +64,17 @@
     --dh-font-ui: "Figtree Variable", system-ui, -apple-system, "Segoe UI",
       Roboto, sans-serif;
     --dh-font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
-    --dh-text-hero: clamp(40px, 8vw, 64px);
-    --dh-text-2xl: 28px;
-    --dh-text-xl: 22px;
-    --dh-text-lg: 18px;
-    --dh-text-body: 16px;
-    --dh-text-label: 15px;
-    --dh-text-tab: 13px;
-    --dh-text-caption: 13px;
+    /* Text size setting: 1, 1.18 (Large) or 1.36 (Extra large). Every font
+       size in the app is written as calc(Npx * var(--dh-text)). */
+    --dh-text: 1;
+    --dh-text-hero: calc(clamp(40px, 8vw, 64px) * var(--dh-text));
+    --dh-text-2xl: calc(28px * var(--dh-text));
+    --dh-text-xl: calc(22px * var(--dh-text));
+    --dh-text-lg: calc(18px * var(--dh-text));
+    --dh-text-body: calc(16px * var(--dh-text));
+    --dh-text-label: calc(15px * var(--dh-text));
+    --dh-text-tab: calc(13px * var(--dh-text));
+    --dh-text-caption: calc(13px * var(--dh-text));
 
     /* Space (4 px base) */
     --dh-space-1: 4px;

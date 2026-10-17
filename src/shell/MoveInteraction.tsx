@@ -167,7 +167,7 @@ export function MoveInteraction(props: Props) {
             floorId: d.item.target.floorId,
             bounds: d.item.bounds,
             status: "snap",
-            label: `Put ${d.item.name} in the tray`,
+            label: `Keep ${d.item.name} for later`,
             guides: [],
             blockers: [],
           });

@@ -10,7 +10,9 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
-import { useProject } from "../useProject";
+import { useProject, type HomeOutcome } from "../useProject";
+import type { HomeEntry } from "../homes/shelf";
+import { feedback, setFeedbackEnabled } from "../ui/feedback";
 import type { HistoryMeta } from "../history";
 import type { Unit } from "../domain/display";
 import type {
@@ -79,6 +81,31 @@ export type EditorApi = {
   recovery: string | null;
   select: (target: SelectionTarget | null, origin?: "canvas" | "list") => void;
   notify: (text: string, tone?: "info" | "success" | "error") => void;
+  /** My homes: every home kept on this device. */
+  homes: Homes;
+};
+
+export type Homes = {
+  list: HomeEntry[];
+  activeId: string;
+  /** False when this browser can only keep the open home. */
+  persistent: boolean;
+  full: boolean;
+  /** Adds a new home to My homes and opens it (a fresh undo history). */
+  create: (project: Project) => Promise<HomeOutcome>;
+  open: (id: string) => Promise<HomeOutcome>;
+  remove: (id: string) => Promise<HomeOutcome>;
+  read: (id: string) => Promise<Project | null>;
+  /** A friendly sentence for an outcome that isn't "ok". */
+  explain: (outcome: HomeOutcome) => string;
+};
+
+const HOME_PROBLEMS: Record<Exclude<HomeOutcome, "ok">, string> = {
+  full: "My homes is full (12 homes). Delete one you don’t need to make room.",
+  unsupported: "This browser can keep only one home. Save a backup file before starting another.",
+  missing: "That home couldn’t be found on this device.",
+  failed: "Your device couldn’t save that home. Save a backup file to be safe.",
+  open: "That home is open right now.",
 };
 
 const EditorContext = createContext<EditorApi | null>(null);
@@ -110,7 +137,7 @@ export function friendlyIssue(project: Project, issue: EditIssue): string {
   switch (issue.code) {
     case "room-overlap":
       if (source && blocker)
-        return `${cap(source)} bumps into ${blocker}. Try a smaller size, another spot, or set ${blocker} aside.`;
+        return `${cap(source)} bumps into ${blocker}. Try a smaller size, another spot, or keep ${blocker} for later.`;
       break;
     case "room-outside-floor":
       if (source)
@@ -135,7 +162,7 @@ export function friendlyError(error: string) {
     return "Saving is unavailable on this device. Download your project file to keep your changes.";
   // Only the room-placement message; furniture and garden messages say it better.
   if (/no free space for this room/i.test(error))
-    return "This room needs more space. Set another room aside in the tray, try a smaller size, or expand the building area.";
+    return "This room needs more space. Keep another room for later, try a smaller size, or expand the building area.";
   return error;
 }
 
@@ -180,6 +207,11 @@ export function EditorProvider({
     document.documentElement.lang = "en";
     savePreferences({ language: "en", unit: prefs.unit });
   }, [prefs.unit]);
+  // Text size scales every font (see --dh-text in tokens.css); sounds follow their switch.
+  useEffect(() => {
+    document.documentElement.dataset.text = prefs.textSize;
+  }, [prefs.textSize]);
+  useEffect(() => setFeedbackEnabled(prefs.sounds), [prefs.sounds]);
 
   const notify = useCallback(
     (text: string, tone: "info" | "success" | "error" = "info") =>
@@ -192,6 +224,14 @@ export function EditorProvider({
     [],
   );
 
+  /** A different home is open: start from the whole house, nothing selected. */
+  const showHome = useCallback(() => {
+    dispatch({ type: "leave-room" });
+    dispatch({ type: "select", target: null });
+    dispatch({ type: "close-panel" });
+    dispatch({ type: "choose-floor", floor: "all" });
+    dispatch({ type: "camera", command: { type: "fit", subject: "home", view: "hero" } });
+  }, []);
   const stateRef = useRef(state);
   stateRef.current = state;
   const projectRef = useRef(project);
@@ -221,9 +261,11 @@ export function EditorProvider({
             doc.setError("");
             dispatch({ type: "notify", text, tone: "error" });
           } else doc.setError(text);
+          feedback.error();
         }
         return false;
       }
+      feedback.pop();
       if (result.ok) {
         if (opts.select !== undefined)
           dispatch({ type: "select", target: opts.select, origin: "list" });
@@ -254,6 +296,7 @@ export function EditorProvider({
   const restore = useCallback(
     (meta: HistoryMeta | undefined, verb: "Undid" | "Redid") => {
       if (!meta) return;
+      feedback.click();
       const target = meta.selection as SelectionTarget | null | undefined;
       if (target) dispatch({ type: "select", target, origin: "history" });
       if (meta.label)
@@ -375,6 +418,20 @@ export function EditorProvider({
     recovery: doc.recovery,
     select,
     notify,
+    homes: {
+      ...doc.homes,
+      create: async (next) => {
+        const outcome = await doc.homes.create(next);
+        if (outcome === "ok") showHome();
+        return outcome;
+      },
+      open: async (id) => {
+        const outcome = await doc.homes.open(id);
+        if (outcome === "ok") showHome();
+        return outcome;
+      },
+      explain: (outcome) => (outcome === "ok" ? "" : HOME_PROBLEMS[outcome]),
+    },
   };
   return (
     <EditorContext.Provider value={value}>{children}</EditorContext.Provider>

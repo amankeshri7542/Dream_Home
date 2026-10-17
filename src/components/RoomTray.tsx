@@ -55,22 +55,22 @@ export default function RoomTray({
     pieces.find((piece) => piece.room.id === selected) ?? pieces[0];
   const unitId = targetUnit === "auto" ? undefined : targetUnit || null;
   return (
-    <section className="room-tray" data-room-tray-drop aria-label="Room tray">
+    <section className="room-tray" data-room-tray-drop aria-label="Kept for later">
       <div className="tray-heading">
         <div>
           <strong>
-            Room tray <span>{pieces.length}</span>
+            Kept for later <span>{pieces.length}</span>
           </strong>
-          <p>Keep pieces here while you make space.</p>
+          <p>Rooms wait here while you make space.</p>
         </div>
-        <button aria-label="Close room tray" onClick={onClose}>
+        <button aria-label="Close kept rooms" onClick={onClose}>
           <X size={20} aria-hidden />
         </button>
       </div>
       {!pieces.length ? (
         <div className="tray-empty">
-          Your tray is empty. Rooms you <strong>set aside</strong> wait here
-          safely until you put them back.
+          Nothing is kept for later yet. Rooms you <strong>keep for later</strong> wait
+          here safely until you put them back.
         </div>
       ) : (
         <>
@@ -82,7 +82,7 @@ export default function RoomTray({
               >
                 <button
                   className="tray-piece-grip"
-                  aria-label={`Place ${room.name} from tray`}
+                  aria-label={`Place ${room.name} back`}
                   onClick={(event) => {
                     if (event.detail > 0 && wasDrag.current) return;
                     onSelect(room.id);
@@ -197,13 +197,13 @@ export default function RoomTray({
                     Find a spot
                   </button>
                   <button
-                    aria-label={`Rotate ${room.name} in tray`}
+                    aria-label={`Rotate kept ${room.name}`}
                     onClick={() => onApply(rotateStagedRoom(project, room.id))}
                   >
                     <RotateCcw size={17} aria-hidden />
                   </button>
                   <button
-                    aria-label={`Remove ${room.name} from tray`}
+                    aria-label={`Remove ${room.name} for good`}
                     onClick={() => onApply(removeStagedRoom(project, room.id))}
                   >
                     <Trash2 size={17} aria-hidden />
@@ -217,7 +217,7 @@ export default function RoomTray({
             <label className="select-label">
               Place into
               <select
-                aria-label="Tray destination group"
+                aria-label="Destination group for kept rooms"
                 value={targetUnit}
                 onChange={(event) => onTargetUnit(event.target.value)}
               >
@@ -233,7 +233,7 @@ export default function RoomTray({
             {picked && (
               <div className="field-pair">
                 <Dimension
-                  label="Tray room width"
+                  label="Kept room width"
                   cm={picked.room.bounds.w}
                   unit={unit}
                   language="en"
@@ -245,7 +245,7 @@ export default function RoomTray({
                   }
                 />
                 <Dimension
-                  label="Tray room depth"
+                  label="Kept room depth"
                   cm={picked.room.bounds.d}
                   unit={unit}
                   language="en"

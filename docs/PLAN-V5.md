@@ -280,7 +280,7 @@ Also fix the existing bug where `:root[data-quality="battery"]` never matches (t
 
 M0 ships in two phases:
 - **M0a: server, limiter, security headers.** ✅ Done on 17 Oct 2026 (see the roadmap log). It covers the "Server" bullets below, the headers module, the preview project and `.env.example`.
-- **M0b: everything else in M0.** My homes, settings, the copy rename, first launch, the domain hand-off and the preload-error reload.
+- **M0b: everything else in M0.** ✅ Done on 17 Oct 2026. It covers My homes, settings, the copy rename, first launch, the domain hand-off and the preload-error reload.
 
 **Build:**
 - **Server** (M0a):
@@ -749,4 +749,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a was implemented and shipped in the planning session (17 Oct 2026). The next phase is **M0b**.
+- M0a and M0b shipped on 17 Oct 2026. The next phase is **M1** (live link + Remix + WhatsApp preview).

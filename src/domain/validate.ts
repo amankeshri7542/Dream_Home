@@ -80,7 +80,7 @@ export function validateProjectIssues(
   if (project.verticalSpaces.length > LIMITS.verticalSpaces)
     issue("limit", "This building supports up to 8 vertical spaces.");
   if ((project.stagedRooms?.length ?? 0) > LIMITS.stagedRooms)
-    issue("limit", "The room tray holds up to 48 rooms.");
+    issue("limit", "Up to 48 rooms can be kept for later.");
   const envelope = rect(
     plot.setback,
     plot.setback,
@@ -104,18 +104,18 @@ export function validateProjectIssues(
     )
       issue(
         "staged",
-        "A room in the tray needs a valid name, type and dimensions.",
+        "A room kept for later needs a valid name, type and dimensions.",
         { source },
       );
     if (typeof sourceFloorId !== "string" || !ID.test(sourceFloorId))
-      issue("staged", "A room in the tray needs a valid original floor ID.", {
+      issue("staged", "A room kept for later needs a valid original floor ID.", {
         source,
       });
     if (
       room.unitId !== null &&
       (typeof room.unitId !== "string" || !ID.test(room.unitId))
     )
-      issue("staged", "A room in the tray needs a valid original unit ID.", {
+      issue("staged", "A room kept for later needs a valid original unit ID.", {
         source,
       });
     if (!validRoomPresentation(room))

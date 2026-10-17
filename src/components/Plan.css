@@ -73,7 +73,7 @@
   justify-content: center;
   gap: 5px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #315b47;
 }
 .direct-plan .plan-tools button:hover:not(:disabled) {
@@ -96,7 +96,7 @@
   background: #fffdf2e8;
   border: 1px solid #d6e2d0;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   line-height: 1.35;
   pointer-events: none;
 }
@@ -132,7 +132,7 @@
 }
 @media (max-width: 760px) {
   .direct-plan .plan-hint {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
 }
 }

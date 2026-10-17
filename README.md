@@ -56,8 +56,12 @@ fails if it's stale).
    makeovers per device; after that (or offline) the built-in planner steps in.
    The AI only proposes; the app's own layout engine builds, so the result is
    always a valid, editable home.
-2. **Start** — a title screen offers *Continue my home*, *Start a new home*,
-   *Try the sample home* and *Open a saved project*. The gallery has eight
+2. **Start** — a first visit asks one question with two big choices: *Design
+   it for me* (the AI designer) or *Pick a ready home*, plus *Just show me a
+   sample home* and *Open a saved file*. Returning visitors get *Continue my
+   home* and **My homes**: up to 12 homes kept on the device, each with a mini
+   plan, opened or deleted in a tap. Starting, importing or AI-designing a home
+   adds it to My homes; the home you were working on stays safe. The gallery has eight
    starting homes (cosy bungalow, garden villa, duplex, courtyard home,
    apartment block, shop + home, little market, blank plot) with live 3D
    previews and simple steppers. *Start with my plot* opens the detailed
@@ -123,6 +127,9 @@ celebrates with confetti, then the pill counts "make it yours" ideas to try.
 **Accessible:** every drag has a tap, keyboard or number alternative; targets
 are 44–48 px; selections are announced to screen readers; reduced-motion
 settings turn off camera glides and animations; `?` lists keyboard shortcuts.
+**Text size** (More → Normal, Large, Extra large) scales every word and grows
+buttons to 56 px for easier reading and tapping, and soft generated **sounds
+and vibration** confirm each change (switchable in More).
 
 ## Architecture
 

@@ -317,7 +317,7 @@ export function growHouse(project: Project, floorId: string): EditResult {
   if (maxW <= w && maxD <= d)
     return {
       ok: false,
-      error: "The house already fills the plot. Set a room aside or try a smaller size.",
+      error: "The house already fills the plot. Keep a room for later or try a smaller size.",
     };
   return resizeBuilding(project, floor.id, { w: Math.max(w, maxW), d: Math.max(d, maxD) });
 }

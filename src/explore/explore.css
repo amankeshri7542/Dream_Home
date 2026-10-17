@@ -100,7 +100,7 @@
   .dh-time-row output {
     min-width: 132px;
     text-align: right;
-    font-size: 13.5px;
+    font-size: calc(13.5px * var(--dh-text));
     font-weight: 650;
     color: var(--dh-hud-ink);
   }
@@ -127,13 +127,13 @@
     border-radius: var(--dh-radius-pill);
     background: transparent;
     color: var(--dh-hud-ink);
-    font-size: 13.5px;
+    font-size: calc(13.5px * var(--dh-text));
     font-weight: 650;
     white-space: nowrap;
   }
   .dh-explore-views button {
     min-height: 48px;
-    font-size: 14.5px;
+    font-size: calc(14.5px * var(--dh-text));
   }
   .dh-time-presets button[aria-pressed="true"],
   .dh-explore-views button[aria-checked="true"] {
@@ -183,13 +183,13 @@
     padding: 8px 12px;
     border-radius: var(--dh-radius-md);
     background: var(--dh-hud-bg);
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
     color: var(--dh-hud-ink-muted);
     text-align: center;
   }
   .dh-walk-hint strong {
     color: var(--dh-hud-ink);
-    font-size: 15px;
+    font-size: calc(15px * var(--dh-text));
   }
   .dh-walk-floors {
     display: flex;
@@ -258,14 +258,14 @@
       min-height: 52px;
       padding: 4px 4px;
       border-radius: var(--dh-radius-md);
-      font-size: 12.5px;
+      font-size: calc(12.5px * var(--dh-text));
       line-height: 1.1;
       white-space: normal;
       text-align: center;
     }
     .dh-explore-views button {
       min-height: 56px;
-      font-size: 13.5px;
+      font-size: calc(13.5px * var(--dh-text));
     }
   }
   .dh-photo-flash {
@@ -287,7 +287,7 @@
   @media (max-width: 430px) {
     .dh-time-row output {
       min-width: 0;
-      font-size: 12.5px;
+      font-size: calc(12.5px * var(--dh-text));
     }
     .dh-time-row > svg {
       display: none;

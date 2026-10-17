@@ -143,7 +143,7 @@ export function Inspector({
       </>
     );
   } else if (state.panel === "tray") {
-    label = "Room tray";
+    label = "Kept for later";
     content = (
       <>
         <SpaceTabs />

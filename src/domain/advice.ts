@@ -242,7 +242,7 @@ export function homeChecks(project: Project): {
           check("kitchen", "There’s a kitchen", rooms.some((r) => r.kind === "kitchen")),
           check("bathroom", "There’s a bathroom", rooms.some((r) => r.kind === "bathroom")),
         ]),
-    check("tray", "No rooms waiting in the tray", !project.stagedRooms?.length),
+    check("tray", "No rooms waiting to be placed back", !project.stagedRooms?.length),
   ];
   const allRooms = [...rooms, ...(project.stagedRooms ?? []).map((s) => s.room)];
   const quests: HomeCheck[] = [

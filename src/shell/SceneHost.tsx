@@ -151,14 +151,14 @@ export function SceneHost({
                 onBlocked={(result) => run(result, "Move", { quietError: true })}
                 onSetAside={(room) => {
                   if (
-                    run(setAsideRoom(project, room.floorId, room.id), `Set aside ${room.name}`, {
+                    run(setAsideRoom(project, room.floorId, room.id), `Keep ${room.name} for later`, {
                       select: null,
                       quietError: true,
                     })
                   )
                     dispatch({
                       type: "notify",
-                      text: `${room.name} is waiting in the tray. Place it back whenever you like.`,
+                      text: `${room.name} is kept for later. Place it back whenever you like.`,
                       tone: "success",
                       undo: true,
                     });

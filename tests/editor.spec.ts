@@ -1045,7 +1045,7 @@ test("tray drags survive an unrelated pointer cancellation and cancel safely wit
   await seed(page, fixture, "m");
   await tool(page, "Tray").click();
   const grip = page.getByRole("button", {
-    name: `Place ${room.name} from tray`,
+    name: `Place ${room.name} back`,
     exact: true,
   });
   const position = async () =>
@@ -1104,7 +1104,7 @@ test("tray drags survive an unrelated pointer cancellation and cancel safely wit
   await page.mouse.up();
   expect(await stored(page)).toEqual(fixture);
   await page
-    .getByRole("button", { name: "Close room tray", exact: true })
+    .getByRole("button", { name: "Close kept rooms", exact: true })
     .click();
   await page.getByRole("button", { name: "Close floor plan", exact: true }).click();
   await openPlan(page);
@@ -1137,7 +1137,7 @@ test("native phone touch restores a tray piece and resizes its top left corner",
     await tool(page, "Tray").tap();
     const grip = (await page
       .getByRole("button", {
-        name: `Place ${room.name} from tray`,
+        name: `Place ${room.name} back`,
         exact: true,
       })
       .boundingBox())!;

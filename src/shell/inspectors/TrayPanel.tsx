@@ -30,7 +30,7 @@ export function TrayPanel({
           dispatch({ type: "close-panel" });
           onDrag(null);
         }}
-        onApply={(result) => run(result, "Place a room from the tray")}
+        onApply={(result) => run(result, "Place a kept room back")}
         onRestored={(id) => {
           dispatch({ type: "tray-select", id: null });
           dispatch({ type: "close-panel" });

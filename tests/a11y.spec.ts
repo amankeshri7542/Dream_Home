@@ -58,9 +58,9 @@ for (const [name, size] of [
 test("title screen and gallery pass automated accessibility checks", async ({ page }) => {
   await page.setViewportSize(mobile);
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /Start a new home/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Pick a ready home/ })).toBeVisible();
   await audit(page, "title");
-  await page.getByRole("button", { name: /Start a new home/ }).click();
+  await page.getByRole("button", { name: /^Pick a ready home/ }).click();
   await expect(page.getByRole("dialog", { name: "Choose a starting home" })).toBeVisible();
   await audit(page, "gallery");
 });

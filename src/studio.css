@@ -17,14 +17,14 @@
   display: none;
 }
 .home-app.hero-workspace .scene-heading h1 {
-  font-size: 24px;
+  font-size: calc(24px * var(--dh-text));
   line-height: 1.1;
   margin: 0;
 }
 .home-app.hero-workspace .scene-heading p {
   display: flex;
   margin-top: 5px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
 }
 .home-app.hero-workspace .scene-area .view-switch {
   display: flex;
@@ -35,7 +35,7 @@
 .home-app.hero-workspace .view-switch button {
   min-height: 44px;
   padding: 0 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .home-app.hero-workspace .scene-area .floating-floors {
   top: 65px;
@@ -46,7 +46,7 @@
   max-width: 116px;
   min-height: 44px;
   padding-left: 12px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .home-app.hero-workspace .scene-area .selected-chip {
   top: 65px;
@@ -55,7 +55,7 @@
   right: 140px;
   transform: none;
   min-height: 44px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   padding: 0 10px;
   overflow: hidden;
   white-space: nowrap;
@@ -82,7 +82,7 @@
   min-height: 44px;
   min-width: 44px;
   padding: 0 9px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   box-shadow: 0 2px 12px #26473609;
   border: 1px solid #bfcfc687;
 }
@@ -104,10 +104,10 @@
   padding: 13px 17px;
 }
 .home-app.hero-workspace .welcome-card h2 {
-  font-size: 18px;
+  font-size: calc(18px * var(--dh-text));
 }
 .home-app.hero-workspace .welcome-card p {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   margin: 4px 0;
 }
 .home-app.hero-workspace .welcome-card .text-link {
@@ -149,7 +149,7 @@
 }
 .tray-heading strong {
   font-family: Georgia, serif;
-  font-size: 19px;
+  font-size: calc(19px * var(--dh-text));
   font-weight: 400;
 }
 .tray-heading strong span {
@@ -162,7 +162,7 @@
   margin-left: 4px;
 }
 .tray-heading p {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #657061;
   margin: 4px 0 0;
 }
@@ -173,7 +173,7 @@
   height: 44px;
 }
 .tray-empty {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   line-height: 1.7;
   padding: 10px;
   border: 1px dashed #a1b7a5;
@@ -211,11 +211,11 @@
   margin-bottom: 5px;
 }
 .tray-piece-grip strong {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   font-weight: 600;
 }
 .tray-piece-grip small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   margin-top: 4px;
   color: #5f7060;
 }
@@ -232,10 +232,10 @@
   gap: 4px;
   border-radius: 8px;
   background: #fffefa;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .tray-options {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   padding: 4px;
 }
 .tray-options summary {
@@ -258,7 +258,7 @@
   color: white;
   border-radius: 10px;
   padding: 0 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .placement-prompt button {
   min-height: 44px;
@@ -312,10 +312,10 @@
     left: 28px;
   }
   .home-app.hero-workspace .scene-heading h1 {
-    font-size: 29px;
+    font-size: calc(29px * var(--dh-text));
   }
   .home-app.hero-workspace .scene-heading p {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .home-app.hero-workspace .scene-area .view-switch {
     top: 24px;
@@ -391,7 +391,7 @@
 @media (max-width: 389px) {
   .home-app.hero-workspace .view-switch button {
     padding: 0 9px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .home-app.hero-workspace .camera-actions button {
     padding: 0 7px;
@@ -436,7 +436,7 @@
     display: none;
   }
   .tray-heading strong {
-    font-size: 17px;
+    font-size: calc(17px * var(--dh-text));
   }
   .tray-heading button {
     height: 36px;

@@ -50,7 +50,7 @@ export function HomeBar({ onAi }: { onAi: () => void }) {
         icon={Icon.add}
         label="Add room"
         className="dh-tool-primary"
-        aria-label={staged ? `Add room, ${staged} set aside` : "Add room"}
+        aria-label={staged ? `Add room, ${staged} kept for later` : "Add room"}
         pressed={state.panel === "catalog" || state.panel === "rooms" || state.panel === "tray"}
         badge={staged}
         onClick={() => dispatch({ type: "open-panel", panel: staged ? "tray" : "catalog" })}
@@ -62,14 +62,14 @@ export function HomeBar({ onAi }: { onAi: () => void }) {
   );
 }
 
-/** "Add room" opens one sheet with three sides: new rooms, your rooms, set aside. */
+/** "Add room" opens one sheet with three sides: new rooms, your rooms, rooms kept for later. */
 export function SpaceTabs() {
   const { state, dispatch, project } = useEditor();
   const staged = project.stagedRooms?.length ?? 0;
   const tabs = [
     { panel: "catalog" as const, label: "Add new" },
     { panel: "rooms" as const, label: "Your rooms" },
-    { panel: "tray" as const, label: staged ? `Set aside (${staged})` : "Set aside" },
+    { panel: "tray" as const, label: staged ? `For later (${staged})` : "For later" },
   ];
   return (
     <div className="dh-segmented dh-space-tabs" role="tablist" aria-label="Rooms">

@@ -19,7 +19,7 @@
 }
 .blueprint-setup .blueprint-kinds button span {
   grid-column: 2;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   line-height: 1.5;
   color: #5c7262;
 }
@@ -50,7 +50,7 @@
   border-color: #426952;
 }
 .blueprint-setup .blueprint-flavors small {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   line-height: 1.4;
 }
 .blueprint-setup .blueprint-program {
@@ -69,7 +69,7 @@
 }
 .blueprint-setup .blueprint-count > span {
   max-width: 52%;
-  font-size: 14px;
+  font-size: calc(14px * var(--dh-text));
   line-height: 1.5;
 }
 .blueprint-setup .blueprint-count > div {
@@ -87,7 +87,7 @@
   border: 0;
   background: #ecf1e5;
   color: #335a46;
-  font-size: 24px;
+  font-size: calc(24px * var(--dh-text));
 }
 .blueprint-setup .blueprint-count input {
   width: 48px;
@@ -97,7 +97,7 @@
   text-align: center;
   padding: 0;
   color: #335a46;
-  font-size: 18px;
+  font-size: calc(18px * var(--dh-text));
   appearance: textfield;
 }
 .blueprint-setup .blueprint-count input::-webkit-inner-spin-button {
@@ -105,7 +105,7 @@
 }
 .blueprint-setup .blueprint-quick {
   margin: 20px 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #5c7262;
 }
 .blueprint-setup .blueprint-quick > div {
@@ -144,11 +144,11 @@
   border-radius: 8px;
   background: #fffdf6;
   color: #335a46;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .blueprint-setup .blueprint-stack small {
   grid-column: 2;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #758369;
 }
 .blueprint-setup .blueprint-stack strong {
@@ -179,19 +179,19 @@
     grid-column: 1;
   }
   .blueprint-setup .blueprint-count > span {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .blueprint-setup .blueprint-count > div {
     flex-shrink: 0;
   }
   .blueprint-setup .blueprint-flavors button {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .blueprint-setup .blueprint-kinds button:last-child {
     min-height: 110px;
   }
   .blueprint-setup .recommendation-copy h3 {
-    font-size: 17px;
+    font-size: calc(17px * var(--dh-text));
   }
 }
 }

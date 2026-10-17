@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useReducedMotion } from "../editor/hooks";
 import { Icon } from "../ui/icons";
 import { Button } from "../ui/primitives";
+import { feedback } from "../ui/feedback";
 
 const COLORS = ["#b5562f", "#4d7a53", "#f4bc55", "#c68a4e", "#7fb0c9", "#e58f6f"];
 
@@ -23,6 +24,8 @@ export function Celebration({ onExplore, onClose }: { onExplore: () => void; onC
       })),
     [],
   );
+  // Once per celebration (the effect below re-runs whenever onClose changes).
+  useEffect(() => feedback.success(), []);
   useEffect(() => {
     primary.current?.focus();
     const key = (e: KeyboardEvent) => {

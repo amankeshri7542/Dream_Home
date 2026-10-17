@@ -371,7 +371,7 @@ export default function RoomCatalog({
               ) : (
                 <>
                   <p role="status">
-                    No room left for this one. Set a room aside in the tray, pick
+                    No room left for this one. Keep a room for later, pick
                     a smaller size, or make the plot bigger.
                   </p>
                   <button className="secondary-button" onClick={onExpand}>

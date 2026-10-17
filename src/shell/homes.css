@@ -1,0 +1,134 @@
+@layer components {
+  .dh-homes {
+    display: grid;
+    gap: 14px;
+    padding: 0 18px 18px;
+  }
+  .dh-homes-lead,
+  .dh-homes-note {
+    margin: 0;
+    color: var(--dh-ink-muted);
+    font-size: calc(14px * var(--dh-text));
+  }
+  .dh-homes-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .dh-home-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-paper-2);
+  }
+  .dh-home-card.is-active {
+    background: var(--dh-terracotta-50);
+    box-shadow: inset 0 0 0 2px var(--dh-terracotta-600);
+  }
+  .dh-home-thumb {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 68px;
+    color: var(--dh-ink-muted);
+  }
+  .dh-home-thumb svg {
+    width: 100%;
+    height: 100%;
+  }
+  .dh-home-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .dh-home-info strong {
+    overflow: hidden;
+    font-family: var(--dh-font-display);
+    font-size: calc(17px * var(--dh-text));
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dh-home-info span {
+    color: var(--dh-ink-muted);
+    font-size: calc(13px * var(--dh-text));
+  }
+  .dh-home-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dh-home-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    color: var(--dh-terracotta-700);
+    font-size: calc(13px * var(--dh-text));
+    font-weight: 700;
+  }
+  /* The delete question takes the whole row, so the buttons stay big. */
+  .dh-home-confirm {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .dh-home-confirm span {
+    margin-right: auto;
+    font-weight: 650;
+  }
+}
+
+@layer components {
+  /* On the old address: a friendly strip under the top bar. */
+  .dh-move-banner {
+    position: absolute;
+    top: calc(var(--dh-topbar-h, 56px) + 8px);
+    left: 50%;
+    z-index: var(--dh-z-chrome);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: min(560px, calc(100% - 16px));
+    padding: 8px 8px 8px 14px;
+    transform: translateX(-50%);
+    border: 1px solid var(--dh-glass-border);
+    border-radius: var(--dh-radius-lg);
+    background: var(--dh-glass-solid);
+    box-shadow: var(--dh-shadow-2);
+    color: var(--dh-terracotta-700);
+  }
+  .dh-move-banner p {
+    flex: 1;
+    margin: 0;
+    color: var(--dh-ink);
+    font-size: calc(14px * var(--dh-text));
+  }
+  .dh-move-banner .dh-btn {
+    flex: none;
+  }
+  .dh-import {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 22px 18px 18px;
+    text-align: center;
+  }
+  .dh-import h2 {
+    margin: 0;
+    font-size: var(--dh-text-xl);
+  }
+  .dh-import p {
+    margin: 0;
+    color: var(--dh-ink-muted);
+  }
+}

@@ -61,7 +61,7 @@ export function useSelectionActions() {
   const setAside = useCallback(() => {
     if (target?.kind !== "room" || !floorId) return;
     if (
-      run(setAsideRoom(project, floorId, target.id), `Set aside ${selected!.name}`, {
+      run(setAsideRoom(project, floorId, target.id), `Keep ${selected!.name} for later`, {
         select: null,
         quietError: true,
       })
@@ -69,7 +69,7 @@ export function useSelectionActions() {
       dispatch({ type: "open-panel", panel: "tray" });
       dispatch({
         type: "notify",
-        text: `${selected!.name} is waiting in the tray. Place it back whenever you like.`,
+        text: `${selected!.name} is kept for later. Place it back whenever you like.`,
         tone: "success",
         undo: true,
       });
@@ -106,13 +106,13 @@ export function useSelectionActions() {
         title: `Remove ${name}?`,
         body:
           target.kind === "room"
-            ? "Setting it aside keeps its size, furniture and finishes in the tray so you can place it again later."
+            ? "Keeping it for later saves its size, furniture and finishes, so you can place it again whenever you like."
             : target.kind === "vertical"
               ? "This removes it from every floor it connects. Undo brings it back."
               : "Undo brings it back.",
         confirmLabel: `Remove ${target.kind === "room" ? "room" : "space"}`,
         ...(target.kind === "room"
-          ? { safeLabel: "Set aside instead", safeAction: "set-aside" }
+          ? { safeLabel: "Keep for later instead", safeAction: "set-aside" }
           : {}),
         action: "remove",
       },

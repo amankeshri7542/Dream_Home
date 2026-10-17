@@ -4,9 +4,11 @@ The full plan is [`docs/PLAN-V5.md`](PLAN-V5.md). This file tracks progress so
 work can resume after any interruption. Update it at the end of every phase.
 
 ## Resume here
-- **M0a is done and shipped** (17 Oct 2026): the server router, limiter, Claude pricing and security headers.
-- **Next phase: M0b.** My homes, text size and sounds, "Keep for later" copy, first launch, "Move my homes" domain hand-off, `vite:preloadError` reload.
-- **Owner action pending:** connect **Upstash Redis / Vercel KV** to the Vercel project. Until then the live site's AI designer is switched off on purpose and the built-in planner is used (see Decisions).
+- **M0a and M0b are done and shipped** (17 Oct 2026). M0a: server router, limiter, Claude pricing, security headers. M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
+- **Next phase: M1.** Live link, Remix and the WhatsApp preview (see the plan).
+- **Owner actions pending:**
+  - Connect **Upstash Redis / Vercel KV** to the Vercel project. Until then the live AI designer is switched off on purpose and the built-in planner is used.
+  - When `home.amankeshri.com` works, set `PUBLIC_ORIGIN` and `VITE_PUBLIC_ORIGIN` to it in Vercel and redeploy. The old address then shows "Move my home".
 
 ## Decisions
 - **15–17 Oct 2026 (owner):**
@@ -36,9 +38,24 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Server-side refusal fallback** is sent only to Opus models; Haiku rejects it.
   - **Headers** are defined once in `server/headers.ts`. `vercel.json` must match (unit test), and `vite preview` serves them, so `npm run test:preview` can check the CSP on the real build.
 
+- **17 Oct 2026 (M0b):**
+  - **My homes storage:** the open home still saves to `dream-home.project.v2`, so nothing changed for existing users. The shelf index is in `dream-home.homes.v1` (≤ 12 homes) and each home's full copy is in IndexedDB.
+  - **Migration:** a device without a shelf gets one holding the home it already has.
+  - **The first-visit starter home is replaced, not duplicated,** when someone picks a starting home. Every later new home (gallery, AI, sample, import, plot wizard) is added to My homes with a fresh undo history.
+  - **Browsers without IndexedDB** fall back to the old undoable replacement, with a notice.
+  - **Text size** uses a codemod: all 347 font sizes became `calc(Npx * var(--dh-text))`. Large and Extra large also raise tap targets to 56 px, let buttons wrap, and make the title card scroll. CSS `zoom` was rejected, as the plan says.
+  - **Sounds** are generated with WebAudio (no files), quiet, with vibration on phones. One switch, "Sounds & vibration", on by default.
+  - **"Keep for later"** replaces "Set aside" and "tray" in about 45 user-visible strings. The Add room tab is "For later (n)". Internal ids are unchanged, so saves are unaffected.
+  - **First screen:** "How would you like to start?" with *Design it for me* and *Pick a ready home*, plus "Just show me a sample home" and "Open a saved file". Returning visitors with more than one home also get *My homes (n)*. *Upload my builder's plan* waits for M6.
+  - **Moving homes to the new domain:**
+    - The old `*.vercel.app` address offers to move the open home in the URL fragment: gzip, then base64url. A fragment never reaches a server.
+    - On arrival the fragment is removed from the address, fully validated with `parseProject`, and decompression is capped at 1 MB (zip-bomb safe).
+    - The move stays off until `VITE_PUBLIC_ORIGIN` is set.
+  - **`vite:preloadError`:** reloads once (at most once a minute) when a deploy removed old lazy chunks.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
-- [ ] **M0b** My homes, settings, copy, first launch, domain hand-off
+- [x] **M0b** My homes, settings, copy, first launch, domain hand-off
 - [ ] **M1** Live link + Remix + WhatsApp preview
 - [ ] **M2** Photo mode
 - [ ] **M3** Regional looks + lived-in details
@@ -68,3 +85,17 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Tests:**
     - `server/platform.test.ts` has 21 tests: body cap, IPv6, same-site, routing, fail-closed, kill switch, billed refusals, atomic limits, day windows, the Upstash script wiring, pricing, and headers matching `vercel.json`.
     - `tests/preview/security.spec.ts` has 3 tests: the built app runs with no CSP violations through Home and Explore; the bundled API guards; the CSP really blocks outside hosts.
+- **2026-10-17, M0b:**
+  - **New modules:**
+    - `src/homes/shelf.ts`: the index, migration, add/switch/remove, at most 12 homes.
+    - `src/homes/store.ts`: the IndexedDB store, plus a memory fallback.
+    - `src/homes/handoff.ts`: pack and unpack homes for move links.
+    - `src/shell/MyHomes.tsx` and `homes.css`, and `src/shell/MoveHomes.tsx` (move banner and import prompt).
+    - `src/ui/feedback.ts`, `src/ui/styles/textsize.css`.
+  - **Changed:**
+    - `useProject` (shelf, create/open/remove/read homes) and `EditorProvider` (`homes` API, text size, sounds).
+    - The title screen, the More menu (My homes, Text size, Sounds & vibration, "Open a saved file"), and all new-home paths, which now go through `addHome`.
+  - **Tests:**
+    - Unit: shelf, store, move links (including the zip bomb), edited-time wording, preferences.
+    - `tests/homes.spec.ts`, 7 browser tests: the first screen; My homes create/open/reload/delete; My homes on the first screen; Extra large at 320 px with no overflow; the sounds switch; arrival by link; a broken link.
+    - Existing specs were updated for the new wording.

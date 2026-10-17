@@ -259,9 +259,9 @@ describe("backward-compatible room save extensions", () => {
       parseProject(
         JSON.stringify({ ...sketch(), stagedRooms: [{ room: {} }] }),
       ),
-    ).toThrow(/tray/);
+    ).toThrow(/for later/);
     expect(() =>
       parseProject(JSON.stringify({ ...sketch(), stagedRooms: null })),
-    ).toThrow(/tray/);
+    ).toThrow(/for later/);
   });
 });

@@ -4,7 +4,7 @@
   color: #294c3f;
   background: #e8eef1;
   font-synthesis: none;
-  font-size: 14px;
+  font-size: calc(14px * var(--dh-text));
   line-height: 1.45;
   --ink: #264a3b;
   --muted: #718176;
@@ -50,7 +50,7 @@ select:focus {
 input,
 select {
   color: var(--ink);
-  font-size: 16px;
+  font-size: calc(16px * var(--dh-text));
   background: #fffefa;
   border: 1px solid #dce4d9;
   border-radius: 10px;
@@ -82,7 +82,7 @@ h2 {
   letter-spacing: -0.5px;
 }
 small {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 button {
   transition:
@@ -116,7 +116,7 @@ button:hover:not(:disabled) {
   align-items: center;
   gap: 8px;
   font-family: Georgia, serif;
-  font-size: 22px;
+  font-size: calc(22px * var(--dh-text));
   letter-spacing: -1px;
   white-space: nowrap;
 }
@@ -190,7 +190,7 @@ button:hover:not(:disabled) {
   pointer-events: none;
 }
 .section-kicker {
-  font-size: 9px;
+  font-size: calc(9px * var(--dh-text));
   letter-spacing: 1.5px;
   color: #829582;
   font-weight: 600;
@@ -201,13 +201,13 @@ button:hover:not(:disabled) {
   color: #7b9192;
 }
 .scene-heading h1 {
-  font-size: 27px;
+  font-size: calc(27px * var(--dh-text));
   color: #3f5b5a;
   line-height: 1.15;
   margin-top: 5px;
 }
 .scene-heading p {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #718d89;
   display: flex;
   align-items: center;
@@ -241,7 +241,7 @@ button:hover:not(:disabled) {
   align-items: center;
   gap: 7px;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #758d89;
 }
 .view-switch button[aria-pressed="true"] {
@@ -289,7 +289,7 @@ button:hover:not(:disabled) {
   padding: 9px 29px 9px 12px;
   border: 1px solid white;
   background: #ffffffc9;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   min-height: 43px;
   border-radius: 11px;
   max-width: 150px;
@@ -309,7 +309,7 @@ button:hover:not(:disabled) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
 }
 .move-button.active {
   background: #edf3e3;
@@ -327,7 +327,7 @@ button:hover:not(:disabled) {
   pointer-events: none;
 }
 .scene-footnote > span {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #6e8a7b;
   display: flex;
   gap: 6px;
@@ -340,7 +340,7 @@ button:hover:not(:disabled) {
   background: #7b9c79;
 }
 .scene-footnote small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #7c9593;
 }
 .welcome-card {
@@ -364,18 +364,18 @@ button:hover:not(:disabled) {
 }
 .welcome-card h2 {
   font-family: inherit;
-  font-size: 17px;
+  font-size: calc(17px * var(--dh-text));
   font-weight: 600;
   letter-spacing: -0.4px;
 }
 .welcome-card p {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #7c8a75;
   margin-top: 4px;
 }
 .welcome-card .text-link {
   min-height: 30px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   padding: 2px;
 }
 .primary-button,
@@ -387,7 +387,7 @@ button:hover:not(:disabled) {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 600;
   line-height: 1.4;
 }
@@ -406,7 +406,7 @@ button:hover:not(:disabled) {
   margin-top: 16px;
 }
 .text-link {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   min-height: 44px;
   padding: 10px;
   color: #6f855f;
@@ -433,7 +433,7 @@ button:hover:not(:disabled) {
   min-height: 57px;
   border-radius: 13px;
   color: #849481;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   max-width: 160px;
 }
 .bottom-nav > button[aria-pressed="true"] {
@@ -473,11 +473,11 @@ button:hover:not(:disabled) {
   min-width: 0;
 }
 .panel-heading .section-kicker {
-  font-size: 8px;
+  font-size: calc(8px * var(--dh-text));
   letter-spacing: 1px;
 }
 .panel-heading h2 {
-  font-size: 23px;
+  font-size: calc(23px * var(--dh-text));
   line-height: 1.2;
   margin-top: 3px;
 }
@@ -493,7 +493,7 @@ button:hover:not(:disabled) {
   min-height: 0;
 }
 .supporting {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   line-height: 1.7;
   color: #768772;
   margin: 8px 0 19px;
@@ -510,7 +510,7 @@ button:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #61735c;
   margin-bottom: 16px;
 }
@@ -531,33 +531,33 @@ button:hover:not(:disabled) {
   background: none;
   width: 100%;
   padding: 12px;
-  font-size: 17px;
+  font-size: calc(17px * var(--dh-text));
   min-height: 49px;
   outline: none;
 }
 .big-field > div span {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   /* 4.5:1 on the field's paper background. */
   color: #5e6b55;
   padding: 0 13px 0 5px;
 }
 .big-field .input-error {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #a0634b;
 }
 .select-label {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #71846b;
   margin-bottom: 16px;
 }
 .select-label select {
-  font-size: 14px;
+  font-size: calc(14px * var(--dh-text));
 }
 .field-note {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   line-height: 1.7;
   color: #819076;
   margin: 10px 0 17px;
@@ -575,7 +575,7 @@ button:hover:not(:disabled) {
   min-width: 43px;
   padding: 0 11px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #839477;
 }
 .unit-switch button[aria-pressed="true"] {
@@ -595,14 +595,14 @@ button:hover:not(:disabled) {
   color: #80a069;
 }
 .plot-stat > strong {
-  font-size: 26px;
+  font-size: calc(26px * var(--dh-text));
   line-height: 1.2;
   font-weight: 500;
   flex: 1;
   color: #54764a;
 }
 .plot-stat strong small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   display: block;
   margin-top: 4px;
   color: #8a9b7b;
@@ -621,7 +621,7 @@ button:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   cursor: pointer;
   color: #61795a;
   list-style: none;
@@ -653,13 +653,13 @@ button:hover:not(:disabled) {
 }
 .switch-row strong {
   display: block;
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 500;
   color: #4e7047;
 }
 .switch-row small {
   display: block;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   line-height: 1.55;
   color: #8a9a7f;
   margin-top: 4px;
@@ -698,11 +698,11 @@ button:hover:not(:disabled) {
   margin: 10px 0 13px;
 }
 .floor-control select {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   max-width: 190px;
 }
 .floor-control span {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #8b9b7d;
   white-space: nowrap;
 }
@@ -728,13 +728,13 @@ button:hover:not(:disabled) {
 }
 .room-card strong {
   display: block;
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 500;
   color: #496442;
 }
 .room-card small {
   display: block;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #8b9b7e;
   margin-top: 3px;
 }
@@ -757,7 +757,7 @@ button:hover:not(:disabled) {
   margin: 15px 0;
 }
 .add-room-row select {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   flex: 1;
 }
 .add-room-row .secondary-button {
@@ -773,7 +773,7 @@ button:hover:not(:disabled) {
   margin-top: 18px;
 }
 .advice-note p {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   line-height: 1.75;
   color: #7c905f;
 }
@@ -782,7 +782,7 @@ button:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
 }
 .stepper-row > div {
   display: flex;
@@ -798,7 +798,7 @@ button:hover:not(:disabled) {
   place-items: center;
 }
 .stepper-row strong {
-  font-size: 16px;
+  font-size: calc(16px * var(--dh-text));
   font-weight: 500;
 }
 .selected-room-stat {
@@ -813,20 +813,20 @@ button:hover:not(:disabled) {
 }
 .selected-room-stat > strong {
   font-family: Georgia, serif;
-  font-size: 34px;
+  font-size: calc(34px * var(--dh-text));
   font-weight: 400;
   line-height: 1;
   white-space: nowrap;
 }
 .selected-room-stat > strong small {
   font-family: "Segoe UI", sans-serif;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   display: block;
   color: #8fa17f;
   margin-top: 6px;
 }
 .selected-room-stat > span:last-child {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #91a081;
   max-width: 90px;
   margin-left: auto;
@@ -843,11 +843,11 @@ button:hover:not(:disabled) {
 }
 .nudge-control strong {
   display: block;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   font-weight: 500;
 }
 .nudge-control small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #91a17b;
   display: block;
   margin-top: 3px;
@@ -872,7 +872,7 @@ button:hover:not(:disabled) {
   gap: 8px;
   padding: 10px 0;
   color: #af7961;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   margin-top: 9px;
 }
 .stage-grid {
@@ -889,7 +889,7 @@ button:hover:not(:disabled) {
   border: 1px solid #e3e9dc;
   border-radius: 10px;
   min-height: 70px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #899b76;
 }
 .stage-grid i {
@@ -900,7 +900,7 @@ button:hover:not(:disabled) {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
 }
 .stage-grid button[aria-pressed="true"] {
   background: #eef5e4;
@@ -920,7 +920,7 @@ button:hover:not(:disabled) {
   justify-content: center;
   gap: 15px;
   color: #829f96;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .panel-open .scene-heading {
   top: 13px;
@@ -929,11 +929,11 @@ button:hover:not(:disabled) {
   display: none;
 }
 .panel-open .scene-heading h1 {
-  font-size: 20px;
+  font-size: calc(20px * var(--dh-text));
   margin: 0;
 }
 .panel-open .scene-heading p {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   margin-top: 5px;
 }
 .panel-open .view-switch {
@@ -987,7 +987,7 @@ button:hover:not(:disabled) {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #6c8d75;
 }
 .plan-tools button:hover {
@@ -1025,7 +1025,7 @@ button:hover:not(:disabled) {
   border-radius: 23px 23px 0 0;
 }
 .sheet-heading h2 {
-  font-size: 25px;
+  font-size: calc(25px * var(--dh-text));
   line-height: 1.2;
   max-width: 85%;
 }
@@ -1052,7 +1052,7 @@ button:hover:not(:disabled) {
   border-radius: 0;
 }
 .step-caption {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #8a9a7d;
 }
 .step-progress {
@@ -1068,7 +1068,7 @@ button:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   color: #a4ae96;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
 }
 .step-progress i {
   font-style: normal;
@@ -1078,7 +1078,7 @@ button:hover:not(:disabled) {
   height: 21px;
   border: 1px solid #e0e7d6;
   border-radius: 50%;
-  font-size: 9px;
+  font-size: calc(9px * var(--dh-text));
 }
 .step-progress .done {
   color: #5c7b47;
@@ -1096,12 +1096,12 @@ button:hover:not(:disabled) {
   overscroll-behavior: contain;
 }
 .guided-body h2 {
-  font-size: 29px;
+  font-size: calc(29px * var(--dh-text));
   line-height: 1.12;
   margin: 7px 0 9px;
 }
 .guided-body > .supporting {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   margin-top: 0;
 }
 .guided-footer {
@@ -1115,13 +1115,13 @@ button:hover:not(:disabled) {
   gap: 9px;
 }
 .guided-footer > span {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #91a07e;
   order: 2;
 }
 .guided-footer .primary-button {
   width: 100%;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   min-height: 49px;
 }
 .plot-entry {
@@ -1152,7 +1152,7 @@ button:hover:not(:disabled) {
   background-size: 15px 15px;
 }
 .sketch-land small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   max-width: 90%;
   text-align: center;
 }
@@ -1162,14 +1162,14 @@ button:hover:not(:disabled) {
   left: 0;
   right: 15px;
   text-align: center;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #839773;
 }
 .sketch-depth {
   position: absolute;
   right: -24px;
   top: 91px;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   transform: rotate(90deg);
   color: #839773;
 }
@@ -1180,7 +1180,7 @@ button:hover:not(:disabled) {
   right: 15px;
   background: #e5e9e5;
   height: 17px;
-  font-size: 7px;
+  font-size: calc(7px * var(--dh-text));
   letter-spacing: 1.3px;
   color: #92a292;
   display: grid;
@@ -1190,16 +1190,16 @@ button:hover:not(:disabled) {
   margin-bottom: 13px;
 }
 .plot-fields .big-field {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   margin-bottom: 10px;
   gap: 5px;
 }
 .plot-fields .big-field input {
-  font-size: 17px;
+  font-size: calc(17px * var(--dh-text));
 }
 .field-caption {
   display: block;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #889877;
   margin-bottom: 10px;
 }
@@ -1212,16 +1212,16 @@ button:hover:not(:disabled) {
   min-height: 46px;
   border: 1px solid #dfe8d5;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   padding: 8px 4px;
   white-space: nowrap;
 }
 .size-chips small {
-  font-size: 9px;
+  font-size: calc(9px * var(--dh-text));
   color: #99a68b;
 }
 .local-note {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #889a75;
   line-height: 1.8;
   margin-top: 15px;
@@ -1233,7 +1233,7 @@ button:hover:not(:disabled) {
   margin: 25px 0;
 }
 .choice-section h3 {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 500;
   margin-bottom: 12px;
 }
@@ -1255,12 +1255,12 @@ button:hover:not(:disabled) {
 }
 .number-options strong {
   font-family: Georgia, serif;
-  font-size: 27px;
+  font-size: calc(27px * var(--dh-text));
   font-weight: 400;
   color: #72935d;
 }
 .number-options span {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
 }
 .number-options button[aria-pressed="true"],
 .floor-options button[aria-pressed="true"] {
@@ -1285,12 +1285,12 @@ button:hover:not(:disabled) {
   justify-content: end;
 }
 .floor-options strong {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   font-weight: 500;
   color: #668651;
 }
 .floor-options small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #95a881;
   margin-top: 4px;
 }
@@ -1346,13 +1346,13 @@ button:hover:not(:disabled) {
 }
 .wish-option strong {
   display: block;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #708250;
   font-weight: 500;
 }
 .wish-option small {
   display: block;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #9ba67b;
   margin-top: 5px;
 }
@@ -1405,25 +1405,25 @@ button:hover:not(:disabled) {
   padding-right: 14px;
 }
 .recommendation-copy h3 {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 500;
   line-height: 1.3;
   color: #527442;
 }
 .recommendation-copy p {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   line-height: 1.6;
   color: #8b9d77;
   margin-top: 6px;
 }
 .recommendation-copy > small {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   color: #819769;
   display: block;
   margin-top: 7px;
 }
 .recommended-tag {
-  font-size: 7px;
+  font-size: calc(7px * var(--dh-text));
   font-weight: 700;
   letter-spacing: 0.8px;
   color: #819e5c;
@@ -1448,7 +1448,7 @@ button:hover:not(:disabled) {
 }
 .guided-body > .field-note {
   margin: 17px 0 0;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
 }
 .inline-error {
   display: flex;
@@ -1459,7 +1459,7 @@ button:hover:not(:disabled) {
   background: #fbf0e8;
   border: 1px solid #ebd3be;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #9a664b;
   line-height: 1.7;
 }
@@ -1490,7 +1490,7 @@ button:hover:not(:disabled) {
   max-width: 580px;
   margin: auto;
   line-height: 1.6;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .toast > span {
   flex: 1;
@@ -1520,7 +1520,7 @@ button:hover:not(:disabled) {
   text-align: left;
   min-height: 61px;
   border-bottom: 1px solid #e8eedf;
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   color: #617e4d;
 }
 .menu-row > svg:first-child {
@@ -1536,7 +1536,7 @@ button:hover:not(:disabled) {
   justify-content: space-between;
   gap: 12px;
   padding: 17px 0;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #7a9168;
   border-bottom: 1px solid #e8eedf;
 }
@@ -1554,13 +1554,13 @@ button:hover:not(:disabled) {
   border-radius: 10px;
   min-height: 46px;
   flex: 1;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
 }
 .privacy-note {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   line-height: 1.8;
   color: #8e9f7b;
   margin-top: 22px;
@@ -1584,7 +1584,7 @@ button:hover:not(:disabled) {
 }
 .share-preview > span {
   place-self: center;
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   color: #98aa80;
 }
 .share-actions {
@@ -1596,17 +1596,17 @@ button:hover:not(:disabled) {
 .share-body > .text-link {
   display: block;
   width: 100%;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
 }
 .share-body > .field-note {
-  font-size: 10px;
+  font-size: calc(10px * var(--dh-text));
   text-align: center;
 }
 .share-message {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   margin-top: 13px;
   color: #85a368;
 }
@@ -1618,13 +1618,13 @@ button:hover:not(:disabled) {
   color: #8da96e;
 }
 .help-item h3 {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 500;
   color: #617f4b;
   margin-bottom: 5px;
 }
 .help-item p {
-  font-size: 12px;
+  font-size: calc(12px * var(--dh-text));
   line-height: 1.8;
   color: #8d9f78;
 }
@@ -1632,12 +1632,12 @@ button:hover:not(:disabled) {
   padding: 36px 30px;
 }
 .overview-content h2 {
-  font-size: 31px;
+  font-size: calc(31px * var(--dh-text));
   line-height: 1.18;
   margin: 12px 0 13px;
 }
 .overview-content > p:not(.privacy-note) {
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   line-height: 1.9;
   color: #87977a;
 }
@@ -1648,13 +1648,13 @@ button:hover:not(:disabled) {
   border-bottom: 1px solid #e4eadc;
 }
 .overview-stats > span {
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #94a681;
 }
 .overview-stats strong {
   display: block;
   font-family: Georgia, serif;
-  font-size: 31px;
+  font-size: calc(31px * var(--dh-text));
   font-weight: 400;
   line-height: 1.1;
   margin-bottom: 7px;
@@ -1678,13 +1678,13 @@ button:hover:not(:disabled) {
 }
 .overview-guide strong {
   display: block;
-  font-size: 13px;
+  font-size: calc(13px * var(--dh-text));
   font-weight: 500;
   color: #6a8752;
 }
 .overview-guide small {
   display: block;
-  font-size: 11px;
+  font-size: calc(11px * var(--dh-text));
   color: #9aaa87;
   margin-top: 4px;
 }
@@ -1697,7 +1697,7 @@ button:hover:not(:disabled) {
     padding: 0 25px;
   }
   .brand {
-    font-size: 27px;
+    font-size: calc(27px * var(--dh-text));
     gap: 11px;
   }
   .brand-mark {
@@ -1714,7 +1714,7 @@ button:hover:not(:disabled) {
   .share-button {
     min-height: 44px;
     padding: 0 16px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .desktop-history {
     display: flex;
@@ -1729,10 +1729,10 @@ button:hover:not(:disabled) {
     left: 31px;
   }
   .scene-heading h1 {
-    font-size: 32px;
+    font-size: calc(32px * var(--dh-text));
   }
   .scene-heading p {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .view-switch {
     left: 30px;
@@ -1761,7 +1761,7 @@ button:hover:not(:disabled) {
     min-height: 44px;
   }
   .welcome-card .primary-button {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .with-welcome .canvas-actions {
     bottom: 191px;
@@ -1817,16 +1817,16 @@ button:hover:not(:disabled) {
     padding: 12px 39px 20px;
   }
   .step-progress > span {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .guided-body {
     padding: 27px 40px 29px;
   }
   .guided-body h2 {
-    font-size: 35px;
+    font-size: calc(35px * var(--dh-text));
   }
   .guided-body > .supporting {
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
   }
   .guided-footer {
     padding: 17px 39px 20px;
@@ -1836,7 +1836,7 @@ button:hover:not(:disabled) {
   }
   .guided-footer > span {
     order: 0;
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .guided-footer .primary-button {
     width: auto;
@@ -1859,7 +1859,7 @@ button:hover:not(:disabled) {
     right: -15px;
   }
   .sketch-land small {
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
   }
   .sketch-road {
     left: 7px;
@@ -1867,10 +1867,10 @@ button:hover:not(:disabled) {
   }
   .sketch-width,
   .sketch-depth {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .plot-fields .big-field {
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
     margin-bottom: 15px;
   }
   .plot-fields > .unit-switch {
@@ -1880,55 +1880,55 @@ button:hover:not(:disabled) {
     gap: 11px;
   }
   .size-chips button {
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
   }
   .size-chips small {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .recommendation-art {
     width: 105px;
     height: 121px;
   }
   .recommendation-copy h3 {
-    font-size: 15px;
+    font-size: calc(15px * var(--dh-text));
   }
   .recommendation-copy p {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .recommendation-copy > small {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .recommended-tag {
-    font-size: 8px;
+    font-size: calc(8px * var(--dh-text));
   }
   .recommendation {
     padding: 14px;
     gap: 18px;
   }
   .wish-option strong {
-    font-size: 14px;
+    font-size: calc(14px * var(--dh-text));
   }
   .wish-option small {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .number-options button {
     min-height: 95px;
   }
   .number-options span {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .floor-options strong {
-    font-size: 14px;
+    font-size: calc(14px * var(--dh-text));
   }
   .floor-options small {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .floor-options button {
     min-height: 143px;
   }
   .local-note,
   .field-note {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
 }
 @media (min-width: 1050px) {
@@ -1956,7 +1956,7 @@ button:hover:not(:disabled) {
   }
   .topbar-tagline {
     display: block;
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
     color: #93a388;
     margin-left: 20px;
     margin-right: auto;
@@ -1972,7 +1972,7 @@ button:hover:not(:disabled) {
   }
   .scene-heading h1,
   .panel-open .scene-heading h1 {
-    font-size: 32px;
+    font-size: calc(32px * var(--dh-text));
   }
   .scene-heading .section-kicker,
   .panel-open .scene-heading .section-kicker {
@@ -1980,7 +1980,7 @@ button:hover:not(:disabled) {
   }
   .scene-heading p,
   .panel-open .scene-heading p {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
     margin-top: 10px;
   }
   .view-switch,
@@ -2018,7 +2018,7 @@ button:hover:not(:disabled) {
     padding: 26px 22px 19px;
   }
   .panel-heading h2 {
-    font-size: 25px;
+    font-size: calc(25px * var(--dh-text));
   }
   .panel-body {
     padding: 22px 23px 28px;
@@ -2030,10 +2030,10 @@ button:hover:not(:disabled) {
     margin-right: -12px;
   }
   .panel-heading .section-kicker {
-    font-size: 8px;
+    font-size: calc(8px * var(--dh-text));
   }
   .supporting {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .bottom-nav {
     justify-content: flex-start;
@@ -2045,13 +2045,13 @@ button:hover:not(:disabled) {
     flex-direction: row;
     gap: 7px;
     min-height: 46px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .bottom-nav:after {
     content: "A starting idea for your architect. No engineering checks.";
     margin-left: auto;
     margin-right: 22px;
-    font-size: 10px;
+    font-size: calc(10px * var(--dh-text));
     color: #9bae89;
   }
 
@@ -2059,7 +2059,7 @@ button:hover:not(:disabled) {
     width: 18px;
   }
   .big-field {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .plot-stat {
     padding: 14px;
@@ -2070,7 +2070,7 @@ button:hover:not(:disabled) {
     width: 20px;
   }
   .plot-stat strong {
-    font-size: 23px;
+    font-size: calc(23px * var(--dh-text));
   }
   .plot-stat .unit-switch button {
     min-width: 35px;
@@ -2081,17 +2081,17 @@ button:hover:not(:disabled) {
     gap: 9px;
   }
   .room-card strong {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .room-card small {
-    font-size: 10px;
+    font-size: calc(10px * var(--dh-text));
   }
   .room-color {
     width: 35px;
     height: 37px;
   }
   .selected-room-stat > span:last-child {
-    font-size: 9px;
+    font-size: calc(9px * var(--dh-text));
   }
   .nudge-control > div {
     gap: 8px;
@@ -2100,7 +2100,7 @@ button:hover:not(:disabled) {
     width: 44px;
   }
   .scene-heading h1 {
-    font-size: 34px;
+    font-size: calc(34px * var(--dh-text));
   }
   .plan-wrap {
     inset: 8px 50px 15px;
@@ -2116,7 +2116,7 @@ button:hover:not(:disabled) {
     left: 0;
     right: 0;
     text-align: center;
-    font-size: 10px;
+    font-size: calc(10px * var(--dh-text));
     color: #8aa098;
   }
 }
@@ -2142,7 +2142,7 @@ button:hover:not(:disabled) {
   }
   .scene-heading h1,
   .panel-open .scene-heading h1 {
-    font-size: 38px;
+    font-size: calc(38px * var(--dh-text));
   }
   .scene-heading,
   .panel-open .scene-heading {
@@ -2170,7 +2170,7 @@ button:hover:not(:disabled) {
     padding: 0 10px;
   }
   .brand {
-    font-size: 20px;
+    font-size: calc(20px * var(--dh-text));
     gap: 6px;
   }
   .brand-mark {
@@ -2188,7 +2188,7 @@ button:hover:not(:disabled) {
     left: 18px;
   }
   .scene-heading h1 {
-    font-size: 24px;
+    font-size: calc(24px * var(--dh-text));
   }
   .view-switch {
     left: 16px;
@@ -2199,7 +2199,7 @@ button:hover:not(:disabled) {
     padding: 14px;
   }
   .welcome-card h2 {
-    font-size: 15px;
+    font-size: calc(15px * var(--dh-text));
   }
   .panel-body {
     padding: 15px 16px 22px;
@@ -2211,14 +2211,14 @@ button:hover:not(:disabled) {
     padding: 21px 18px;
   }
   .guided-body h2 {
-    font-size: 27px;
+    font-size: calc(27px * var(--dh-text));
   }
   .step-progress {
     padding: 10px 18px 16px;
     gap: 5px;
   }
   .step-progress > span {
-    font-size: 9px;
+    font-size: calc(9px * var(--dh-text));
     gap: 4px;
   }
   .plot-entry {
@@ -2228,7 +2228,7 @@ button:hover:not(:disabled) {
     gap: 5px;
   }
   .size-chips button {
-    font-size: 10px;
+    font-size: calc(10px * var(--dh-text));
   }
   .guided-footer {
     padding-left: 18px;
@@ -2243,7 +2243,7 @@ button:hover:not(:disabled) {
     height: 102px;
   }
   .recommendation-copy h3 {
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .nudge-control {
     padding: 11px;
@@ -2255,7 +2255,7 @@ button:hover:not(:disabled) {
     gap: 10px;
   }
   .big-field {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
 }
 @media (max-height: 650px) and (max-width: 699px) {
@@ -2263,10 +2263,10 @@ button:hover:not(:disabled) {
     top: 13px;
   }
   .scene-heading h1 {
-    font-size: 22px;
+    font-size: calc(22px * var(--dh-text));
   }
   .scene-heading p {
-    font-size: 10px;
+    font-size: calc(10px * var(--dh-text));
     margin-top: 5px;
   }
   .view-switch {
@@ -2285,14 +2285,14 @@ button:hover:not(:disabled) {
     gap: 6px;
   }
   .welcome-card h2 {
-    font-size: 15px;
+    font-size: calc(15px * var(--dh-text));
   }
   .welcome-card p {
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .welcome-card .primary-button {
     min-height: 44px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dh-text));
   }
   .welcome-card .text-link {
     min-height: 27px;
@@ -2312,14 +2312,14 @@ button:hover:not(:disabled) {
     min-height: 150px;
   }
   .panel-open .scene-heading h1 {
-    font-size: 18px;
+    font-size: calc(18px * var(--dh-text));
   }
   .panel-open .view-switch {
     top: 57px;
   }
   .panel-open .view-switch button {
     height: 36px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
   }
   .panel-open .model-canvas {
     top: 83px;
@@ -2337,7 +2337,7 @@ button:hover:not(:disabled) {
     padding-bottom: 9px;
   }
   .panel-heading h2 {
-    font-size: 20px;
+    font-size: calc(20px * var(--dh-text));
   }
 }
 @media (prefers-reduced-motion: reduce) {

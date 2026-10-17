@@ -179,12 +179,12 @@ test("dragging a room from 3D onto the Tray sets it aside", async ({ page }) => 
   await dh(page, (b) => b.waitForIdle());
   await page.waitForTimeout(300);
   const from = await screen(page, project, centre(bedroom.bounds));
-  const tray = (await dock(page, "Set aside").locator.boundingBox())!;
+  const tray = (await dock(page, "Keep for later").locator.boundingBox())!;
   await drag(page, from, { x: tray.x + tray.width / 2, y: tray.y + tray.height / 2 }, false);
-  await expect(page.locator(".scene-ghost-badge")).toContainText(`Put ${bedroom.name} in the tray`);
+  await expect(page.locator(".scene-ghost-badge")).toContainText(`Keep ${bedroom.name} for later`);
   await page.mouse.up();
   await expect.poll(async () => (await stored(page)).stagedRooms?.length ?? 0).toBe(1);
-  await expect(page.getByRole("status", { name: "Notifications" })).toContainText("waiting in the tray");
+  await expect(page.getByRole("status", { name: "Notifications" })).toContainText("kept for later");
   await undo(page);
   expect(await stored(page)).toEqual(project);
 });

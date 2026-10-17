@@ -11,14 +11,28 @@ import { PLOT_SIZES, TEMPLATES, buildTemplate, type Template } from "./templates
 import "./onboarding.css";
 import "../ai/ai.css";
 
-/** The big "Design my home with AI" button (title screen and gallery). */
+/** The big "Design it for me" button: the AI designer (title screen and gallery). */
 function AiEntry({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" className="dh-ai-entry" onClick={onClick}>
       <Icon.sparkle size={26} aria-hidden />
       <span>
-        <strong>Design my home with AI</strong>
+        <strong>Design it for me</strong>
         <small>Answer 4 quick questions. Get a furnished home.</small>
+      </span>
+      <Icon.right size={20} aria-hidden />
+    </button>
+  );
+}
+
+/** The other big choice: start from one of the ready-made homes. */
+function ReadyHomeEntry({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className="dh-ai-entry dh-ready-entry" onClick={onClick}>
+      <Icon.home size={26} aria-hidden />
+      <span>
+        <strong>Pick a ready home</strong>
+        <small>Choose from 8 homes, then make it yours.</small>
       </span>
       <Icon.right size={20} aria-hidden />
     </button>
@@ -31,22 +45,26 @@ export function TitleScreen({
   onSample,
   onOpen,
   onAi,
+  onHomes,
 }: {
   onContinue: () => void;
   onNew: () => void;
   onSample: () => void;
   onOpen: () => void;
   onAi: () => void;
+  onHomes: () => void;
 }) {
   const editor = useEditor();
-  const { project, hasSavedProject, error, recovery } = editor;
+  const { project, hasSavedProject, error, recovery, homes } = editor;
   const stats = projectStats(project);
   const primary = useRef<HTMLButtonElement>(null);
-  useEffect(() => primary.current?.focus(), []);
+  const card = useRef<HTMLDivElement>(null);
+  // Keyboard users start on the main choice: Continue, or the first big card.
+  useEffect(() => (primary.current ?? card.current?.querySelector<HTMLElement>(".dh-ai-entry"))?.focus(), []);
   const returning = hasSavedProject && error !== "saved-file-unreadable";
   return (
     <div className="dh-title-screen" role="dialog" aria-modal="false" aria-labelledby="dh-title-heading">
-      <div className="dh-title-card" data-inset="auto">
+      <div className="dh-title-card" data-inset="auto" ref={card}>
         <div className="dh-title-brand">
           <BrandMark size={52} />
           <span>Dream Home</span>
@@ -90,33 +108,32 @@ export function TitleScreen({
               Continue my home
               <Icon.right size={20} aria-hidden />
             </Button>
-            <Button variant="secondary" size="lg" full icon={Icon.add} onClick={onNew}>
-              Start a new home
-            </Button>
+            {homes.list.length > 1 && (
+              <Button variant="secondary" size="lg" full icon={Icon.homes} onClick={onHomes}>
+                My homes ({homes.list.length})
+              </Button>
+            )}
+            <p className="dh-title-question">Or start another home:</p>
             <AiEntry onClick={onAi} />
+            <ReadyHomeEntry onClick={onNew} />
           </>
         ) : (
           <>
             <h2 id="dh-title-heading" className="dh-title-heading">
               Build the home you keep imagining.
             </h2>
-            <p className="dh-title-lead">
-              Pick a starting home, move rooms like puzzle pieces, add doors,
-              furniture and a garden — then walk right in.
-            </p>
+            <p className="dh-title-question">How would you like to start?</p>
             <AiEntry onClick={onAi} />
-            <Button ref={primary} variant="secondary" size="lg" full onClick={onNew}>
-              Start a new home
-              <Icon.right size={20} aria-hidden />
-            </Button>
-            <Button variant="secondary" size="lg" full icon={Icon.home} onClick={onSample}>
-              Try the sample home
-            </Button>
+            <ReadyHomeEntry onClick={onNew} />
+            <button type="button" className="dh-title-link" onClick={onSample}>
+              <Icon.home size={18} aria-hidden />
+              Just show me a sample home
+            </button>
           </>
         )}
         <button type="button" className="dh-title-link" onClick={onOpen}>
           <Icon.upload size={18} aria-hidden />
-          Open a saved project
+          Open a saved file
         </button>
         <p className="dh-title-foot">
           <Icon.check size={16} aria-hidden /> No account. Saved on this device.

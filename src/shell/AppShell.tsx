@@ -13,7 +13,8 @@ import { useEditor } from "../editor/EditorProvider";
 import { useChromeInsets, useDesktop } from "../editor/hooks";
 import { Icon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
-import { DialogHost, ProjectFileInput } from "./Dialogs";
+import { DialogHost, ProjectFileInput, addHome } from "./Dialogs";
+import { ImportFromLink, MoveBanner } from "./MoveHomes";
 import { ConfirmDialog, Notifications } from "./Feedback";
 import { CameraHud, FloorSwitcher, ViewOptions } from "./Hud";
 import { Inspector } from "./Inspector";
@@ -105,13 +106,12 @@ export function AppShell() {
   }, [dispatch, reduced]);
   const onPreview = useCallback((project: Project | null) => setPreview(project), []);
   /**
-   * A first-run starting home becomes the beginning of history, so Undo never
-   * swaps it for the invisible default. Returning users can undo back.
+   * A new home joins My homes and opens with a fresh history; the home that
+   * was open stays safe on the shelf. (A first visit's untouched starter home
+   * is simply replaced.) Browsers that can keep only one home fall back to an
+   * undoable replacement.
    */
-  const adopt = (project: Project, label: string) => {
-    if (!editor.hasSavedProject && !editor.canUndo) editor.startFresh(project);
-    else editor.commit(project, label, { select: null });
-  };
+  const adopt = (project: Project, label: string) => addHome(editor, project, label);
   const [photoRequest, setPhotoRequest] = useState<{ id: number } | null>(null);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [flash, setFlash] = useState(0);
@@ -222,25 +222,26 @@ export function AppShell() {
         <TitleScreen
           onContinue={enterWorkspace}
           onNew={() => setScreen("gallery")}
-          onSample={() => {
+          onSample={async () => {
             const sample = createStarter(
               { widthCm: 914, depthCm: 1524, road: "south", marginCm: 60, bedrooms: 2, floors: 1 },
               "family",
             );
-            if (sample.ok) adopt(sample.project, "Try the sample home");
+            if (sample.ok && !(await adopt(sample.project, "Try the sample home"))) return;
             enterWorkspace();
             constructionReveal();
             startTourIfNew();
           }}
           onOpen={() => fileInput.current?.click()}
           onAi={() => setScreen("ai")}
+          onHomes={() => dispatch({ type: "overlay", overlay: "homes" })}
         />
       )}
       {screen === "ai" && (
         <AiDesigner
           onBack={() => setScreen("title")}
-          onDone={(result) => {
-            adopt(result.project, "Design my home with AI");
+          onDone={async (result) => {
+            if (!(await adopt(result.project, "Design my home with AI"))) return;
             dispatch({ type: "choose-floor", floor: "all" });
             enterWorkspace();
             constructionReveal();
@@ -252,8 +253,8 @@ export function AppShell() {
         <TemplateGallery
           onBack={() => setScreen("title")}
           onPreview={onPreview}
-          onBuild={(project, template) => {
-            adopt(project, `Start a ${template.name.toLowerCase()}`);
+          onBuild={async (project, template) => {
+            if (!(await adopt(project, `Start a ${template.name.toLowerCase()}`))) return;
             dispatch({ type: "choose-floor", floor: "all" });
             enterWorkspace();
             constructionReveal();
@@ -317,6 +318,7 @@ export function AppShell() {
           {desktop && inspector}
           {/* Hidden in a room, but still mounted so finishing the home celebrates. */}
           {!design && <ChecklistPill hidden={!!state.focus} />}
+          {!state.focus && <MoveBanner />}
           {!explore && !state.focus && <FloorSwitcher />}
           <CameraHud />
           {!explore && (
@@ -351,6 +353,14 @@ export function AppShell() {
         fileInput={fileInput}
         onReplayTour={() => setTour(true)}
         onStartNew={() => setScreen("gallery")}
+        onHomeOpened={() => {
+          if (screen !== "workspace") enterWorkspace();
+        }}
+      />
+      <ImportFromLink
+        onAdded={() => {
+          if (screen !== "workspace") enterWorkspace();
+        }}
       />
       <ProjectFileInput
         inputRef={fileInput}

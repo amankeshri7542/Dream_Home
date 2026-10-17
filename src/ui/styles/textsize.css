@@ -1,0 +1,49 @@
+/* Text size setting (More → Text size): bigger type everywhere, and bigger
+   targets so every button is easy to hit. `data-text` is set on <html>. */
+@layer tokens {
+  :root[data-text="large"] {
+    --dh-text: 1.18;
+    --dh-target-primary: 56px;
+    --dh-target-secondary: 56px;
+  }
+  :root[data-text="extra"] {
+    --dh-text: 1.36;
+    --dh-target-primary: 60px;
+    --dh-target-secondary: 56px;
+  }
+}
+
+@layer utilities {
+  :root:is([data-text="large"], [data-text="extra"])
+    :is(.dh-btn, .dh-icon-btn, .dh-tool, .menu-row, .dh-studio-tabs [role="tab"]) {
+    min-height: 56px;
+  }
+  :root:is([data-text="large"], [data-text="extra"]) .dh-icon-btn {
+    min-width: 56px;
+  }
+  /* Long labels wrap onto a second line rather than spilling out. */
+  :root:is([data-text="large"], [data-text="extra"]) .dh-btn {
+    padding-block: 8px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Room studio header on narrow phones: the room's name gets the space. */
+  @media (max-width: 480px) {
+    :root:is([data-text="large"], [data-text="extra"]) .dh-studio-head .dh-chip-icon {
+      display: none;
+    }
+    :root:is([data-text="large"], [data-text="extra"]) .dh-studio-title h2 {
+      display: -webkit-box;
+      font-size: 21px;
+      white-space: normal;
+      overflow-wrap: break-word;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    :root:is([data-text="large"], [data-text="extra"]) .dh-studio-head .dh-icon-btn {
+      width: 48px;
+      min-width: 48px;
+    }
+  }
+}

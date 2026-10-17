@@ -161,7 +161,7 @@
     height: 24px;
   }
   .dh-tool-label {
-    font-size: 13.5px;
+    font-size: calc(13.5px * var(--dh-text));
     font-weight: 650;
     line-height: 1.15;
     white-space: nowrap;
@@ -176,10 +176,10 @@
     border-radius: 9px;
     background: var(--dh-terracotta-600);
     color: var(--dh-paper-0);
-    font-size: 11px;
+    font-size: calc(11px * var(--dh-text));
     font-style: normal;
     font-weight: 700;
-    line-height: 18px;
+    line-height: calc(18px * var(--dh-text));
     text-align: center;
   }
 
@@ -239,7 +239,7 @@
     border-radius: var(--dh-radius-md);
     background: var(--dh-paper-0);
     box-shadow: var(--dh-shadow-1);
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--dh-text));
     font-weight: 600;
     line-height: 1.15;
     text-align: center;
@@ -338,7 +338,7 @@
     border-radius: 7px;
     background: var(--dh-paper-0);
     font-family: var(--dh-font-ui);
-    font-size: 13px;
+    font-size: calc(13px * var(--dh-text));
     font-weight: 700;
     text-align: center;
   }

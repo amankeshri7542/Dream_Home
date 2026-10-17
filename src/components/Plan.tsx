@@ -187,7 +187,7 @@ export default function Plan({
     if (!next) return;
     if (next.valid) onPlaceStaged?.(next.id, next.bounds);
     report(
-      next.valid ? { valid: true, message: "Room placed from tray" } : next,
+      next.valid ? { valid: true, message: "Room placed back" } : next,
     );
   });
 
@@ -420,7 +420,7 @@ export default function Plan({
       setPreview(null);
       report(
         result.ok
-          ? { valid: true, message: "Release to keep this room in the tray" }
+          ? { valid: true, message: "Release to keep this room for later" }
           : { valid: false, message: result.error },
       );
       return;
@@ -461,7 +461,7 @@ export default function Plan({
       if (result.ok) onSetAside(start.room.id);
       report(
         result.ok
-          ? { valid: true, message: "Room kept safely in the tray" }
+          ? { valid: true, message: "Room kept safely for later" }
           : { valid: false, message: result.error },
       );
       return;
@@ -472,7 +472,7 @@ export default function Plan({
       if (next?.valid) onPlaceStaged(next.id, next.bounds);
       if (next)
         report(
-          next.valid ? { valid: true, message: "Room placed from tray" } : next,
+          next.valid ? { valid: true, message: "Room placed back" } : next,
         );
       return;
     }

@@ -140,10 +140,11 @@ export function ActionDock() {
           </>
         )}
         {room && (
-          // Also the drop target while moving: drag the room here to set it aside.
+          // Also the drop target while moving: drag the room here to keep it for later.
           <ToolButton
             icon={Icon.tray}
-            label="Set aside"
+            label="Keep for later"
+            caption="For later"
             data-room-tray-drop
             onClick={actions.setAside}
           />

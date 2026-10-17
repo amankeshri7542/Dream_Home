@@ -56,6 +56,12 @@ git diff --check
   - New saved fields must be added to `parseProject` (`src/domain/model.ts`) **and** the whitelists in `src/domain/persist.ts`, or they are silently dropped on load.
 - **Edits reach the UI through `run(result, label)` / `commit(project, label)`** from `src/editor/EditorProvider.tsx`. That gives one undo step with a human label. Chain several domain calls into one `run` when they form one user action.
 - **The editor reducer is `src/editor/state.ts`.** Rooms open as the hero via `enter-room`; the room tabs map onto modes (`TAB_MODE`).
+- **My homes** (`src/homes/`):
+  - The open home saves to `dream-home.project.v2` exactly as before.
+  - The shelf index lives in `dream-home.homes.v1`, and every home's full copy in IndexedDB.
+  - New homes go through `editor.homes.create(project)` (or `addHome` in `src/shell/Dialogs.tsx`, which explains failures), never by overwriting the open home.
+- **Text size:** every font size is written as `calc(Npx * var(--dh-text))` (`--dh-text` is 1, 1.18 or 1.36; see `src/ui/styles/textsize.css`). New CSS must follow the same pattern. Check new screens at 320 px in Extra large.
+- **Feedback:** `feedback.pop() / click() / error() / success()` from `src/ui/feedback.ts` play soft generated sounds and vibration. `run()` already calls them for edits.
 - **Server (`server/`):**
   - Every `/api/*` request goes through `server/router.ts`. Handlers take `(request, env, deps)` so tests inject a fake Claude and store.
   - Use the helpers in `server/http.ts` (`json`, `fail`, `readBody` with a cap, `clientIp`, `deviceOf`) and the limiter in `server/limiter.ts` (add a kind to `DEFAULT_RULES`).

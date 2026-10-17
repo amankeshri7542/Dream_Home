@@ -38,6 +38,7 @@ export type Overlay =
   | "help"
   | "shortcuts"
   | "photo"
+  | "homes"
   | null;
 export type Notice = {
   id: number;
@@ -49,7 +50,7 @@ export type Confirm = {
   title: string;
   body: string;
   confirmLabel: string;
-  /** The safe alternative (e.g. "Set aside instead"); focused by default. */
+  /** The safe alternative (e.g. "Keep for later instead"); focused by default. */
   safeLabel?: string;
   action: string;
   safeAction?: string;

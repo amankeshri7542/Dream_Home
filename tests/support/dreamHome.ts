@@ -71,8 +71,8 @@ const action = (run: (how: "click" | "tap") => Promise<void>): Action => ({
 export const homeAction = (page: Page, name: string) =>
   page
     .getByRole("toolbar", { name: "Home actions" })
-    // "Add room, 2 set aside" while rooms wait in the tray.
-    .getByRole("button", name === "Add room" ? { name: /^Add room(, \d+ set aside)?$/ } : { name, exact: true });
+    // "Add room, 2 kept for later" while rooms wait to be placed back.
+    .getByRole("button", name === "Add room" ? { name: /^Add room(, \d+ kept for later)?$/ } : { name, exact: true });
 
 /** Back to the Home level: out of a room, or back in from Outside. */
 export async function goHome(page: Page) {
@@ -102,7 +102,7 @@ export async function enterRoom(page: Page, name: string) {
 }
 
 /** Opens the Add room sheet on one of its sides. */
-async function addRoomSheet(page: Page, side: "Add new" | "Your rooms" | "Set aside", how: "click" | "tap") {
+async function addRoomSheet(page: Page, side: "Add new" | "Your rooms" | "For later", how: "click" | "tap") {
   await goHome(page);
   const add = homeAction(page, "Add room");
   if (how === "tap") await add.tap();
@@ -119,7 +119,7 @@ export const tool = (page: Page, name: string): Action =>
   action(async (how) => {
     if (name === "Add space" || name === "Add room") return addRoomSheet(page, "Add new", how);
     if (name === "Rooms") return addRoomSheet(page, "Your rooms", how);
-    if (name === "Tray") return addRoomSheet(page, "Set aside", how);
+    if (name === "Tray") return addRoomSheet(page, "For later", how);
     if (name === "My plot") {
       await goHome(page);
       await homeAction(page, "Outside").click();

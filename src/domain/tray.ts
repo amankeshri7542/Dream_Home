@@ -22,7 +22,7 @@ export function setAsideRoom(
     return {
       ok: false,
       error:
-        "Your tray holds 48 rooms. Place a room back before setting another aside.",
+        "Up to 48 rooms can be kept for later. Place one back first.",
     };
   return finalizeEdit(project, {
     ...project,
@@ -52,7 +52,7 @@ export function restoreStagedRoom(
   const entry = project.stagedRooms?.find((item) => item.room.id === roomId);
   const floor = project.floors.find((item) => item.id === floorId);
   if (!entry || !floor)
-    return { ok: false, error: "Choose a room from the tray and a floor." };
+    return { ok: false, error: "Choose a kept room and a floor." };
   const room = entry.room;
   // A removed floor may also remove its old unit. The room itself stays in the tray.
   const unitId =
@@ -92,7 +92,7 @@ export function restoreStagedRoom(
   if (!bounds)
     return {
       ok: false,
-      error: `${room.name} stays safe in the tray. Make space, resize it, or choose another floor or group.`,
+      error: `${room.name} stays safely kept for later. Make space, resize it, or choose another floor or group.`,
     };
   return insert(bounds);
 }
@@ -110,7 +110,7 @@ export function updateStagedRoom(
   patch: StagedRoomPatch,
 ): EditResult {
   if (!project.stagedRooms?.some((item) => item.room.id === roomId))
-    return { ok: false, error: "Room not found in the tray." };
+    return { ok: false, error: "That kept room wasn’t found." };
   const { width, depth, ...presentation } = patch;
   return finalizeEdit(project, {
     ...project,
@@ -137,7 +137,7 @@ export function rotateStagedRoom(project: Project, roomId: string): EditResult {
   const room = project.stagedRooms?.find(
     (item) => item.room.id === roomId,
   )?.room;
-  if (!room) return { ok: false, error: "Room not found in the tray." };
+  if (!room) return { ok: false, error: "That kept room wasn’t found." };
   return finalizeEdit(project, {
     ...project,
     stagedRooms: project.stagedRooms!.map((item) =>
@@ -160,7 +160,7 @@ export function rotateStagedRoom(project: Project, roomId: string): EditResult {
 
 export function removeStagedRoom(project: Project, roomId: string): EditResult {
   if (!project.stagedRooms?.some((item) => item.room.id === roomId))
-    return { ok: false, error: "Room not found in the tray." };
+    return { ok: false, error: "That kept room wasn’t found." };
   return finalizeEdit(project, {
     ...project,
     stagedRooms: project.stagedRooms.filter((item) => item.room.id !== roomId),

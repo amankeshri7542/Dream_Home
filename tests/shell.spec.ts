@@ -151,9 +151,9 @@ test("removing a room asks first and offers setting it aside instead", async ({ 
   await page.getByRole("button", { name: "Remove room" }).click();
   const confirm = page.getByRole("dialog", { name: /^Remove / });
   await expect(confirm).toBeVisible();
-  await expect(confirm.getByRole("button", { name: "Set aside instead" })).toBeFocused();
-  await confirm.getByRole("button", { name: "Set aside instead" }).click();
-  await expect(page.getByRole("region", { name: "Room tray" })).toBeVisible();
+  await expect(confirm.getByRole("button", { name: "Keep for later instead" })).toBeFocused();
+  await confirm.getByRole("button", { name: "Keep for later instead" }).click();
+  await expect(page.getByRole("region", { name: "Kept for later" })).toBeVisible();
   const stagedName = await page.evaluate(
     () => JSON.parse(localStorage.getItem("dream-home.project.v2")!).stagedRooms[0].room.name,
   );

@@ -127,7 +127,7 @@ export function PlanLens({
                   position: { x: bounds.x, z: bounds.z },
                   unitId: state.tray.unit === "auto" ? undefined : state.tray.unit || null,
                 }),
-                "Place a room from the tray",
+                "Place a kept room back",
               )
             ) {
               dispatch({ type: "tray-select", id: null });
@@ -138,7 +138,7 @@ export function PlanLens({
           }}
           onSetAside={(id) => {
             const name = activeFloor.rooms.find((r) => r.id === id)?.name ?? "Room";
-            if (run(setAsideRoom(project, activeFloor.id, id), `Set aside ${name}`, { select: null }))
+            if (run(setAsideRoom(project, activeFloor.id, id), `Keep ${name} for later`, { select: null }))
               dispatch({ type: "open-panel", panel: "tray" });
           }}
           trayDrag={trayDrag}
