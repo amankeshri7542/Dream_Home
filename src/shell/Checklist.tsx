@@ -97,6 +97,12 @@ export function ChecklistPill({ hidden = false }: { hidden?: boolean }) {
     // `missing` is derived from `checks`; `complete` changes with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [complete, checks]);
+  // "Show Vastu" from Talk to your home opens the score here.
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener("dh:show-score", show);
+    return () => window.removeEventListener("dh:show-score", show);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const close = (e: PointerEvent) => {

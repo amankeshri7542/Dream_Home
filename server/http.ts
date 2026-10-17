@@ -8,6 +8,7 @@ export type Env = Partial<
     | "ANTHROPIC_API_KEY"
     | "AI_MODEL"
     | "PLAN_MODEL"
+    | "COMMAND_MODEL"
     | "AI_DAILY_BUDGET_USD"
     | "AI_DISABLED"
     | "KV_REST_API_URL"

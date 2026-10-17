@@ -2,6 +2,7 @@
 // vercel.json). Routes are looked up by name; anything that changes state must
 // come from our own pages. New routes (share links, plan reading, voice
 // commands) are added to ROUTES.
+import { handleCommand } from "./command";
 import type { Deps } from "./context";
 import { handleDesign } from "./design";
 import { fail, sameSite, type Env } from "./http";
@@ -17,6 +18,7 @@ const ROUTES: Record<string, Handler> = {
   share: handleShare,
   og: handleOg,
   "plan-read": handlePlanRead,
+  command: handleCommand,
 };
 
 /**

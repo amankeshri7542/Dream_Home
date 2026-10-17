@@ -4,7 +4,7 @@ The full plan is [`docs/PLAN-V5.md`](PLAN-V5.md). This file tracks progress so
 work can resume after any interruption. Update it at the end of every phase.
 
 ## Resume here
-- **Done and shipped (17 Oct 2026):**
+- **Done and shipped (17–18 Oct 2026):**
   - M0a: server router, limiter, Claude pricing, security headers.
   - M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
   - M1: share links, the viewer, Remix, WhatsApp previews, reports, admin.
@@ -13,10 +13,11 @@ work can resume after any interruption. Update it at the end of every phase.
   - M4: the "My dream home" reel: a 15 s (or 8 s) vertical MP4 with a title, room names, generated music and an end card with the link and a QR code.
   - M5: a city and the way the home faces give the real sun; the Sunlight sheet (seasons, hour slider, sun per room, tips); opt-in Vastu with swaps; the Home score ring and badges, on the reel's end card and shared homes too.
   - M6: start from a photo of the builder's plan. The AI (Sonnet 5.5) reads it once per device; the homeowner checks the rooms over the faint photo on the 2D plan, fixes them, then "Make it 3D". "Draw it yourself" works with no reading at all.
-- **Next phase: M7.** Talk to your home (voice and chat, Haiku 5.5). First-load budget: about 4.6 KB gzip left of the +30 KB, so keep the chat sheet and speech code lazy.
-- **Live check still owed for M6:** one real plan reading with a sample plan (about ₹4–8), only with the owner's go-ahead. Reading also needs KV connected (below); until then the live site offers "Draw it yourself" only.
+  - M7: talk to your home. A Talk button (phones: above the Home bar and in the room's header; desktop: the top bar) opens a chat sheet; speak or type in English, Hindi or Hinglish. Haiku 5.5 turns a request into calls from a closed set of 30 tools, run as one undo step; big changes ask first; navigation is answered on the phone without the AI.
+- **Next phase: M8.** PWA, usability and security review, docs. First-load budget: about 4 KB gzip left of the +30 KB.
+- **Live checks still owed (need KV connected, below, and the owner's go-ahead):** one real plan reading with the sample plan (about ₹4–8; the sample and a one-reading script are ready), and a few real voice commands (about ₹0.1 each).
 - **Waiting for the owner's review (not merged):** three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist).
-- **Owner actions pending** (sharing, the AI designer and plan reading are off on the live site until these are done):
+- **Owner actions pending** (sharing, the AI designer, plan reading and talking are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
   3. Add `ADMIN_TOKEN`: a long random secret, for hiding or deleting reported homes (`docs/SECURITY.md`).
@@ -192,6 +193,21 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Found on the way (live since M5):** the Home score ring showed as a black disc on a first load. Its styles were only in the lazy Vastu chunk; `Checklist.tsx` now imports `insights.css`, and the score test checks the ring's size and fill.
   - **Not done (for later):** the doors the reading lists are not used yet (automatic doors give every room a working door); stairs and a second floor from the drawing; metres on the plot chips.
 
+- **18 Oct 2026 (M7):**
+  - **Haiku 5.5 with tool use**, checked with the claude-api skill: thinking off (allowed at effort high or below), effort `low`, `max_tokens` 600, `tool_choice: auto`. One cache breakpoint on the system prompt caches the tools too, since tools come first. A request is about 4–5k input tokens, mostly cached after the first, plus at most 600 out: roughly $0.0005–0.001 (₹0.05–0.1). `COMMAND_MODEL` overrides the model. Haiku has no server-side fallback, so it isn't asked for.
+  - **The tools aren't `strict`.** Strict mode allows at most 20 strict tools, 24 optional parameters and a limited grammar size, and our 30 tools carry long lists (59 furniture pieces, every paint and floor). Instead `cleanAction` (`src/voice/tools.ts`) checks every call on the server: a known tool, only its own fields, the right types, values in range or in their list, and refs that exist in the home that was described. The app checks again before running anything.
+  - **The context is small and id-free:** floors `f1…`, rooms `r1…` with name, type, size in the home's unit, and where each sits as seen from the road ("front-left"; plus the compass zone once the facing is set), the open room's furniture, and the selected room. It stays under 3 KB (trimmed in steps on huge homes); the server rebuilds it field by field (`cleanContext`) and refuses anything bigger.
+  - **The tool set:** add, remove, resize, rename, change use, swap; paint walls, floor, feature wall; add or remove furniture (up to 3), furnish, empty, "make it nice" (the built-in planner, no second AI call); door, window, attached bathroom; look, outside finish, roof; open a room, home, explore, time of day, sunlight, Vastu, photo, video; undo and redo. They run through the same pure commands the buttons use.
+  - **One request, one undo step:** the runner (`runTools.ts`) chains every edit into one project, labelled "Voice: {what you said}", with the reply and an Undo button as the message. It stops at the first edit that can't be done and says why (`friendlyIssue`); edits before it stay. An edit that changes nothing says so ("Bedroom 1 already has a door.").
+  - **Asks first** for removing a room, emptying one, a new look, and growing the house when a new or bigger room needs the space ("There isn’t room for that, so I’ll make the house bigger first. OK?"). A resize tries each corner and the middle before asking to grow; a new room "near" another tries each side of it first.
+  - **Answered on the phone, without the AI:** undo, redo, night, day, explore, walk inside, Vastu, sunlight, the whole home, and opening a room by its name or what people call it (kitchen, रसोई, किचन, hall, बैठक, pooja, मंदिर…). English, Hinglish and Devanagari, with Hindi replies for Hindi; Devanagari digits work. "Open the bedroom" with three bedrooms asks which.
+  - **Speech:** the browser's own recognition, `en-IN` or `hi-IN` from the English / हिंदी switch. Tap to start and stop (easier than holding); the box shows the words as they come, and they're sent when you stop. Without speech recognition (Firefox, in-app browsers) the mic is hidden and the sheet says "Tip: tap the 🎤 on your keyboard to speak." Replies can be read aloud (`speechSynthesis`, off by default). The privacy note shows until it's dismissed or the mic is first used.
+  - **Views close the sheet** (night, a room, explore, Vastu), and the reply stays in sight as a message. The photo, video and sunlight studios open in its place. "Show Vastu" opens the Home score (an event the checklist ring listens to). A photo opens the studio; the mood is picked there.
+  - **Where the button is:** phones get a round Talk button above the Home bar and a microphone in the room's header; desktop gets "Talk" in the top bar (not also in the room panel). The room header on narrow phones and with bigger text now puts the room's name on its own line, as the extra button left it too little room (it was already tight at 320 px in Extra large).
+  - **Limits:** 15 a day per device and 60 per connection (`command`), given back when the call fails; off without a key, with `AI_DISABLED`, or on Vercel without KV (then only the phone's own answers work, and the sheet says so).
+  - **Nothing said is kept or logged:** usage and cost only; a failed call logs the error's name. A unit test checks.
+  - **Size:** M7 adds 0.6 KB gzip to the first load (225.6 → 226.2 KB, same method). The sheet, the runner and the tool set load on first tap (10.9 KB).
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
@@ -201,7 +217,7 @@ work can resume after any interruption. Update it at the end of every phase.
 - [x] **M4** "My dream home" reel
 - [x] **M5** Location, real sun, sunlight, Vastu, Home score
 - [x] **M6** Builder's plan → 3D
-- [ ] **M7** Talk to your home (voice + chat, Haiku 5.5)
+- [x] **M7** Talk to your home (voice + chat, Haiku 5.5)
 - [ ] **M8** PWA, usability and security review, docs
 
 ## Log
@@ -324,3 +340,18 @@ work can resume after any interruption. Update it at the end of every phase.
     - Browser: `tests/planread.spec.ts` (3, with `/api/plan-read` mocked): from the first screen on a phone, a drawn plan photo is sent as a JPEG with the plot and road, the eight rooms come back over the photo, the photo is nudged, the unsure pooja room is checked, retyped and undone, and Make it 3D renders the home on My homes; with the free reading used, Draw it yourself over the photo with no request sent; a failed reading says what to do, Draw it yourself works, from Add room, and the open home stays on the shelf. `insights.spec.ts` checks the score ring is styled on a first load. `DH_SHOTS=1` writes `docs/screenshots/planread/`.
     - `tests/preview/security.spec.ts`: the plan flow under the production CSP (the lazy chunks and the `blob:` photo under the plan) and the bundled `/api/plan-read` answering offline and refusing a non-JPEG.
   - **Gate:** typecheck, lint, 892 unit tests, build, `check:api`, 127 browser tests (36 screenshot- and timing-only skipped), 5 preview tests (now also the plan flow under the CSP), `diff --check`: all green.
+- **2026-10-18, M7:**
+  - **New `src/voice/`:**
+    - `tools.ts` (shared by server and app): the 30 tools and their definitions, `cleanAction`, the context's shape and `cleanContext`, the system prompt.
+    - `context.ts` (`buildVoiceContext`, `placeOf`), `local.ts` (`matchLocal`, `speaksHindi`), `runTools.ts` (`runActions`, `confirmText`), `api.ts`.
+    - `TalkButton.tsx` (eager, with `talkButton.css`) and `TalkSheet.tsx` (lazy, with `talk.css`).
+  - **New `server/command.ts`:** `GET` answers whether talking is on and how many are left today; `POST {text, lang, context}` asks Haiku and returns the checked actions. Routed at `/api/command`.
+  - **Changed:**
+    - `server/claude.ts` (`callTools`: one tool-use turn, thinking off, cached), `server/context.ts` (`callTools` in `Deps`), `server/http.ts` (`COMMAND_MODEL`), `server/router.ts`, `api/index.js`, `.env.example`.
+    - The editor: the `"talk"` overlay and the `talkLang`, `talkSpeak` and `talkNoteSeen` preferences.
+    - The shell: `AppShell.tsx` (the lazy sheet; the Talk button above the Home bar on phones), `TopBar.tsx` (Talk on desktop), `RoomStudio.tsx` and `studio.css` (the microphone in a room's header on phones; the name on its own line when narrow), `Checklist.tsx` (opens on "show Vastu"), `icons.ts` (mic, send).
+  - **Tests:**
+    - Unit: `src/voice/voice.test.ts` (61): every edit tool through its command on a real home (each result valid); destructive tools and growing the house ask first and work on a yes; a request chains into one project and stops at the first failure; views and history; "already so" notes; `cleanAction` keeps good calls and drops 13 kinds of bad ones; `cleanContext` rebuilds and refuses; the context stays under 3 KB and id-free on every starting home; where rooms sit from each road side; the open room's furniture; 27 phrases answered on the phone (English, Hinglish, Devanagari) and 6 left to the AI. `server/command.test.ts` (7): Haiku with the tools, the system prompt and the home, bad calls dropped; at most five actions and a kind answer for none; 15 a day per device, refunded on failure; bad requests refused before spending; offline, fail-closed on Vercel without KV, off with `AI_DISABLED`; nothing said reaches the logs; routing and the same-site check.
+    - Browser: `tests/talk.spec.ts` (5, with `/api/command` mocked): on a phone, a typed request resizes the kitchen as one undo step ("Voice: …") and Undo restores it, then Hinglish paints a bedroom; removing a room asks, No changes nothing, Yes removes it; night, opening the kitchen in Hindi and undo are answered without the AI; a fake microphone's words go out in Hindi (`hi-IN`); without speech or the AI, typing still answers and navigation works, fitting at 320 px in Extra large with the room's name on its own line. `DH_SHOTS=1` writes `docs/screenshots/talk/`.
+    - `tests/preview/security.spec.ts`: the Talk sheet under the production CSP, and the bundled `/api/command` answering offline and refusing a bad request.
+  - **Gate:** typecheck, lint, 960 unit tests, build, `check:api`, 132 browser tests (36 screenshot- and timing-only skipped), 6 preview tests, `diff --check`: all green.

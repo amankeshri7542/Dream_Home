@@ -113,3 +113,46 @@ export const callClaude: CallClaude = async (call) => {
     throw new BilledError("The design wasn't readable.", costUsd);
   }
 };
+
+export type ToolCall = {
+  apiKey: string;
+  model: string;
+  system: string;
+  user: string;
+  tools: { name: string; description: string; input_schema: Record<string, unknown> }[];
+  maxTokens: number;
+  label: string;
+  timeoutMs?: number;
+};
+export type ToolAnswer = { text: string; calls: { name: string; input: unknown }[]; costUsd: number; model: string };
+export type CallTools = (call: ToolCall) => Promise<ToolAnswer>;
+
+/**
+ * One quick tool-use turn (voice commands on Haiku): no thinking, low effort,
+ * the tool list and system prompt cached. The calls come back unchecked;
+ * the caller checks every one against its tool.
+ */
+export const callTools: CallTools = async (call) => {
+  const client = new Anthropic({ apiKey: call.apiKey, timeout: call.timeoutMs ?? 20_000, maxRetries: 1 });
+  const message = await client.messages.create({
+    model: call.model,
+    max_tokens: call.maxTokens,
+    thinking: { type: "disabled" },
+    output_config: { effort: "low" },
+    // Tools come before the system prompt, so this one breakpoint caches both.
+    system: [{ type: "text", text: call.system, cache_control: { type: "ephemeral" } }],
+    tools: call.tools.map((tool) => ({ ...tool, input_schema: tool.input_schema as Anthropic.Tool.InputSchema })),
+    tool_choice: { type: "auto" },
+    messages: [{ role: "user", content: call.user }],
+  });
+  const costUsd = costOf(message.usage as Usage, message.model ?? call.model);
+  // Usage only: never what was said or done.
+  console.info(JSON.stringify({ ai: call.label, model: message.model, stop: message.stop_reason, usage: message.usage, costUsd }));
+  if (message.stop_reason === "refusal") throw new DesignRefused("The helper declined.", costUsd);
+  return {
+    text: message.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join(" ").trim(),
+    calls: message.content.flatMap((b) => (b.type === "tool_use" ? [{ name: b.name, input: b.input }] : [])),
+    costUsd,
+    model: message.model,
+  };
+};

@@ -13,6 +13,7 @@ import { neighbourRoom } from "../../editor/rooms";
 import { ROOM_TABS, type RoomTab } from "../../editor/state";
 import { Icon, roomIcon, type LucideIcon } from "../../ui/icons";
 import { Button, IconButton } from "../../ui/primitives";
+import { TalkButton } from "../../voice/TalkButton";
 import { RoomInspector } from "../inspectors/RoomInspector";
 import { DecorateRoomPanel, FurnitureInspector, Thumb } from "../modes/DecoratePanels";
 import { OpeningInspector, RoomOpeningsPanel } from "../modes/OpeningsPanels";
@@ -202,6 +203,8 @@ export function RoomStudio({ desktop }: { desktop: boolean }) {
             ].join(" · ")}
           </p>
         </div>
+        {/* On desktop, Talk is in the top bar. */}
+        {!desktop && <TalkButton place="header" />}
         <IconButton
           icon={Icon.sunlight}
           tone="plain"

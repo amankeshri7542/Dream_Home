@@ -20,6 +20,10 @@ export type Preferences = {
   textSize: TextSize;
   /** Soft sounds and vibration when things change. */
   sounds: boolean;
+  /** Talk to your home: the speech language, replies read aloud, the privacy note seen. */
+  talkLang: "en" | "hi";
+  talkSpeak: boolean;
+  talkNoteSeen: boolean;
 };
 export type TextSize = "normal" | "large" | "extra";
 export type LivedIn = "tidy" | "lived-in";
@@ -45,6 +49,9 @@ export function normalizePreferences(raw: unknown): Preferences {
     livedIn: p.livedIn === "tidy" ? "tidy" : "lived-in",
     textSize: TEXT_SIZES.includes(p.textSize as TextSize) ? (p.textSize as TextSize) : "normal",
     sounds: p.sounds !== false,
+    talkLang: p.talkLang === "hi" ? "hi" : "en",
+    talkSpeak: p.talkSpeak === true,
+    talkNoteSeen: p.talkNoteSeen === true,
   };
 }
 function readRaw(storage: Storage | undefined, key: string): unknown {

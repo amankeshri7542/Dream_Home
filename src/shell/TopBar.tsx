@@ -5,6 +5,7 @@ import { Icon } from "../ui/icons";
 import { IconButton } from "../ui/primitives";
 import { HomeBar } from "./HomeBar";
 import { BrandMark } from "../ui/BrandMark";
+import { TalkButton } from "../voice/TalkButton";
 
 export { BrandMark };
 
@@ -58,6 +59,7 @@ export function TopBar({
       </div>
       {desktop && state.mode !== "explore" && <HomeBar onAi={onAi} />}
       <div className="dh-topbar-actions">
+        {desktop && <TalkButton place="top" />}
         <div className="dh-history" role="toolbar" aria-label="History">
           <IconButton
             icon={Icon.undo}

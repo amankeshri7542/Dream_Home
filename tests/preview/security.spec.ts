@@ -140,3 +140,25 @@ test("starting from a builder's plan works under the policy, and its API holds i
   await page.waitForTimeout(500);
   expect(violations).toEqual([]);
 });
+
+test("talking to your home works under the policy, and its API holds its line", async ({ page, request }) => {
+  // Without an AI key the helper is off, so this never calls Claude.
+  const device = { "x-dream-device": "device-0123456789abcdef" };
+  expect(await (await request.get("/api/command", { headers: device })).json()).toMatchObject({ ok: true, live: false });
+  const junk = await request.post("/api/command", { headers: { ...device, "content-type": "application/json" }, data: { text: "hi" } });
+  expect(junk.status()).toBe(400);
+
+  const violations = await watchCsp(page);
+  await freshVisit(page);
+  await renderedModel(page);
+  await page.getByRole("button", { name: "Talk to your home" }).first().click();
+  const talk = page.getByRole("dialog", { name: "Talk to your home" });
+  await talk.getByRole("textbox", { name: "What would you like to change?" }).fill("Make the kitchen bigger");
+  await talk.getByRole("button", { name: "Send" }).click();
+  await expect(talk).toContainText("Talking to your home isn’t switched on yet.");
+  // Answered on the phone: no AI needed.
+  await talk.getByRole("textbox", { name: "What would you like to change?" }).fill("night");
+  await talk.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByRole("status", { name: "Notifications" })).toContainText("Here's your home at night.");
+  expect(violations).toEqual([]);
+});

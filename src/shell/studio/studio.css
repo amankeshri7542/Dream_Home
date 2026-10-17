@@ -28,6 +28,33 @@
     flex: 1;
     min-width: 0;
   }
+  /* Phones: the room glyph steps aside for the name. On narrow phones and with
+     bigger text, the name takes its own line under the buttons. */
+  @media (max-width: 480px) {
+    .dh-studio.is-sheet .dh-studio-head .dh-chip-icon {
+      display: none;
+    }
+  }
+  @media (max-width: 379px) {
+    .dh-studio.is-sheet .dh-studio-head {
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    .dh-studio.is-sheet .dh-studio-title {
+      order: 10;
+      flex-basis: 100%;
+      padding: 0 6px;
+    }
+  }
+  :root:is([data-text="large"], [data-text="extra"]) .dh-studio.is-sheet .dh-studio-head {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  :root:is([data-text="large"], [data-text="extra"]) .dh-studio.is-sheet .dh-studio-title {
+    order: 10;
+    flex-basis: 100%;
+    padding: 0 6px;
+  }
   /* One line each, so the tray keeps its room for tools on small phones. */
   .dh-studio-title h2,
   .dh-studio-title p {

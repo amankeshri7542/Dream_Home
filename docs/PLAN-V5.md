@@ -653,6 +653,15 @@ Crossfades between shots happen in the compositor.
 **Live check:** ask the owner before one real call with a sample plan (≈ ₹4–8).
 
 ### M7: Talk to your home (voice + chat; Haiku 5.5)
+✅ Done on 18 Oct 2026 (see the roadmap log). Differences from the text below:
+- the tools aren't `strict` (strict mode's limits on tool count, optional fields and grammar size don't fit 30 tools with long lists); the server checks every call against its tool and the home's refs instead, and the app checks again;
+- Haiku runs with thinking off and effort `low`; one cache breakpoint on the system prompt covers the tools too;
+- the microphone is tap to start and stop (not hold), and sends when you stop;
+- on desktop, Talk is in the top bar only; on phones, above the Home bar and in the room's header (whose name now gets its own line on narrow phones and with bigger text);
+- "show me the house at night", a room or explore close the sheet and keep the reply as a message;
+- a photo request opens the photo studio, where the mood is chosen;
+- undo and redo only on their own; an edit that changes nothing says so.
+
 **Goal:** anyone can design by speaking, in Hindi, English or Hinglish.
 
 **Experience:**
@@ -789,4 +798,4 @@ Crossfades between shots happen in the compositor.
 
 ## 11. Hand-off
 - This plan lives at `docs/PLAN-V5.md`; progress lives in `docs/ROADMAP-V5.md`; working rules for any Claude session are in `CLAUDE.md`.
-- M0a, M0b, M1, M2, M3, M4, M5 and M6 shipped on 17 Oct 2026. The next phase is **M7** (talk to your home: voice and chat, Haiku 5.5).
+- M0a, M0b, M1, M2, M3, M4, M5 and M6 shipped on 17 Oct 2026, M7 on 18 Oct. The next phase is **M8** (PWA, usability and security review, docs).

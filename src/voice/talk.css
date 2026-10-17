@@ -1,0 +1,242 @@
+@layer components {
+  /* Talk to your home: a chat sheet at the bottom on phones, a card at the right on desktop. */
+  .dh-talk {
+    position: absolute;
+    left: calc(8px + var(--dh-safe-left));
+    right: calc(8px + var(--dh-safe-right));
+    bottom: calc(8px + var(--dh-safe-bottom));
+    z-index: var(--dh-z-coach);
+    display: flex;
+    flex-direction: column;
+    max-height: min(72dvh, 580px);
+    pointer-events: auto;
+    background: var(--dh-glass-solid);
+    border: 1px solid var(--dh-glass-border);
+    border-radius: var(--dh-radius-xl);
+    box-shadow: var(--dh-shadow-3);
+    animation: dh-rise var(--dh-dur-slow) var(--dh-ease-spring);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dh-talk {
+      animation: none;
+    }
+  }
+  @media (min-width: 900px) {
+    .dh-talk {
+      left: auto;
+      right: calc(24px + var(--dh-safe-right));
+      bottom: 24px;
+      width: 440px;
+    }
+  }
+  .dh-talk-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 8px 2px 16px;
+  }
+  .dh-talk-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 10px;
+    padding: 0 12px 8px 14px;
+  }
+  .dh-talk-speak {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--dh-target-secondary);
+    padding: 0 14px;
+    border: 1px solid var(--dh-line-strong);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink-soft);
+    font: inherit;
+    font-size: calc(14px * var(--dh-text));
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dh-talk-speak[aria-pressed="true"] {
+    border-color: var(--dh-terracotta-600);
+    background: var(--dh-terracotta-50);
+    color: var(--dh-terracotta-700);
+  }
+  .dh-talk-speak:focus-visible {
+    outline: 3px solid var(--dh-focus);
+    outline-offset: 2px;
+  }
+  .dh-talk-head h2 {
+    flex: 1 1 auto;
+    margin: 0;
+    font-family: var(--dh-font-display);
+    font-size: calc(19px * var(--dh-text));
+    font-weight: 600;
+    color: var(--dh-ink);
+  }
+  .dh-talk-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 12px 6px;
+    padding: 10px 12px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-paper-2);
+    color: var(--dh-ink-soft);
+    font-size: calc(13px * var(--dh-text));
+    line-height: 1.4;
+  }
+  .dh-talk-note svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+  .dh-talk-note button {
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+    margin: -10px -6px -10px 0;
+    border: 0;
+    background: transparent;
+    color: var(--dh-terracotta-700);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .dh-talk-log {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    margin: 0;
+    padding: 4px 14px;
+    overflow-y: auto;
+    list-style: none;
+  }
+  .dh-talk-log:empty {
+    display: none;
+  }
+  .dh-talk-log li {
+    max-width: 85%;
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: calc(15px * var(--dh-text));
+    line-height: 1.4;
+    color: var(--dh-ink);
+    overflow-wrap: anywhere;
+  }
+  .dh-talk-log .is-you {
+    align-self: flex-end;
+    background: var(--dh-terracotta-100);
+    border-bottom-right-radius: 6px;
+  }
+  .dh-talk-log .is-home {
+    align-self: flex-start;
+    background: var(--dh-paper-2);
+    border-bottom-left-radius: 6px;
+  }
+  .dh-talk-log .is-error {
+    background: var(--dh-crimson-100);
+    color: var(--dh-crimson-700);
+  }
+  .dh-talk-log .is-busy {
+    color: var(--dh-ink-muted);
+  }
+  .dh-talk-confirm {
+    margin: 6px 14px 2px;
+    padding: 12px;
+    border-radius: var(--dh-radius-md);
+    background: var(--dh-amber-100);
+  }
+  .dh-talk-confirm p {
+    margin: 0 0 10px;
+    font-size: calc(16px * var(--dh-text));
+    font-weight: 600;
+    color: var(--dh-ink);
+  }
+  .dh-talk-confirm div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dh-talk-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 14px 6px;
+  }
+  .dh-talk-examples button {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--dh-line-strong);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink);
+    font: inherit;
+    font-size: calc(14px * var(--dh-text));
+    cursor: pointer;
+  }
+  .dh-talk-examples button:hover {
+    border-color: var(--dh-terracotta-600);
+  }
+  .dh-talk-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 2px;
+  }
+  .dh-talk-input input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--dh-field-border);
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-paper-0);
+    color: var(--dh-ink);
+    font: inherit;
+    /* 16px or more keeps phones from zooming in on focus. */
+    font-size: calc(16px * var(--dh-text));
+  }
+  .dh-talk-input input:focus-visible {
+    outline: 3px solid var(--dh-focus);
+    outline-offset: 1px;
+  }
+  .dh-talk-mic {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--dh-terracotta-600);
+    color: #fff;
+    cursor: pointer;
+  }
+  .dh-talk-mic:focus-visible {
+    outline: 3px solid var(--dh-focus);
+    outline-offset: 2px;
+  }
+  .dh-talk-mic.is-listening {
+    background: var(--dh-crimson-600);
+    box-shadow: 0 0 0 6px rgb(179 40 63 / 0.18);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .dh-talk-mic.is-listening {
+      animation: dh-talk-pulse 1.2s ease-in-out infinite;
+    }
+  }
+  @keyframes dh-talk-pulse {
+    50% {
+      box-shadow: 0 0 0 12px rgb(179 40 63 / 0.08);
+    }
+  }
+  .dh-talk-foot {
+    margin: 0;
+    padding: 4px 16px 12px;
+    color: var(--dh-ink-muted);
+    font-size: calc(13px * var(--dh-text));
+  }
+}

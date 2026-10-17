@@ -1,12 +1,13 @@
 // What every route shares: injectable dependencies (for tests) and the limiter.
 import { memoryBlobs, vercelBlobs, type BlobStore } from "./blob";
-import type { CallClaude } from "./claude";
+import type { CallClaude, CallTools } from "./claude";
 import { onVercel, type Env } from "./http";
 import { memoryKv, restKv, type KeyValue } from "./kv";
 import { Limiter, budgetFrom, memoryStore, restStore, rulesFrom, type Store } from "./limiter";
 
 export type Deps = {
   callClaude?: CallClaude;
+  callTools?: CallTools;
   store?: Store;
   kv?: KeyValue;
   blobs?: BlobStore;

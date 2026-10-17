@@ -1,0 +1,49 @@
+@layer components {
+  /* The round Talk button (the sheet's own styles load with it). */
+  .dh-talk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: var(--dh-target-secondary);
+    min-height: var(--dh-target-secondary);
+    padding: 0;
+    border: 0;
+    border-radius: var(--dh-radius-pill);
+    background: var(--dh-terracotta-600);
+    color: #fff;
+    font: inherit;
+    font-size: calc(15px * var(--dh-text));
+    font-weight: 650;
+    box-shadow: var(--dh-shadow-2);
+    cursor: pointer;
+  }
+  .dh-talk-btn:hover,
+  .dh-talk-btn[aria-pressed="true"] {
+    background: var(--dh-terracotta-700);
+  }
+  .dh-talk-btn:focus-visible {
+    outline: 3px solid var(--dh-focus);
+    outline-offset: 2px;
+  }
+  .dh-talk-btn.is-fab {
+    align-self: flex-end;
+    flex-direction: column;
+    gap: 0;
+    width: 64px;
+    height: 64px;
+    font-size: calc(12px * var(--dh-text));
+  }
+  .dh-talk-btn.is-top {
+    padding: 0 14px;
+  }
+  .dh-talk-btn.is-header {
+    background: transparent;
+    color: var(--dh-terracotta-700);
+    box-shadow: none;
+  }
+  .dh-talk-btn.is-header:hover,
+  .dh-talk-btn.is-header[aria-pressed="true"] {
+    background: var(--dh-terracotta-50);
+  }
+}

@@ -41,6 +41,7 @@ import { useBackButton } from "./useBackButton";
 import { PlanLens } from "./PlanLens";
 import { SceneHost } from "./SceneHost";
 import { TopBar } from "./TopBar";
+import { TalkButton } from "../voice/TalkButton";
 import "./shell.css";
 import "./studio/studio.css";
 
@@ -50,6 +51,7 @@ const SunlightSheet = lazy(() => import("../insights/SunlightSheet"));
 // Starting from a builder's plan: the steps load when chosen.
 const PlanStart = lazy(() => import("../planread/PlanStart"));
 const PlanCheck = lazy(() => import("../planread/PlanCheck"));
+const TalkSheet = lazy(() => import("../voice/TalkSheet"));
 
 /** The construction reveal: five steps, then "Ta-da!" for a moment. */
 const REVEAL_MS = 5 * 520 + 1800;
@@ -359,6 +361,11 @@ export function AppShell() {
           />
         </Suspense>
       )}
+      {screen === "workspace" && state.overlay === "talk" && (
+        <Suspense fallback={null}>
+          <TalkSheet onClose={() => dispatch({ type: "overlay", overlay: null })} />
+        </Suspense>
+      )}
       {studioOpen && state.overlay === "sunlight" && (
         <Suspense fallback={null}>
           <SunlightSheet onClose={() => dispatch({ type: "overlay", overlay: null })} />
@@ -538,6 +545,7 @@ export function AppShell() {
             <div className="dh-bottom" data-inset="bottom" data-chrome="bottom">
               {state.tool === "select" && inspector}
               <ModeHint />
+              {!showDock && !state.focus && !explore && state.overlay !== "talk" && <TalkButton place="fab" />}
               {showDock ? <ActionDock /> : !state.focus && <HomeBar onAi={openAi} />}
             </div>
           )}
