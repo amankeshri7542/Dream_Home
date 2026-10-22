@@ -162,7 +162,7 @@ test("the checklist hands over a balcony whose door took a bedroom's window", as
   await seed(page, result.project);
   await page.getByRole("button", { name: /Home checklist, \d+ of \d+ done/ }).click();
   await page
-    .getByRole("dialog", { name: "Home checklist" })
+    .getByRole("dialog", { name: "Home score" })
     .getByRole("listitem")
     .filter({ hasText: "Every bedroom has a window" })
     .getByRole("button", { name: "Fix it" })

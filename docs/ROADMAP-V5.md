@@ -15,11 +15,9 @@ work can resume after any interruption. Update it at the end of every phase.
   - M6: start from a photo of the builder's plan. The AI (Sonnet 5.5) reads it once per device; the homeowner checks the rooms over the faint photo on the 2D plan, fixes them, then "Make it 3D". "Draw it yourself" works with no reading at all.
   - M7: talk to your home. A Talk button (phones: above the Home bar and in the room's header; desktop: the top bar) opens a chat sheet; speak or type in English, Hindi or Hinglish. Haiku 5.5 turns a request into calls from a closed set of 30 tools, run as one undo step; big changes ask first; navigation is answered on the phone without the AI.
 - **v5 is complete** (M8 shipped 18 Oct 2026): installable and offline, reviewed for usability and security, documented. First-load budget: 1.5 KB gzip left of the +30 KB.
-- **Next:** the owner's setup (below), the live AI checks, and real-phone checks of the reel in WhatsApp and Instagram, the share preview in WhatsApp, Hindi speech, and installing on Android and iPhone. Usability follow-ups are listed in the M8 decisions.
+- **Next:** the owner's setup (below), the live AI checks, and real-phone checks of the reel in WhatsApp and Instagram, the share preview in WhatsApp, Hindi speech, and installing on Android and iPhone. The M8 usability follow-ups are done and merged.
 - **Live checks still owed (need KV connected, below, and the owner's go-ahead):** one real plan reading with the sample plan (about ₹4–8; the sample and a one-reading script are ready), and a few real voice commands (about ₹0.1 each).
-- **Waiting for the owner's review (not merged):**
-  - three small fixes for the balcony that can cost a room its window (found in M3), on branches `claude/vibrant-mestorf-f73f72` (AI builder), `claude/heuristic-zhukovsky-2d08d6` (Add balcony) and `claude/serene-elgamal-3c154b` (checklist);
-  - the M8 usability review's ten P2 follow-ups, on `claude/objective-cerf-b2d1d0` (see the M8 follow-ups under Decisions).
+- **Merged into `main` (22 Oct 2026):** the M8 usability review's ten P2 follow-ups and the three balcony fixes (the AI builder, Add balcony and the checklist no longer cost a room its only window). See "22 Oct 2026 (merge)" under Decisions.
 - **Owner actions pending** (sharing, the AI designer, plan reading and talking are off on the live site until these are done):
   1. Connect **Upstash Redis / Vercel KV** to the project. Limits, the AI budget and share records live there.
   2. Create a **Vercel Blob** store and connect it to the project. Shared homes and pictures live there.
@@ -272,7 +270,7 @@ work can resume after any interruption. Update it at the end of every phase.
         - My homes shows one "Open now" badge;
         - "Welcome back" has one big button.
       - **The viewer:** the report button is labelled "Report this home" and its sheet closes with Escape.
-    - **P2, left for later** (the review's screenshots are in the session scratchpad; all ten are now done on a branch, see "M8 follow-ups" below):
+    - **P2, left for later** (the review's screenshots are in the session scratchpad; all ten are now done, see "M8 follow-ups" below):
       - the tour starting under the build animation;
       - the Home score chip's wording ("75 · 1/5 ideas");
       - Photo and Video being hard to find from Home on phones;
@@ -284,7 +282,7 @@ work can resume after any interruption. Update it at the end of every phase.
       - the Home score panel and Sunlight sheet framing on desktop;
       - 3D room labels shorter than 44 px.
 
-- **18 Oct 2026 (M8 follow-ups: the review's ten P2s, on branch `claude/objective-cerf-b2d1d0`, not merged):**
+- **18 Oct 2026 (M8 follow-ups: the review's ten P2s; merged 22 Oct):**
   1. **The tour waits for the build.** `AppShell` keeps a `revealing` flag from the first build step until the "Ta-da!" has gone, and the tour shows only after it, on every path (the sample home started it at once before).
   2. **The Home score chip says what it is:** "Home score · Next: Paint a wall" (two short lines on phones, one on desktop), naming the first missing essential, then the first idea not yet tried, then "All done!". On phones it stops short of the Photo and Video buttons (the next step ends in "…" at 320 px with Extra large text). A tried idea gets a tick like the essentials: the sparkle is the AI's mark everywhere else, so it read as "AI".
   3. **Photo and Video on Home:** two labelled buttons, round and opposite the score on phones and tablets, pills under the top bar on desktop. They open the same studios as before. They step aside in a room, under the floor plan, behind a sheet or Talk, and (on phones) while the Home score is open. On screens under 600 px tall (a phone on its side, or a small one with Extra large text) they'd meet the camera buttons, so they hide there; Explore and Share still offer both. Next to Share would have squeezed the home's name on phones (item 5).
@@ -309,6 +307,14 @@ work can resume after any interruption. Update it at the end of every phase.
     - Redo hidden on phones until there's something to redo;
     - the viewer's slow turntable now turns the cut-away, so its room names move with it, slowly. It pauses while you touch it, and reduced motion stops it.
     - On phones the viewer is framed by the screen's width and its card still covers about half the screen, so the home there is opened up and named, but not much bigger than before.
+
+- **22 Oct 2026 (merge):**
+  - **Merged in order:** the M8 follow-ups (fast-forward), then the three balcony fixes on top (cherry-picked, so `main` stays linear): the AI builder tries the balcony centred, then flush to either end, and keeps the first that leaves every essential in place; the editor's Add balcony keeps the first clear spot that leaves every bedroom and living room a window, and otherwise says which room would lose its window; the checklist offers "add a window" only where one fits and, when a balcony's door is the cause, hands over Move for the balcony. They merged with no conflicts.
+  - **One wording change:** the checklist's balcony hint said "a bedroom's window", but the check covers living rooms too, so it says "a room's window".
+  - **ESLint ignores `.claude` and `node_modules *`:** it was linting the session worktrees and their `node_modules` (and iCloud's duplicate `node_modules 2`, `3`, `4` folders), so `npm run lint` took many minutes. Vitest and Playwright were already limited to their own folders.
+  - **iCloud can offload project files:** `public/models/street.glb` was "dataless" (in iCloud only), and `kit.test.ts` timed out loading it. Opening it brought it back. If that test times out, check with `ls -lO public/models`.
+  - **A stale test name:** the balcony checklist test was written before M5 renamed the checklist's dialog "Home score", so it looked for "Home checklist". It now uses the current name.
+  - **Dependencies:** this Mac's `node_modules` had no `mediabunny` or `qrcode-generator` (both pinned since M4), so it was reinstalled with `npm ci` and the symlink restored.
 
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
@@ -485,7 +491,7 @@ work can resume after any interruption. Update it at the end of every phase.
       - `interiors.spec.ts`: the battery style.
     - `tests/preview/security.spec.ts` (7): offline after one visit with the API never cached, the manifest and icons.
   - **Gate:** typecheck, lint, 974 unit tests, build, `check:api`, 142 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.
-- **2026-10-18, M8 follow-ups (branch `claude/objective-cerf-b2d1d0`, not merged):**
+- **2026-10-18, M8 follow-ups (merged 22 Oct):**
   - **New:** `src/shell/CaptureButtons.tsx` (Photo and Video on Home), `src/ui/tooltips.ts` (quick tooltips for `data-tip`), `tests/usability.spec.ts`.
   - **Changed:**
     - `src/history.ts` (`setEverywhere`), `src/useProject.ts` (`setSetting`), `src/editor/EditorProvider.tsx` (`setHomeSetting`), `src/insights/VastuCard.tsx`.
@@ -499,3 +505,6 @@ work can resume after any interruption. Update it at the end of every phase.
     - Updated for the new words: `goHome` in `tests/support/dreamHome.ts`, "Back to home" in five specs, `data-tip` in `talk.spec.ts`.
   - **Found on the way:** the app already had a `.dh-tip` class (inline hints like "Drag it in the picture"), so the tooltip is `.dh-tooltip`. `editor.spec.ts` checks hosts against `localhost` and one test is pinned to port 5173, so the suite was run on `localhost:5191` and that test on 5173. A reused dev server keeps counting share links per device (20 a day), so the new viewer test makes its link from a device of its own.
   - **Gate:** typecheck, lint, 975 unit tests, build, `check:api`, 156 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.
+- **2026-10-22, merge of the M8 follow-ups and the balcony fixes:**
+  - **Commits on `main`:** `c776c4b` (M8 follow-ups), then the AI builder's, Add balcony's and the checklist's balcony fixes, then this one (the hint's wording, the test's dialog name, ESLint's ignores, this roadmap).
+  - **Gate:** typecheck, lint, 993 unit tests, build, `check:api`, 157 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.

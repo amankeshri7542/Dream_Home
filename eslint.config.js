@@ -7,6 +7,8 @@ export default tseslint.config(
       "dist",
       "node_modules",
       "node_modules.nosync",
+      "node_modules *",
+      ".claude",
       "test-results",
       "playwright-report",
       "public",
