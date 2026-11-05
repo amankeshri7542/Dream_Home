@@ -105,6 +105,7 @@ git diff --check
   - Idle animation goes through the gate in `SceneRoot` and `useIdleTicker` (`src/scene/motion.ts`) and reads the store's shared clock (`store.time()`).
   - GLTFLoader strips `:` from node names; read kit names with `gltfName()` (`src/scene/props/kit.ts`).
 - **Room light** (`src/scene/roomlight/`): `solve.ts` and `input.ts` are pure: each room's light, worked out exactly for boxes with rectangular openings, into a 3D grid. `uniforms.ts` is the one permanent shader path (`patchMaterial(m, { room: true })`), switched by `uRoomOn`. It's on only while walking (`view.walkFloorId`) and never on battery; then the shadowless fill light, the lamp pool and the walker's lamp step aside. A new interior material needs `room: true`.
+- **Ceilings** (`src/scene/building/geometry/ceiling.ts`, `Ceilings.tsx`) are drawn only while walking; dollhouse views never see one. A room's finish and false ceiling come from `roomCeiling` and `roomFalseCeiling` (the Look's default unless the room chose).
 - **The street outside** (`src/scene/world/`): `streetPlan.ts` is pure and seeded by the plot. It shows when a view sets `world: true` (Walk, the bench), or when an Explore camera is low and on the plot or its road; Home, Room and Build keep the plinth.
 - **Feedback:** `feedback.pop() / click() / error() / success()` from `src/ui/feedback.ts` play soft generated sounds and vibration. `run()` already calls them for edits.
 - **Server (`server/`):**

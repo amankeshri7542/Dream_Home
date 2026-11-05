@@ -34,6 +34,7 @@ import { StreetLife } from "./street/StreetLife";
 import { LivedIn } from "./life/LivedIn";
 import { Neighbourhood } from "./world/Neighbourhood";
 import { RoomLight } from "./roomlight/RoomLight";
+import { Ceilings } from "./building/Ceilings";
 import { useIdleTicker, usePageVisible } from "./motion";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
@@ -261,6 +262,7 @@ export function SceneRoot(props: RootProps) {
           reducedMotion={reducedMotion}
         />
         {props.ghost && <Ghost project={project} ghost={props.ghost} offset={offset} />}
+        {view.walkFloorId && <Ceilings project={project} floorId={view.walkFloorId} glow={light.palette.windowGlow} />}
         <Night light={light} library={library} floors={nightFloors} indoors={!!view.walkFloorId} roomLit={roomLit} />
         {(everyday || diwali) && vis.stage >= 4 && (
           <LivedIn

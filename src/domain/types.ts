@@ -125,6 +125,10 @@ export type Room = {
   /** Richer floor material id; `floorFinish` keeps the nearest legacy family. */
   floorMaterial?: string;
   wallColor?: string;
+  /** The ceiling's finish (a `CEILING_FINISHES` id); absent means the Look's choice, else plain plaster. */
+  ceiling?: string;
+  /** A POP false ceiling with cove light; absent means the Look's default (roomFalseCeiling). */
+  falseCeiling?: boolean;
   furniture?: FurnitureItem[];
   /** An attached (en-suite) bathroom: the id of the bedroom it opens into. */
   attachedTo?: string;

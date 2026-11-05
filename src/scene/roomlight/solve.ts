@@ -452,7 +452,7 @@ export function solveLightGrid(rooms: readonly LightRoom[], sky: LightSky, spec:
       mean += lum(p.e) * p.area;
     }
     mean /= area || 1;
-    s.gain = mean > 1e-4 ? clamp(Math.pow(sky.target / mean, 0.86), 0.55, 4.2) : 1;
+    s.gain = mean > 1e-4 ? clamp(Math.pow(sky.target / mean, 0.86), 0.3, 4.2) : 1;
     gains[s.room.id] = s.gain;
     // And a photographer's white balance: the light's colour stays, but only part of it.
     const tint: RGB = [0, 0, 0];

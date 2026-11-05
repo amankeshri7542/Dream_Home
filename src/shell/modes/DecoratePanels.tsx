@@ -20,13 +20,20 @@ import {
   updateFurniture,
 } from "../../domain/furnitureCommands";
 import {
+  CEILING_FINISHES,
   FLOOR_MATERIALS,
   WALL_PAINTS,
+  roomCeiling,
+  roomFalseCeiling,
   roomFloorMaterial,
   roomWallPaint,
+  setRoomCeiling,
+  setRoomFalseCeiling,
   setRoomFloorMaterial,
   setRoomWallColor,
+  stylePreset,
 } from "../../domain/materials";
+import { Switch } from "../../components/Controls";
 import { deriveWalls } from "../../domain/walls";
 import type { EditResult, Room } from "../../domain/types";
 import { ROOM_META } from "../../domain/types";
@@ -265,10 +272,10 @@ export function DecorateRoomPanel({
         </>
       )}
       {colours && (
-        <Section title="Walls & floor" description="Paint and flooring" open>
+        <Section title="Walls, floor & ceiling" description="Paint, flooring and the ceiling" open>
           <Swatches
             label="Wall paint"
-            value={roomWallPaint(room)}
+            value={roomWallPaint(room, stylePreset(project))}
             options={Object.entries(WALL_PAINTS).map(([value, s]) => ({
               value,
               label: s.label,
@@ -286,7 +293,7 @@ export function DecorateRoomPanel({
           />
           <Swatches
             label="Floor"
-            value={roomFloorMaterial(room)}
+            value={roomFloorMaterial(room, stylePreset(project))}
             options={Object.entries(FLOOR_MATERIALS).map(([value, s]) => ({
               value,
               label: s.label,
@@ -301,6 +308,25 @@ export function DecorateRoomPanel({
                 },
               )
             }
+          />
+          <Swatches
+            label="Ceiling"
+            value={roomCeiling(room, stylePreset(project))}
+            options={Object.entries(CEILING_FINISHES).map(([value, s]) => ({
+              value,
+              label: s.label,
+              color: s.color,
+            }))}
+            onChange={(id) => run(setRoomCeiling(project, floorId, room.id, id), `Change ${room.name} ceiling`, { coalesceKey: `ceiling:${room.id}` })}
+          />
+          <Switch
+            label="False ceiling with cove light"
+            description="A lowered edge with hidden warm lights. You see it when you walk inside"
+            checked={roomFalseCeiling(room, stylePreset(project))}
+            onChange={() => {
+              const on = !roomFalseCeiling(room, stylePreset(project));
+              run(setRoomFalseCeiling(project, floorId, room.id, on), `False ceiling ${on ? "on" : "off"} in ${room.name}`);
+            }}
           />
         </Section>
       )}

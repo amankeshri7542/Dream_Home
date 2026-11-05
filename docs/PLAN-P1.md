@@ -28,7 +28,15 @@ The owner sent five phases: interior detailing, furniture realism, walk polish, 
 
 **Naming:** the owner's numbers are kept as they are (Phase 1 … 5, 1.1, 3.4 …). The v6 items above are always written with their prefix (v6 P1.2 and so on), so the two can't be confused.
 
-### Decisions the owner needs to make first
+### Decisions (6 Nov, night)
+
+The owner handed over ("handle everything from here … build everything"), so the agent went with its recommendations below. Each can be reversed in the morning.
+- **D1 gallery: not built.** The owner had ruled it out earlier, and the new prompt itself says to flag a clash like this rather than override it. It waits for the owner's explicit word.
+- **D2 "SEO Bot": not built.** It isn't known what it is.
+- **D3 false ceilings:** as recommended. On by default for living, dining and bedrooms in Indian modern, Mumbai modern and Bengaluru contemporary; off elsewhere; anyone can switch it per room.
+- **D4:** v6 P1.6 goes into Phase 3, and v6 P1.4 into Phase 2. v6 P1.2 and P1.5 come after the owner's phases, if there's time.
+
+### Decisions the owner was asked to make
 
 | # | Question | Why | Recommendation |
 |---|---|---|---|
@@ -87,6 +95,13 @@ Smaller adjustments, flagged here rather than made silently:
 - **Before and after:**
   - **Live:** an Empty / Furnished toggle (press and hold on phones) in the viewer and Explore. It flips `furnishings` and `livedIn`: one flag, no second render, so it stays within 160 draw calls.
   - **Photo:** a "Before and after" picture made of two offline renders joined half and half, the same mechanism as v6 P1.2's half-plan framing.
+
+### Progress on the owner's phases
+
+| Phase | State |
+|---|---|
+| 1.1 Layered materials | **Done (6 Nov):** `Room.ceiling` (4 finishes, from the Look by default), floor tiles laid from each room's inner corner, roller-scale paint variation, sheen tuned, and the Colours tab shows the Look's choices |
+| 1.2 False ceiling | **Done (6 Nov):** `Room.falseCeiling` (D3 defaults); band, step, cove lip and glow, downlights, rose and crown moulding, in the room light too. Night walk draw calls fell from 143 to 104, because the old fake pools and lamp pool give way to room light |
 
 ### Order of work
 

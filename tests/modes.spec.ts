@@ -46,6 +46,18 @@ test("decorate: add furniture, recolour it, paint the walls and undo", async ({ 
   await expect
     .poll(async () => (await stored(page)).floors[0].rooms.find((r) => r.id === living.id)?.wallColor)
     .toBeUndefined();
+  // The ceiling: its own finish, and a false ceiling with cove light, both undoable.
+  const roomOf = async () => (await stored(page)).floors[0].rooms.find((r) => r.id === living.id);
+  await page.getByRole("radiogroup", { name: "Ceiling" }).getByRole("radio", { name: "Teak panels" }).click();
+  await expect.poll(async () => (await roomOf())?.ceiling).toBe("teak-panel");
+  const cove = page.getByRole("switch", { name: /False ceiling with cove light/ });
+  // Whatever the Look's default, the switch flips it and saves the room's own choice.
+  const was = (await cove.getAttribute("aria-checked")) === "true";
+  await cove.click();
+  await expect.poll(async () => (await roomOf())?.falseCeiling).toBe(!was);
+  await expect(cove).toHaveAttribute("aria-checked", String(!was));
+  await undo(page);
+  await expect.poll(async () => (await roomOf())?.falseCeiling).toBeUndefined();
 });
 
 test("doors & windows: restyle, slide, remove and add, then go back to automatic", async ({ page }) => {

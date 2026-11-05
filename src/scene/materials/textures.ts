@@ -454,8 +454,10 @@ const soil: Gen = (u, v, base) => {
 const W: C3 = [1, 1, 1];
 const paint: Gen = (u, v) => {
   const m = fbm(u, v, 4, 4, 191);
+  // Paint is never one flat colour: broad, faint patches about a roller's width.
+  const broad = fbm(u, v, 1, 2, 193);
   const roller = anis(u, v, 24, 6, 2, 192);
-  return { c: mul(W, 0.965 + (m - 0.5) * 0.05 + (roller - 0.5) * 0.02), h: 0.5 + (roller - 0.5) * 0.4, r: 0.9 };
+  return { c: mul(W, 0.962 + (m - 0.5) * 0.05 + (broad - 0.5) * 0.045 + (roller - 0.5) * 0.022), h: 0.5 + (roller - 0.5) * 0.4, r: 0.9 + (broad - 0.5) * 0.06 };
 };
 const stoneSmall: Gen = (u, v, _b, [w, h]) => {
   const b = blocks(u * w, v * h, 0.3, 0.15, 4, 4);

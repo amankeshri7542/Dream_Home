@@ -186,7 +186,9 @@ const checkSite = (v: unknown): v is SiteStyle =>
 
 /** Throws a user-facing error when an optional field has the wrong shape. */
 export function checkRoomExtras(r: Obj) {
-  if (!optStr(r.floorMaterial) || !optStr(r.wallColor))
+  if (!optStr(r.floorMaterial) || !optStr(r.wallColor) || !optStr(r.ceiling))
+    throw new Error("Project contains an invalid room finish.");
+  if (r.falseCeiling !== undefined && typeof r.falseCeiling !== "boolean")
     throw new Error("Project contains an invalid room finish.");
   if (!optStr(r.attachedTo) || (typeof r.attachedTo === "string" && r.attachedTo.length > 120))
     throw new Error("Project contains an invalid attached bathroom.");
@@ -250,7 +252,7 @@ export function checkProjectExtras(p: Obj) {
 }
 export function copyRoomExtras(
   room: Room,
-): Pick<Room, "floorMaterial" | "wallColor" | "furniture" | "attachedTo" | "accentWall"> {
+): Pick<Room, "floorMaterial" | "wallColor" | "ceiling" | "falseCeiling" | "furniture" | "attachedTo" | "accentWall"> {
   return {
     ...(room.attachedTo !== undefined ? { attachedTo: room.attachedTo } : {}),
     ...(room.accentWall !== undefined
@@ -260,6 +262,8 @@ export function copyRoomExtras(
       ? { floorMaterial: room.floorMaterial }
       : {}),
     ...(room.wallColor !== undefined ? { wallColor: room.wallColor } : {}),
+    ...(room.ceiling !== undefined ? { ceiling: room.ceiling } : {}),
+    ...(room.falseCeiling !== undefined ? { falseCeiling: room.falseCeiling } : {}),
     ...(room.furniture !== undefined
       ? { furniture: room.furniture.map(copyFurniture) }
       : {}),

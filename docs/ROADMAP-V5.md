@@ -588,3 +588,19 @@ work can resume after any interruption. Update it at the end of every phase.
     - `tests/interiors.spec.ts`: night lamps come from room light while walking.
   - **Measured:** a floor's light solve takes 20–59 ms on the owner's Mac. Draw calls: Build 76, Explore with street 76, night walk 143.
   - **Bench:** `npm run bench:look -- --label p1-checkpoint` (not committed) against `baseline`. Judged by eye; the fresh critic waits until after the furniture work.
+- **2026-11-06, the owner's Phase 1.1 and 1.2 (layered materials; a false ceiling with cove light):**
+  - **New saved fields:** `Room.ceiling` (a `CEILING_FINISHES` id: white plaster, smooth POP, teak panels, exposed concrete) and `Room.falseCeiling`. They go through `persist.ts` (check and copy), `registerValidation` and the lenient share parser, and they're on the `schema.test.ts` list.
+  - **Resolvers, both pure:** `roomCeiling` and `roomFalseCeiling` (`src/domain/materials.ts`). Defaults (D3): a false ceiling in living, dining and bedrooms of the modern Looks, but Bengaluru contemporary living rooms keep exposed concrete; teak in Kerala and Chettinad living and dining rooms; plaster otherwise.
+  - **Setters:** `setRoomCeiling` and `setRoomFalseCeiling`, one undo step each.
+  - **Drawn only while walking:** `src/scene/building/geometry/ceiling.ts` (pure) and `Ceilings.tsx`.
+    - A false ceiling has a band 17 cm below the slab and 42–60 cm wide, a step to the middle, a cove lip and the warm `#ffd9a0` glow, downlights every 1.25 m, a ceiling rose and a 45° crown moulding.
+    - A room under 2.4 m across gets a plain drop ceiling. A room whose door or window reaches the band keeps a plain ceiling.
+    - It replaces the old `WalkCeiling`. The room light uses each room's ceiling colour, and lights false-ceiling rooms with downlights and the cove (no tube light).
+  - **Floors:** whole tiles start at each room's inner corner, so the grout runs square to the walls.
+  - **Walls:** paint has broad, faint roller patches.
+  - **Sheen:** kota and polished concrete are more honed, walnut less glossy.
+  - **UI:** the room's Colours tab is "Walls, floor & ceiling", with a Ceiling row and a "False ceiling with cove light" switch. The paint and floor swatches now show the Look's choice as selected (a bug found while mapping).
+  - **Tests:**
+    - `src/domain/ceiling.test.ts` (4): defaults by Look, set/clear/save, lenient share parsing.
+    - `src/scene/building/geometry/ceiling.test.ts` (5): inside the room, clears every opening, narrow rooms, off, buckets.
+    - `modes.spec.ts`: ceiling swatch, switch, undo. `interiors.spec.ts`: ceilings while walking.

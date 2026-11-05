@@ -1,11 +1,12 @@
 // A home's floor and the hour → what the room-light solver needs (pure).
 import { floorForGeometry } from "../../domain/core";
 import { furnitureBaseY, furnitureCatalogItem, resolveFurniture } from "../../domain/furniture";
-import { FLOOR_MATERIALS, roomFloorMaterial, stylePreset } from "../../domain/materials";
+import { CEILING_FINISHES, FLOOR_MATERIALS, roomCeiling, roomFloorMaterial, stylePreset } from "../../domain/materials";
+import { COVE_COLOUR, falseCeilings } from "../building/geometry/ceiling";
 import type { Project, Room } from "../../domain/types";
 import { deriveWalls, isWindow, wallStart } from "../../domain/walls";
 import { rgb } from "../building/geometry/QuadBuilder";
-import { CEILING_WHITE, facePaint } from "../building/geometry/walls";
+import { facePaint } from "../building/geometry/walls";
 import { FLOOR_SURFACE, floorBase, plotOffset } from "../coords";
 import type { Lighting } from "../environment/timeOfDay";
 import type { LightGridSpec, LightLamp, LightOpening, LightRoom, LightSky, RGB, V3 } from "./solve";
@@ -19,6 +20,8 @@ const CELL_Y = 0.42;
 
 /** Ceiling tube light for rooms with no lamp of their own. */
 const TUBE: RGB = rgb("#fff1d8");
+const DOWNLIGHT: RGB = rgb("#ffe6c4");
+const COVE: RGB = rgb(COVE_COLOUR);
 
 /** The floor's rooms in world metres, with every opening and lamp that lights them. */
 export function lightRooms(project: Project, floorId: string, lampsOn: boolean): { rooms: LightRoom[]; spec: LightGridSpec } {
@@ -30,6 +33,8 @@ export function lightRooms(project: Project, floorId: string, lampsOn: boolean):
   const y0 = floorBase(floor) + FLOOR_SURFACE;
   const y1 = floorBase(floor) + floor.height / 100 - CEILING_DROP;
   const baseY = floorBase(floor);
+  // False ceilings light their rooms with downlights and the cove instead of a tube light.
+  const falses = new Map(falseCeilings(project, floor.id).map((c) => [c.roomId, c]));
   const rooms: LightRoom[] = geo.rooms.map((room) => {
     const b = room.bounds;
     const min: V3 = [b.x / 100 + ox + INSET, y0, b.z / 100 + oz + INSET],
@@ -86,9 +91,22 @@ export function lightRooms(project: Project, floorId: string, lampsOn: boolean):
           intensity: light.intensity,
         });
       }
-      // Every Indian room has its tube light; it's the lamps that are optional.
-      if (!lamps.length) lamps.push({ position: [(min[0] + max[0]) / 2, y1 - 0.06, (min[2] + max[2]) / 2], color: TUBE, intensity: 0.9 });
-      else lamps.push({ position: [(min[0] + max[0]) / 2, y1 - 0.06, (min[2] + max[2]) / 2], color: TUBE, intensity: 0.28 });
+      const fc = falses.get(room.id);
+      if (fc) {
+        for (const d of fc.downlights) lamps.push({ position: [d[0] + ox, d[1] - 0.04, d[2] + oz], color: DOWNLIGHT, intensity: 0.1 });
+        // The LED strip: a soft row of warm sources tucked under the lip.
+        for (const run of fc.cove) {
+          const len = Math.hypot(run.to[0] - run.from[0], run.to[2] - run.from[2]);
+          const n = Math.max(1, Math.round(len / 0.9));
+          for (let i = 0; i < n; i++) {
+            const t = (i + 0.5) / n;
+            lamps.push({ position: [run.from[0] + (run.to[0] - run.from[0]) * t + ox, run.from[1] + 0.02, run.from[2] + (run.to[2] - run.from[2]) * t + oz], color: COVE, intensity: 0.045 });
+          }
+        }
+      } else if (!lamps.length) {
+        // Every Indian room has its tube light; it's the lamps that are optional.
+        lamps.push({ position: [(min[0] + max[0]) / 2, y1 - 0.06, (min[2] + max[2]) / 2], color: TUBE, intensity: 0.9 });
+      } else lamps.push({ position: [(min[0] + max[0]) / 2, y1 - 0.06, (min[2] + max[2]) / 2], color: TUBE, intensity: 0.28 });
     }
     return {
       id: room.id,
@@ -101,7 +119,7 @@ export function lightRooms(project: Project, floorId: string, lampsOn: boolean):
         zMax: paint(2, -1, (b.z + b.d) / 100),
       },
       floor: rgb(FLOOR_MATERIALS[roomFloorMaterial(room, look)].color),
-      ceiling: rgb(CEILING_WHITE),
+      ceiling: rgb(CEILING_FINISHES[roomCeiling(room, look)].color),
       openings,
       lamps,
     };

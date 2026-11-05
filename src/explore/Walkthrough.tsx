@@ -2,24 +2,13 @@
 // camera while active and restores the orbit view exactly on exit.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import {
-  Euler,
-  MeshStandardMaterial,
-  Path,
-  PerspectiveCamera,
-  type PointLight,
-  Raycaster,
-  Shape,
-  ShapeGeometry,
-  Vector2,
-} from "three";
+import { Euler, PerspectiveCamera, type PointLight, Raycaster, Vector2 } from "three";
 import { inside } from "../domain/geometry";
 import { deriveFloorVoids } from "../domain/core";
-import type { Floor, Project } from "../domain/types";
+import type { Project } from "../domain/types";
 import { floorBaseY, plotToWorld, rayToPlot } from "../editor/spatial";
 import { EYE_HEIGHT, buildColliders, moveVisitor, unstick } from "./walkPhysics";
 import { walkInput } from "./walkInput";
-import { patchMaterial } from "../scene/materials/patches";
 import { roomLightUniforms } from "../scene/roomlight/uniforms";
 
 type Props = {
@@ -37,8 +26,6 @@ type Props = {
 };
 
 const WALK_FOV = 68;
-/** The underside of the slab above sits this far below the next floor. */
-const CEILING_DROP = 0.18;
 const SPEED = 140; // cm per second
 const TURN = 1.8; // radians per second
 
@@ -305,59 +292,11 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     }
     if (moving) invalidate();
   });
-  const floor = project.floors.find((f) => f.id === floorId) ?? project.floors[0];
   return (
     <>
-      <WalkCeiling project={project} floor={floor} />
       {/* A warm ceiling light that follows the visitor; dark by day so the
           light count (and every shader) stays the same as the hour changes. */}
       <pointLight ref={lamp} color="#ffd29a" intensity={0} distance={8} decay={1.4} />
     </>
-  );
-}
-
-/**
- * A soft plaster ceiling over the floor being walked, so looking up shows a
- * room rather than the underside of the roof. Courtyards and stairwells stay open.
- */
-function WalkCeiling({ project, floor }: { project: Project; floor: Floor }) {
-  const geometry = useMemo(() => {
-    const f = floor.footprint;
-    const shape = new Shape();
-    // Shape (x, y) = plot (x, z); turning it face-down maps shape y onto world +z.
-    shape.moveTo(f.x, f.z);
-    shape.lineTo(f.x + f.w, f.z);
-    shape.lineTo(f.x + f.w, f.z + f.d);
-    shape.lineTo(f.x, f.z + f.d);
-    shape.closePath();
-    for (const v of deriveFloorVoids(project, floor.id)) {
-      const b = v.bounds;
-      const hole = new Path();
-      hole.moveTo(b.x, b.z);
-      hole.lineTo(b.x, b.z + b.d);
-      hole.lineTo(b.x + b.w, b.z + b.d);
-      hole.lineTo(b.x + b.w, b.z);
-      hole.closePath();
-      shape.holes.push(hole);
-    }
-    const g = new ShapeGeometry(shape);
-    g.scale(0.01, 0.01, 1);
-    return g;
-  }, [project, floor]);
-  const material = useMemo(
-    () => patchMaterial(new MeshStandardMaterial({ color: "#f4ede3", roughness: 0.95, metalness: 0 }), { room: true }),
-    [],
-  );
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  useEffect(() => () => material.dispose(), [material]);
-  const origin = plotToWorld(project.plot, 0, 0, floorBaseY(floor) + floor.height / 100 - CEILING_DROP);
-  return (
-    <mesh
-      geometry={geometry}
-      material={material}
-      position={origin}
-      rotation={[Math.PI / 2, 0, 0]}
-      raycast={() => null}
-    />
   );
 }

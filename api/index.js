@@ -3337,7 +3337,9 @@ function copyStyle(s) {
 }
 var checkSite = (v) => obj(v) && optStr(v.ground) && optStr(v.fence);
 function checkRoomExtras(r2) {
-  if (!optStr(r2.floorMaterial) || !optStr(r2.wallColor))
+  if (!optStr(r2.floorMaterial) || !optStr(r2.wallColor) || !optStr(r2.ceiling))
+    throw new Error("Project contains an invalid room finish.");
+  if (r2.falseCeiling !== void 0 && typeof r2.falseCeiling !== "boolean")
     throw new Error("Project contains an invalid room finish.");
   if (!optStr(r2.attachedTo) || typeof r2.attachedTo === "string" && r2.attachedTo.length > 120)
     throw new Error("Project contains an invalid attached bathroom.");
@@ -3379,6 +3381,8 @@ function copyRoomExtras(room2) {
     ...room2.accentWall !== void 0 ? { accentWall: { edge: room2.accentWall.edge, color: room2.accentWall.color } } : {},
     ...room2.floorMaterial !== void 0 ? { floorMaterial: room2.floorMaterial } : {},
     ...room2.wallColor !== void 0 ? { wallColor: room2.wallColor } : {},
+    ...room2.ceiling !== void 0 ? { ceiling: room2.ceiling } : {},
+    ...room2.falseCeiling !== void 0 ? { falseCeiling: room2.falseCeiling } : {},
     ...room2.furniture !== void 0 ? { furniture: room2.furniture.map(copyFurniture) } : {}
   };
 }
@@ -3463,6 +3467,12 @@ var FLOOR_MATERIALS = {
   vitrified: { label: "Vitrified tiles", color: "#e9e5dd", family: "tile" },
   azulejo: { label: "Blue azulejo tiles", color: "#3a64a8", family: "tile" }
 };
+var CEILING_FINISHES = {
+  "white-plaster": { label: "White plaster", color: "#f4f0e8" },
+  "ivory-pop": { label: "Smooth POP", color: "#f0e8d9" },
+  "teak-panel": { label: "Teak panels", color: "#8a5a35" },
+  "board-concrete": { label: "Exposed concrete", color: "#bdb8ae" }
+};
 var ROOF_MATERIALS = {
   terracotta: { label: "Terracotta tiles", color: "#c2693f" },
   slate: { label: "Slate", color: "#5d6670" },
@@ -3507,6 +3517,7 @@ var GROUND_STYLES = {
 var isExterior = (id) => typeof id === "string" && Object.hasOwn(EXTERIOR_FINISHES, id);
 var isWallPaint = (id) => typeof id === "string" && Object.hasOwn(WALL_PAINTS, id);
 var isFloorMaterial = (id) => typeof id === "string" && Object.hasOwn(FLOOR_MATERIALS, id);
+var isCeilingFinish = (id) => typeof id === "string" && Object.hasOwn(CEILING_FINISHES, id);
 var isRoofMaterial = (id) => typeof id === "string" && Object.hasOwn(ROOF_MATERIALS, id);
 var isTrim = (id) => typeof id === "string" && Object.hasOwn(TRIM_COLORS, id);
 var isDoorColor = (id) => typeof id === "string" && Object.hasOwn(DOOR_COLORS, id);
@@ -3537,7 +3548,7 @@ registerValidation((p, issue) => {
     if (p.site.fence !== void 0 && !isFence(p.site.fence)) bad();
   }
   const room2 = (r2, source, floorIds) => {
-    if (r2.floorMaterial !== void 0 && !isFloorMaterial(r2.floorMaterial) || r2.wallColor !== void 0 && !isWallPaint(r2.wallColor) || r2.accentWall !== void 0 && !roomAccentWall(r2))
+    if (r2.floorMaterial !== void 0 && !isFloorMaterial(r2.floorMaterial) || r2.wallColor !== void 0 && !isWallPaint(r2.wallColor) || r2.ceiling !== void 0 && !isCeilingFinish(r2.ceiling) || r2.falseCeiling !== void 0 && typeof r2.falseCeiling !== "boolean" || r2.accentWall !== void 0 && !roomAccentWall(r2))
       bad(source, floorIds);
   };
   for (const f of p.floors)

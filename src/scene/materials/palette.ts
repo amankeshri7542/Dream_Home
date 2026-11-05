@@ -112,20 +112,20 @@ export const FACADE_LOOKS: Record<ExteriorFinishId, FacadeLook> = {
 
 export const FLOOR_LOOKS: Record<FloorMaterialId, Look> = {
   oak: { texture: "planks", color: FLOOR_MATERIALS.oak.color, tile: [3.6, 1.44], roughness: 0.62, bumpScale: 0.6 },
-  walnut: { texture: "planks", color: FLOOR_MATERIALS.walnut.color, tile: [3.6, 1.44], roughness: 0.55, bumpScale: 0.6 },
+  walnut: { texture: "planks", color: FLOOR_MATERIALS.walnut.color, tile: [3.6, 1.44], roughness: 0.62, bumpScale: 0.6 },
   herringbone: { texture: "herringbone", color: FLOOR_MATERIALS.herringbone.color, tile: [1.0, 1.0], roughness: 0.6, bumpScale: 0.6 },
   "light-tile": { texture: "tile", color: FLOOR_MATERIALS["light-tile"].color, tile: [1.2, 1.2], roughness: 0.38, bumpScale: 0.8 },
   terrazzo: { texture: "terrazzo", color: FLOOR_MATERIALS.terrazzo.color, tile: [2.4, 2.4], roughness: 0.32, bumpScale: 0.3 },
   marble: { texture: "marble", color: FLOOR_MATERIALS.marble.color, tile: [2.4, 2.4], roughness: 0.18, bumpScale: 0.3 },
   limestone: { texture: "limestone", color: FLOOR_MATERIALS.limestone.color, tile: [1.2, 1.2], roughness: 0.6, bumpScale: 0.6 },
   slate: { texture: "slate", color: FLOOR_MATERIALS.slate.color, tile: [0.8, 0.8], roughness: 0.7, bumpScale: 1.2 },
-  concrete: { texture: "polished", color: FLOOR_MATERIALS.concrete.color, tile: [2.4, 2.4], roughness: 0.42, bumpScale: 0.3 },
+  concrete: { texture: "polished", color: FLOOR_MATERIALS.concrete.color, tile: [2.4, 2.4], roughness: 0.55, bumpScale: 0.3 },
   carpet: { texture: "carpet", color: FLOOR_MATERIALS.carpet.color, tile: [1, 1], roughness: 0.98, bumpScale: 0.8 },
   "red-oxide": { texture: "redOxide", color: FLOOR_MATERIALS["red-oxide"].color, tile: [2.4, 2.4], roughness: 0.2, bumpScale: 0.2 },
   athangudi: { texture: "athangudi", color: FLOOR_MATERIALS.athangudi.color, tile: [0.8, 0.8], roughness: 0.26, bumpScale: 0.3 },
   "athangudi-indigo": { texture: "athangudi", color: FLOOR_MATERIALS["athangudi-indigo"].color, tile: [0.8, 0.8], roughness: 0.26, bumpScale: 0.3 },
   "athangudi-green": { texture: "athangudi", color: FLOOR_MATERIALS["athangudi-green"].color, tile: [0.8, 0.8], roughness: 0.26, bumpScale: 0.3 },
-  kota: { texture: "kota", color: FLOOR_MATERIALS.kota.color, tile: [1.2, 1.2], roughness: 0.42, bumpScale: 0.4 },
+  kota: { texture: "kota", color: FLOOR_MATERIALS.kota.color, tile: [1.2, 1.2], roughness: 0.5, bumpScale: 0.4 },
   vitrified: { texture: "vitrified", color: FLOOR_MATERIALS.vitrified.color, tile: [2.4, 2.4], roughness: 0.14, bumpScale: 0.2 },
   azulejo: { texture: "azulejo", color: FLOOR_MATERIALS.azulejo.color, tile: [0.6, 0.6], roughness: 0.2, bumpScale: 0.3 },
 };

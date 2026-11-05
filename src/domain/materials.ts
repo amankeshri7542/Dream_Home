@@ -115,6 +115,15 @@ export const FLOOR_MATERIALS = {
   Swatch & { family: "wood" | "tile" | "stone" }
 >;
 export type FloorMaterialId = keyof typeof FLOOR_MATERIALS;
+
+/** Ceilings: seen only from inside (Walk and photos taken there). */
+export const CEILING_FINISHES = {
+  "white-plaster": { label: "White plaster", color: "#f4f0e8" },
+  "ivory-pop": { label: "Smooth POP", color: "#f0e8d9" },
+  "teak-panel": { label: "Teak panels", color: "#8a5a35" },
+  "board-concrete": { label: "Exposed concrete", color: "#bdb8ae" },
+} as const satisfies Record<string, Swatch>;
+export type CeilingFinishId = keyof typeof CEILING_FINISHES;
 const LEGACY_FLOOR: Record<"wood" | "tile" | "stone", FloorMaterialId> = {
   wood: "oak",
   tile: "light-tile",
@@ -177,6 +186,8 @@ export const isWallPaint = (id: unknown): id is WallPaintId =>
   typeof id === "string" && Object.hasOwn(WALL_PAINTS, id);
 export const isFloorMaterial = (id: unknown): id is FloorMaterialId =>
   typeof id === "string" && Object.hasOwn(FLOOR_MATERIALS, id);
+export const isCeilingFinish = (id: unknown): id is CeilingFinishId =>
+  typeof id === "string" && Object.hasOwn(CEILING_FINISHES, id);
 export const isRoofMaterial = (id: unknown): id is RoofMaterialId =>
   typeof id === "string" && Object.hasOwn(ROOF_MATERIALS, id);
 export const isTrim = (id: unknown): id is TrimColorId =>
@@ -215,6 +226,31 @@ const DEFAULT_PAINT: Record<RoomKind, WallPaintId> = {
 export function roomWallPaint(room: Room, look?: StylePreset | null): WallPaintId {
   if (isWallPaint(room.wallColor)) return room.wallColor;
   return roomPalette(look, room)?.paint ?? DEFAULT_PAINT[room.kind];
+}
+/** Looks whose homes usually have a POP false ceiling: the modern, urban ones. */
+const FALSE_CEILING_LOOKS: ReadonlySet<StylePreset> = new Set(["indian-modern", "mumbai-modern", "bengaluru-contemporary"]);
+const FALSE_CEILING_ROOMS: ReadonlySet<string> = new Set(["living", "dining", "bedroom"]);
+/**
+ * Whether a room has a false ceiling with cove light: its own choice, else on
+ * for living, dining and bedrooms in the modern Looks. Bengaluru contemporary
+ * living rooms keep their exposed concrete instead.
+ */
+export function roomFalseCeiling(room: Room, look?: StylePreset | null): boolean {
+  if (typeof room.falseCeiling === "boolean") return room.falseCeiling;
+  if (!look || !FALSE_CEILING_LOOKS.has(look) || room.kind === "shop") return false;
+  const kind = autoLayoutKind(room);
+  if (look === "bengaluru-contemporary" && kind === "living") return false;
+  return FALSE_CEILING_ROOMS.has(kind);
+}
+/** A room's ceiling: its own, else smooth POP under a false ceiling, else the Look's, else plain plaster. */
+export function roomCeiling(room: Room, look?: StylePreset | null): CeilingFinishId {
+  if (isCeilingFinish(room.ceiling)) return room.ceiling;
+  if (roomFalseCeiling(room, look)) return "ivory-pop";
+  if (room.kind === "shop") return "white-plaster";
+  const kind = autoLayoutKind(room);
+  if ((look === "kerala" || look === "chettinad") && (kind === "living" || kind === "dining")) return "teak-panel";
+  if (look === "bengaluru-contemporary" && kind === "living") return "board-concrete";
+  return "white-plaster";
 }
 /** A room's accent wall, when it has a valid one. */
 export function roomAccentWall(room: Room): { edge: EdgeSide; color: WallPaintId } | null {
@@ -446,6 +482,23 @@ export function setRoomWallColor(
     return id === null ? rest : { ...rest, wallColor: id };
   });
 }
+/** Sets a room's ceiling finish ("auto" returns to the Look's or plain plaster). */
+export function setRoomCeiling(p: Project, floorId: string | null, roomId: string, id: string): EditResult {
+  if (id !== "auto" && !isCeilingFinish(id)) return INVALID;
+  return editRoom(p, floorId, roomId, (room) => {
+    const { ceiling: _c, ...rest } = room;
+    void _c;
+    return id === "auto" ? rest : { ...rest, ceiling: id };
+  });
+}
+/** Turns a room's false ceiling on or off (null returns to the Look's default). */
+export function setRoomFalseCeiling(p: Project, floorId: string | null, roomId: string, on: boolean | null): EditResult {
+  return editRoom(p, floorId, roomId, (room) => {
+    const { falseCeiling: _f, ...rest } = room;
+    void _f;
+    return on === null ? rest : { ...rest, falseCeiling: on };
+  });
+}
 /**
  * Paints one wall of a room (its inside face) as a feature wall, or clears it
  * (edge null). Without a colour it picks one that suits the room's paint.
@@ -615,6 +668,8 @@ registerValidation((p, issue) => {
     if (
       (r.floorMaterial !== undefined && !isFloorMaterial(r.floorMaterial)) ||
       (r.wallColor !== undefined && !isWallPaint(r.wallColor)) ||
+      (r.ceiling !== undefined && !isCeilingFinish(r.ceiling)) ||
+      (r.falseCeiling !== undefined && typeof r.falseCeiling !== "boolean") ||
       (r.accentWall !== undefined && !roomAccentWall(r))
     )
       bad(source, floorIds);

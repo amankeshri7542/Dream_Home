@@ -3,7 +3,7 @@
 import { roomFloorMaterial, type FloorMaterialId } from "../../../domain/materials";
 import { slabTiles } from "../../../domain/model";
 import type { GeometryFloor, StylePreset } from "../../../domain/types";
-import { FLOOR_SURFACE, SLAB_DEPTH, SLAB_TOP } from "../../coords";
+import { FLOOR_SURFACE, INTERIOR_WALL, SLAB_DEPTH, SLAB_TOP } from "../../coords";
 import { rgb, type Buckets, type QuadBuilder, type V3 } from "./QuadBuilder";
 
 export const ownerKey = (kind: "room" | "balcony" | "vertical" | "opening", id: string) =>
@@ -21,6 +21,15 @@ export function upQuad(b: QuadBuilder, x0: number, z0: number, x1: number, z1: n
     c: V3 = [x1, y, z1],
     d: V3 = [x0, y, z1];
   b.quadFacing(a, bb, c, d, [0, 1, 0]);
+}
+
+/**
+ * An upward quad whose texture starts at (ox, oz): a whole tile begins at the
+ * room's inner corner and the grout runs square to its walls.
+ */
+function tiledQuad(b: QuadBuilder, x0: number, z0: number, x1: number, z1: number, y: number, ox: number, oz: number) {
+  const uv = (x: number, z: number): [number, number] => [x - ox, -(z - oz)];
+  b.quadFacing([x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], [0, 1, 0], [1, 1, 1], [uv(x0, z0), uv(x1, z0), uv(x1, z1), uv(x0, z1)]);
 }
 
 /** Circulation (hall) floor under everything that is not a room. */
@@ -41,7 +50,7 @@ export function emitRoomFloors(floor: GeometryFloor, base: number, buckets: Buck
     const b = buckets.get(`floor:${id}`);
     b.setOwner(ownerKey("room", room.id));
     const r = room.bounds;
-    upQuad(b, r.x / 100, r.z / 100, (r.x + r.w) / 100, (r.z + r.d) / 100, y);
+    tiledQuad(b, r.x / 100, r.z / 100, (r.x + r.w) / 100, (r.z + r.d) / 100, y, r.x / 100 + INTERIOR_WALL / 2, r.z / 100 + INTERIOR_WALL / 2);
   }
   return used;
 }

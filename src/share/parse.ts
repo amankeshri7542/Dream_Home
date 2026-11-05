@@ -9,6 +9,7 @@ import {
   isRoofMaterial,
   isTrim,
   isWallPaint,
+  isCeilingFinish,
 } from "../domain/materials";
 import { parseProject } from "../domain/model";
 import { RAILING_KINDS, STYLE_PRESETS } from "../domain/persist";
@@ -69,6 +70,8 @@ function simplify(copy: Loose) {
     if (!loose(room)) continue;
     forget(room, "floorMaterial", isFloorMaterial);
     forget(room, "wallColor", isWallPaint);
+    forget(room, "ceiling", isCeilingFinish);
+    if (room.falseCeiling !== undefined && typeof room.falseCeiling !== "boolean") delete room.falseCeiling;
     if (loose(room.accentWall) && !isWallPaint(room.accentWall.color)) delete room.accentWall;
     keep(room, "furniture", knownFurniture);
   }

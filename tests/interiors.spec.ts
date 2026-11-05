@@ -76,6 +76,8 @@ test("designer interiors stay within the draw-call budget, idle in Build, and li
   // Walking, the room light has every lamp in it, in place of the point-light pool.
   const lamps = await bridge(page, (dh) => dh.roomLightLamps ?? 0);
   expect(await bridge(page, (dh) => dh.scene().getObjectByName("interior-lamps") ?? null)).toBeNull();
+  // Walking, the rooms have ceilings of their own (and false ceilings where the Look has them).
+  expect(await bridge(page, (dh) => !!dh.scene().getObjectByName("ceilings"))).toBe(true);
   const night = await bridge(page, (dh) => dh.renderer().calls);
   console.log(`draw calls: build ${build}, explore walk at night ${night}, lamps ${lamps}`);
   expect(build).toBeLessThanOrEqual(90);

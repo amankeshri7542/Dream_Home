@@ -9,6 +9,8 @@ import {
   setExterior,
   setRoomFloorMaterial,
   setRoomWallColor,
+  setRoomCeiling,
+  setRoomFalseCeiling,
   setSite,
   setStyle,
 } from "./materials";
@@ -25,6 +27,8 @@ const NEW_KEYS = [
   "furniture",
   "floorMaterial",
   "wallColor",
+  "ceiling",
+  "falseCeiling",
   "style",
   "site",
   "landscape",
@@ -65,6 +69,8 @@ describe("schema compatibility", () => {
     const chair = p.floors[0].rooms[0].furniture!.at(-1)!;
     p = ok(updateFurniture(p, floor, living.id, chair.id, { finish: "terracotta" }));
     p = ok(setRoomWallColor(p, floor, second.id, "dusty-blue"));
+    p = ok(setRoomCeiling(p, floor, second.id, "teak-panel"));
+    p = ok(setRoomFalseCeiling(p, floor, second.id, true));
     p = ok(setRoomFloorMaterial(p, floor, second.id, "herringbone"));
     p = ok(setExterior(p, "white-stucco"));
     p = ok(setStyle(p, { trim: "oak", frontDoor: "sage", roof: { style: "gable", material: "slate", pitch: 30 } }));
