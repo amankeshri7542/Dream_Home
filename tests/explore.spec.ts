@@ -105,6 +105,94 @@ test("explore: you can't walk through the furniture", async ({ page }) => {
   }
 });
 
+test("a quiet walk: the time folds to a sun chip, and the plan takes you to a room", async ({ page }) => {
+  await page.setViewportSize(mobile);
+  const project = createPreset("compact");
+  await seed(page, project);
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await explore(page).click();
+  await page.getByRole("radio", { name: /Walk inside/ }).click();
+  await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(68);
+  // The time panel is folded away to a chip while walking; tapping it opens it, Done folds it.
+  const chip = page.getByRole("button", { name: /^Time of day: .* Change it$/ });
+  await expect(chip).toBeVisible();
+  await expect(page.getByRole("slider", { name: "Time of day" })).toHaveCount(0);
+  await chip.click();
+  await expect(page.getByRole("slider", { name: "Time of day" })).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(chip).toBeVisible();
+  // The plan: every room a target of 44 px or more, and a tap goes there.
+  const planButton = page.getByRole("button", { name: "Plan", exact: true });
+  expect((await planButton.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await chip.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await planButton.click();
+  const plan = page.getByRole("group", { name: /^Plan of / });
+  await expect(plan).toBeVisible();
+  const bedroom = project.floors[0].rooms.find((r) => r.kind === "bedroom")!;
+  await plan.getByRole("button", { name: `Go to ${bedroom.name}` }).click();
+  await expect(plan).toHaveCount(0);
+  await expect(page.locator(".dh-walk-hint strong")).toHaveText(new RegExp(bedroom.name));
+});
+
+test("at 320 px in Extra large, the walk's controls fit without overlapping", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.addInitScript(() => {
+    const prefs = JSON.parse(localStorage.getItem("dream-home.preferences.v1") ?? "{}");
+    localStorage.setItem("dream-home.preferences.v1", JSON.stringify({ ...prefs, textSize: "extra" }));
+  });
+  await seed(page, createPreset("compact"));
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await explore(page).click();
+  await page.getByRole("radio", { name: /Walk inside/ }).click();
+  await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(68);
+  const boxes = await page.evaluate(() =>
+    [".dh-joystick", ".dh-walk-tools", ".dh-walk-hint", ".dh-sun-chip", ".dh-walk-floors"]
+      .map((sel) => ({ sel, r: document.querySelector(sel)?.getBoundingClientRect() }))
+      .filter((b) => b.r && b.r.width > 0)
+      .map(({ sel, r }) => ({ sel, x0: r!.left, y0: r!.top, x1: r!.right, y1: r!.bottom })),
+  );
+  expect(boxes.length).toBeGreaterThanOrEqual(4);
+  for (const b of boxes) {
+    expect(b.x0, b.sel).toBeGreaterThanOrEqual(-1);
+    expect(b.x1, b.sel).toBeLessThanOrEqual(321);
+  }
+  for (let i = 0; i < boxes.length; i++)
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i],
+        b = boxes[j];
+      const overlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 2 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 2;
+      expect(overlap, `${a.sel} overlaps ${b.sel}`).toBe(false);
+    }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+test("desktop: the mouse can look around, and dragging still works if the browser says no", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seed(page, createPreset("compact"));
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await explore(page).click();
+  await page.getByRole("radio", { name: /Walk inside/ }).click();
+  await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(68);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.getByRole("button", { name: "Look with the mouse" }).click();
+  await page.keyboard.press("Escape");
+  // Drag to look, as before.
+  const canvas = page.locator("canvas").first();
+  const box = (await canvas.boundingBox())!;
+  const before = await bridge(page, (dh) => dh.camera().position);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 160, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await page.keyboard.down("w");
+  await page.waitForTimeout(500);
+  await page.keyboard.up("w");
+  const after = await bridge(page, (dh) => dh.camera().position);
+  expect(Math.hypot(after[0] - before[0], after[2] - before[2])).toBeGreaterThan(0.1);
+  expect(errors).toEqual([]);
+});
+
 test.describe("walking with motion on", () => {
   test.use({ reducedMotion: "no-preference" });
   test("running widens the view, the head bobs, and both settle when you stop", async ({ page }) => {

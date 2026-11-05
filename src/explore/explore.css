@@ -209,6 +209,85 @@
     flex-direction: column;
     gap: 6px;
   }
+  /* The quiet walk: a small sun chip instead of the whole time panel, a plan on request. */
+  .dh-walk-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dh-sun-chip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--dh-hud-line);
+    background: var(--dh-hud-bg);
+    color: var(--dh-hud-ink);
+    font-size: calc(14px * var(--dh-text));
+    font-weight: 650;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .dh-sun-fold {
+    min-height: 44px;
+    margin-top: 6px;
+    padding: 0 14px;
+    border-radius: var(--dh-radius-md);
+    border: 1px solid var(--dh-hud-line);
+    background: transparent;
+    color: var(--dh-hud-ink);
+    font-size: calc(14px * var(--dh-text));
+    font-weight: 650;
+  }
+  .dh-miniplan {
+    position: absolute;
+    right: calc(12px + var(--dh-safe-right));
+    top: calc(72px + var(--dh-safe-top));
+    width: min(78vw, 320px);
+    max-height: 52vh;
+    padding: 10px;
+    border-radius: var(--dh-radius-lg, 16px);
+    background: var(--dh-hud-bg-strong, var(--dh-hud-bg));
+    border: 1px solid var(--dh-hud-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: auto;
+  }
+  .dh-miniplan svg {
+    display: block;
+    width: 100%;
+    max-height: calc(52vh - 20px);
+  }
+  .dh-miniplan-room rect {
+    fill: rgb(255 255 255 / 0.08);
+    stroke: rgb(255 255 255 / 0.55);
+    stroke-width: 4;
+    cursor: pointer;
+  }
+  .dh-miniplan-room:hover rect,
+  .dh-miniplan-room:focus-visible rect {
+    fill: rgb(255 210 120 / 0.28);
+  }
+  .dh-miniplan-room:focus-visible {
+    outline: none;
+  }
+  .dh-miniplan-room text {
+    fill: var(--dh-hud-ink);
+    font-weight: 650;
+    pointer-events: none;
+  }
+  .dh-miniplan-dot circle {
+    fill: #3b82f6;
+  }
+  .dh-miniplan-dot .dh-miniplan-halo {
+    fill: rgb(59 130 246 / 0.25);
+  }
+  .dh-miniplan-beam {
+    fill: rgb(59 130 246 / 0.35);
+  }
   .dh-walk-tip-short {
     display: none;
   }
@@ -220,7 +299,7 @@
       grid-template-columns: auto 1fr auto;
       grid-template-areas:
         "hint hint hint"
-        "stick . floors";
+        "stick tools floors";
       align-items: end;
       gap: 8px;
     }
@@ -247,6 +326,13 @@
     }
     .dh-walk-floors {
       grid-area: floors;
+    }
+    .dh-walk-tools {
+      grid-area: tools;
+      align-self: end;
+      justify-self: center;
+      min-width: 0;
+      max-width: 100%;
     }
     .dh-walk-floors .dh-btn {
       width: 52px;

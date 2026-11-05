@@ -107,6 +107,7 @@ Smaller adjustments, flagged here rather than made silently:
 | 1.3 Trim | **Done (6 Nov):** door casings stand 4.5 cm proud (window casings 2.5 cm), inside window sills reach 10 cm into the room; skirting (8 cm) and reveal linings were already there; crown moulding came with 1.2 |
 | 1.4 Flooring | Done with v6 P1.7 and 1.1 (tiles from each room's corner, sheen) |
 | 2 Furniture and props | **Done (6 Nov):** cloth, wood and metal detail in the shader for every kit piece; tailored sofas and armchair; a made bed with a turned-back sheet; rounder lamps, fan and side table; three plant species (rubber plant, snake plant, money plant); an Indian mild-steel gate in place of the picket one; pleated curtains on rods; soft contact shadows under big pieces and rugs. Garden trees still use the old kit (the street's leaf-card trees could replace them later) |
+| 3.5, 3.6 and v6 P1.6 | **Done (6 Nov):** desktop mouse look (pointer lock from a button, Esc frees it, dragging still works); a few millimetres of sideways lead when turning; the walk starts a step inside the front door facing in; the time panel folds to a sun chip; a small plan with a blue dot, where tapping a room goes there |
 
 ### Order of work
 

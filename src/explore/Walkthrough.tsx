@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Euler, PerspectiveCamera, type PointLight, Raycaster, Vector2 } from "three";
 import { inside } from "../domain/geometry";
+import { mainDoor } from "../domain/entrance";
 import { deriveFloorVoids } from "../domain/core";
 import type { Project } from "../domain/types";
 import { floorBaseY, plotToWorld, rayToPlot } from "../editor/spatial";
@@ -34,6 +35,15 @@ const TURN = 1.8; // radians per second
  */
 export function walkSpawn(project: Project, floorId: string, roomId?: string) {
   const floor = project.floors.find((f) => f.id === floorId) ?? project.floors[0];
+  // On the ground floor, come in at the front door, a step inside, facing in.
+  const door = !roomId ? mainDoor(project) : null;
+  if (door && door.floorId === floor.id) {
+    const inward = -door.out;
+    const step = 140;
+    return door.axis === "x"
+      ? { x: door.along, z: door.line + inward * step, yaw: Math.atan2(0, -inward) }
+      : { x: door.line + inward * step, z: door.along, yaw: Math.atan2(-inward, 0) };
+  }
   const rooms = [...floor.rooms].sort((a, b) => b.bounds.w * b.bounds.d - a.bounds.w * a.bounds.d);
   const r = (floor.rooms.find((room) => room.id === roomId) ?? rooms[0])?.bounds ?? floor.footprint;
   // yaw 0 looks north (−z); −π/2 looks east (+x).
@@ -56,6 +66,10 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
   const keys = useRef(new Set<string>());
   const lastRoom = useRef<string | null | undefined>(undefined);
   const lastFloorRequest = useRef(walkInput.floorRequestId);
+  const lastRoomRequest = useRef(walkInput.roomRequestId);
+  const locked = useRef(false);
+  const lastYaw = useRef(yaw.current);
+  const sway = useRef(0);
   const [floorId, setFloorId] = useState(startFloorId);
   const lamp = useRef<PointLight>(null);
   const colliders = useMemo(
@@ -126,11 +140,18 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
     let drag: { id: number; x: number; y: number; moved: boolean } | null = null;
     const pdown = (e: PointerEvent) => {
-      if (!e.isPrimary) return;
+      if (!e.isPrimary || locked.current) return;
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
       el.setPointerCapture(e.pointerId);
     };
     const pmove = (e: PointerEvent) => {
+      // Mouse look: with the pointer locked, any movement turns and tilts the view.
+      if (locked.current) {
+        yaw.current -= e.movementX * 0.005;
+        pitch.current = Math.max(-1.1, Math.min(1.1, pitch.current - e.movementY * 0.004));
+        invalidate();
+        return;
+      }
       if (!drag || e.pointerId !== drag.id) return;
       const dx = e.clientX - drag.x,
         dy = e.clientY - drag.y;
@@ -165,6 +186,21 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     const cancel = () => {
       drag = null;
     };
+    // Desktop mouse look (pointer lock): asked for by the HUD's button, released with Esc.
+    const lockChange = () => {
+      locked.current = document.pointerLockElement === el;
+      walkInput.onMove?.();
+    };
+    walkInput.lockPointer = () => {
+      try {
+        const asked = el.requestPointerLock?.() as unknown;
+        // Some browsers refuse (or return a promise that rejects): dragging still works.
+        if (asked && typeof (asked as Promise<void>).catch === "function") void (asked as Promise<void>).catch(() => {});
+      } catch {
+        /* drag to look stays */
+      }
+    };
+    document.addEventListener("pointerlockchange", lockChange);
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     el.addEventListener("pointerdown", pdown);
@@ -178,6 +214,9 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
       el.removeEventListener("pointermove", pmove);
       el.removeEventListener("pointerup", pup);
       el.removeEventListener("pointercancel", cancel);
+      document.removeEventListener("pointerlockchange", lockChange);
+      walkInput.lockPointer = null;
+      if (document.pointerLockElement === el) document.exitPointerLock?.();
     };
   }, [gl, camera, invalidate, project]);
 
@@ -279,7 +318,21 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
       }
       target.current = null;
     };
-    if (requested) change(floorIndex.current + walkInput.floorRequest);
+    const goTo = walkInput.roomRequestId !== lastRoomRequest.current ? walkInput.roomRequest : null;
+    if (walkInput.roomRequestId !== lastRoomRequest.current) lastRoomRequest.current = walkInput.roomRequestId;
+    if (goTo) {
+      const to = project.floors.findIndex((f) => f.id === goTo.floorId);
+      if (to >= 0) {
+        floorIndex.current = to;
+        floor = project.floors[to];
+        const spot = walkSpawn(project, floor.id, goTo.roomId);
+        pos.current = unstick({ x: spot.x, z: spot.z }, colliders[to]);
+        yaw.current = spot.yaw;
+        target.current = null;
+        throttle.current = 0;
+        moving = true;
+      }
+    } else if (requested) change(floorIndex.current + walkInput.floorRequest);
     else if (stairs && (forward > 0 || target.current)) {
       const i = floorIndex.current;
       if (stairs.floorIds.includes(project.floors[i + 1]?.id ?? "")) change(i + 1);
@@ -296,6 +349,18 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     bob.current += ((stepping ? 1 : 0) - bob.current) * Math.min(1, dt * 6);
     if (bob.current < 0.002 && !stepping) bob.current = 0;
     const world = plotToWorld(project.plot, pos.current.x, pos.current.z, eye.current + headBob(walked.current, bob.current) / 100);
+    // Turning, the head leads the body a touch: a few millimetres to the side, gone in a moment.
+    const turned = Math.atan2(Math.sin(yaw.current - lastYaw.current), Math.cos(yaw.current - lastYaw.current));
+    lastYaw.current = yaw.current;
+    if (!reducedMotion) {
+      sway.current += (Math.max(-0.006, Math.min(0.006, -turned * 0.06)) - sway.current) * Math.min(1, dt * 18);
+      if (Math.abs(sway.current) < 0.00005) sway.current = 0;
+    } else sway.current = 0;
+    if (sway.current !== 0) {
+      world.x += Math.cos(yaw.current) * sway.current;
+      world.z -= Math.sin(yaw.current) * sway.current;
+      moving = true;
+    }
     camera.position.copy(world);
     // Running widens the view a little, then settles back to exactly the walking FOV.
     const nextView = reducedMotion ? WALK_FOV : nextFov(fov.current, running.current && throttle.current > 0.5, dt);
@@ -313,6 +378,11 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     }
     euler.set(pitch.current, yaw.current, 0);
     camera.quaternion.setFromEuler(euler);
+    const here = walkInput.position;
+    if (here.x !== pos.current.x || here.z !== pos.current.z || here.yaw !== yaw.current || here.floorId !== floor.id) {
+      walkInput.position = { floorId: floor.id, x: pos.current.x, z: pos.current.z, yaw: yaw.current };
+      walkInput.onMove?.();
+    }
     // Room announcements.
     const room =
       floor.rooms.find((r) => inside(r.bounds, pos.current.x, pos.current.z))?.id ?? null;

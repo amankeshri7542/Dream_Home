@@ -10,7 +10,21 @@ export const walkInput = {
   floorRequestId: 0,
   /** Set by the walkthrough: asks the on-demand render loop for a frame. */
   wake: null as (() => void) | null,
+  /** Where the visitor stands (plot cm) and faces, written every frame they move. */
+  position: { floorId: "", x: 0, z: 0, yaw: 0 },
+  /** Called when the visitor moves (the small plan's dot); never re-renders React. */
+  onMove: null as (() => void) | null,
+  /** A room to go to, from the small plan: incremented id, like the floor request. */
+  roomRequest: null as { floorId: string; roomId: string } | null,
+  roomRequestId: 0,
+  /** Set by the walkthrough on desktop: asks the browser to lock the pointer for mouse look. */
+  lockPointer: null as (() => void) | null,
 };
+export function requestRoom(floorId: string, roomId: string) {
+  walkInput.roomRequest = { floorId, roomId };
+  walkInput.roomRequestId++;
+  walkInput.wake?.();
+}
 export function requestFloor(direction: 1 | -1) {
   walkInput.floorRequest = direction;
   walkInput.floorRequestId++;

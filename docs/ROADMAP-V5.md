@@ -641,3 +641,11 @@ work can resume after any interruption. Update it at the end of every phase.
     - `src/scene/life/drapePanels.ts` and `Drapes.tsx`: pleated curtains on a bronze rod at the windows of living, dining, bed, study, kids' and guest rooms while walking. One mesh.
     - `ContactShadows.tsx`: soft-edged shadows under big standing pieces and rugs in Explore. One mesh.
   - **Tests:** `drapes.test.ts` (5): curtains only in lived-in rooms, rod to floor, one geometry; contact shadows; surface mapping.
+- **2026-11-06, the owner's Phase 3.5 and 3.6, with v6 P1.6 (a quiet walk):**
+  - **Pointer lock (3.5)** is desktop only, and only on a screen at least 600 px wide with a fine pointer. A HUD button, "Look with the mouse", asks for it via `walkInput.lockPointer`. While locked, `movementX/Y` turn and tilt the view with the same sensitivity as dragging, and taps don't walk. Esc releases it; leaving Walk releases it too. If the browser refuses, dragging works as before.
+  - **Turn micro-offset (3.6):** up to 6 mm of sideways lead against the turn, eased away within a few frames. Camera only, and off with reduced motion.
+  - **Front-door entry:** with no room asked for, `walkSpawn` stands 1.4 m inside the main door, facing in.
+  - **The quiet walk (v6 P1.6):**
+    - In Walk the time panel folds to a sun chip (≥ 44 px). Tapping it opens the panel, and Done folds it again.
+    - "Plan" opens `MiniPlan`: an SVG of the floor with a blue dot and a viewing beam, moved by direct DOM writes (`walkInput.position` and `onMove`), so walking re-renders nothing and the plan adds no draw calls. Tapping a room (or pressing Enter on it) goes there through `requestRoom`, then the plan closes.
+  - **Tests** (`explore.spec.ts`): sun chip and plan, including ≥ 44 px targets and going to a bedroom; 320 px in Extra large with no overlaps and no sideways scroll (it caught the walk tools running 24 px off the edge, now fixed); desktop mouse look with drag still working.

@@ -4,7 +4,8 @@ import type { QualitySetting } from "../editor/types";
 import { Icon } from "../ui/icons";
 import { Button } from "../ui/primitives";
 import { Joystick } from "./Joystick";
-import { requestFloor } from "./walkInput";
+import { requestFloor, walkInput } from "./walkInput";
+import { MiniPlan } from "./MiniPlan";
 import "./explore.css";
 
 export const HOUR_PRESETS = [
@@ -51,6 +52,17 @@ export function ExploreHud({
   const { state, dispatch, project } = useEditor();
   const walking = state.explore === "walk";
   const [quality, setQuality] = useState(false);
+  // A quiet walk: the time panel folds to a sun chip, and the plan opens only when asked for.
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  // Mouse look is for a desk: a mouse and a screen wide enough to have one.
+  const finePointer = typeof window !== "undefined" && !!window.matchMedia?.("(pointer: fine) and (min-width: 600px)").matches;
+  useEffect(() => {
+    if (!walking) {
+      setTimeOpen(false);
+      setPlanOpen(false);
+    }
+  }, [walking]);
   useEffect(() => {
     if (!quality) return;
     const close = (e: PointerEvent) => {
@@ -117,8 +129,27 @@ export function ExploreHud({
           </div>
         </div>
       </div>
+      {walking && planOpen && (
+        <MiniPlan project={project} floorId={walkFloorId} onChosen={() => setPlanOpen(false)} />
+      )}
       {walking && (
         <div className="dh-walk">
+          <div className="dh-walk-tools">
+            <Button
+              variant="secondary"
+              className="dh-hud-btn"
+              icon={Icon.floorPlan}
+              aria-expanded={planOpen}
+              onClick={() => setPlanOpen(!planOpen)}
+            >
+              Plan
+            </Button>
+            {finePointer && (
+              <Button variant="secondary" className="dh-hud-btn" icon={Icon.orbitView} onClick={() => walkInput.lockPointer?.()}>
+                Look with the mouse
+              </Button>
+            )}
+          </div>
           <Joystick />
           <p className="dh-walk-hint">
             {walkStatus ? <strong aria-live="polite">{walkStatus}</strong> : null}
@@ -152,6 +183,12 @@ export function ExploreHud({
         </div>
       )}
       <div className="dh-explore-bottom" data-inset="bottom">
+        {walking && !timeOpen ? (
+          <button type="button" className="dh-sun-chip" aria-expanded={false} aria-label={`Time of day: ${hourText(state.hour)}. Change it`} onClick={() => setTimeOpen(true)}>
+            <Icon.day size={18} aria-hidden />
+            <span className="dh-num">{hourText(state.hour)}</span>
+          </button>
+        ) : (
         <div className="dh-time">
           <div className="dh-time-row">
             <Icon.day size={18} aria-hidden />
@@ -181,7 +218,13 @@ export function ExploreHud({
               </button>
             ))}
           </div>
+          {walking && (
+            <button type="button" className="dh-sun-fold" onClick={() => setTimeOpen(false)}>
+              Done
+            </button>
+          )}
         </div>
+        )}
         <div className="dh-explore-views" role="radiogroup" aria-label="How to explore">
           <button
             type="button"
