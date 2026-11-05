@@ -623,3 +623,4 @@ work can resume after any interruption. Update it at the end of every phase.
   - **Tests:**
     - `walkPhysics.test.ts` (+5): big pieces only; pushed out of a piece; stopped by a sofa and sliding along it; room to stand in every room; every room still reachable on foot, walked on a 20 cm grid.
     - `explore.spec.ts`: three walks forward and turning never end up inside a piece.
+- **2026-11-06, the owner's Phase 1.3 (trim):** door architraves now stand 4.5 cm proud of the wall (window ones 2.5 cm), and inside window sill boards are 3.5 cm thick and reach 10 cm into the room, with 5 cm returns. These were 2 cm and 3.5 cm. The 8 cm skirting, full-depth reveal linings and lintels were already there, and the crown moulding came with the false ceiling (1.2). It's all still in the merged joinery bucket, so draw calls don't change.

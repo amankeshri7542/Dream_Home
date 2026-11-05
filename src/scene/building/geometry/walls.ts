@@ -382,8 +382,9 @@ export function emitOpenings(
         const outsideFace = info.outside;
         if (outsideFace && isWin) continue;
         const color = outsideFace ? trim : white;
+        // Door casings stand 4.5 cm proud, as a real frame does; window casings a little less.
         const f = faceAt(side),
-          n1 = f + side * 0.02;
+          n1 = f + side * (isWin ? 0.025 : 0.045);
         const bottom = isWin ? ys + 0.03 : y0;
         const headTop = Math.min(yt + 0.07, top - 0.005);
         for (const [a0, a1] of [
@@ -398,8 +399,8 @@ export function emitOpenings(
           joinery.box(bx.min, bx.max, color);
         }
         if (isWin && o.sill > 0) {
-          // Sill board + apron on the room side.
-          const board = B(o0 - 0.035, o1 + 0.035, ys, ys + 0.03, line, f + side * 0.035);
+          // Sill board (10 cm deep into the room) + apron on the room side.
+          const board = B(o0 - 0.05, o1 + 0.05, ys, ys + 0.035, line, f + side * 0.1);
           joinery.box(board.min, board.max, white);
           const apron = B(o0 - 0.02, o1 + 0.02, ys - 0.08, ys, f, f + side * 0.015);
           joinery.box(apron.min, apron.max, white);

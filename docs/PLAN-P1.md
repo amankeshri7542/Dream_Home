@@ -104,6 +104,8 @@ Smaller adjustments, flagged here rather than made silently:
 | 1.2 False ceiling | **Done (6 Nov):** `Room.falseCeiling` (D3 defaults); band, step, cove lip and glow, downlights, rose and crown moulding, in the room light too. Night walk draw calls fell from 143 to 104, because the old fake pools and lamp pool give way to room light |
 | 3.1–3.3 Walk feel | **Done (6 Nov):** speed eases in and out over 0.25 s, head bob of 2.5 cm per 75 cm walked, a run FOV punch from 68 to 78 that settles back to exactly 68; bob and punch are off with reduced motion and on stairs |
 | 3.4 Furniture colliders | **Done (6 Nov):** every standing piece that blocks walking and is over 50 × 50 cm (sofas, beds, tables, wardrobes, counters) is a solid capsule, so you bump into it and can't get stuck inside it; every room is still reachable on foot in every starter home |
+| 1.3 Trim | **Done (6 Nov):** door casings stand 4.5 cm proud (window casings 2.5 cm), inside window sills reach 10 cm into the room; skirting (8 cm) and reveal linings were already there; crown moulding came with 1.2 |
+| 1.4 Flooring | Done with v6 P1.7 and 1.1 (tiles from each room's corner, sheen) |
 
 ### Order of work
 
