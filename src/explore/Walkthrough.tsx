@@ -23,6 +23,8 @@ type Props = {
   reducedMotion: boolean;
   /** After dark the rooms light up around the visitor. */
   night?: boolean;
+  /** Furniture is solid (off while the rooms are shown empty). */
+  furniture?: boolean;
   onStatus?: (status: { floorId: string; roomId: string | null }) => void;
 };
 
@@ -51,7 +53,7 @@ export function walkSpawn(project: Project, floorId: string, roomId?: string) {
   return { x: r.x + r.w / 2, z: r.z + r.d - Math.min(70, r.d * 0.2), yaw: 0 };
 }
 
-export default function Walkthrough({ project, startFloorId, startRoomId, start, startYaw, reducedMotion, night = false, onStatus }: Props) {
+export default function Walkthrough({ project, startFloorId, startRoomId, start, startYaw, reducedMotion, night = false, furniture = true, onStatus }: Props) {
   const { camera, gl, invalidate } = useThree();
   const controls = useThree((state) => state.controls) as unknown as {
     enabled: boolean;
@@ -80,9 +82,9 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
           .filter((v) => v.kind === "courtyard")
           .map((v) => v.bounds);
         // Sofas, beds, tables and wardrobes are solid too.
-        return buildColliders(project, floor.id, holes, { furniture: true });
+        return buildColliders(project, floor.id, holes, { furniture });
       }),
-    [project],
+    [project, furniture],
   );
 
   // Borrow the camera; restore it on exit.

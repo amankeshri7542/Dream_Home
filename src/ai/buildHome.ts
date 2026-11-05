@@ -7,10 +7,15 @@ import { COMPASS_ANGLE, roomBearing, roomZone } from "../domain/compass";
 import { createBlueprint } from "../domain/blueprints";
 import { ROOM_CATALOG, addCatalogRoom, resizeBuilding } from "../domain/builder";
 import { addAttachedBathroom } from "../domain/ensuite";
-import { ensuiteHost } from "../domain/walls";
+import { ensuiteHost, sharedEdge } from "../domain/walls";
+import { replaceFloor } from "../domain/core";
+import { finalizeEdit } from "../domain/edit";
+import { mainDoor } from "../domain/entrance";
+import { allocateId, componentIds, inside, snap } from "../domain/geometry";
 import { furnitureCatalogItem, furnitureFitsRoom } from "../domain/furniture";
 import { addFurniture, customizeFurniture, resetFurniture, updateFurniture } from "../domain/furnitureCommands";
 import { addLandscape } from "../domain/landscapeCommands";
+import { ensureRoomDoor } from "../domain/openingCommands";
 import {
   applyStylePreset,
   setExterior,
@@ -90,6 +95,179 @@ function swapFits(a: Room, b: Room) {
     !b.attachedTo
   );
 }
+// ---------------------------------------------------------------------------
+// The layout a designer would draw: who sits next to whom, and room shapes.
+// ---------------------------------------------------------------------------
+const POOJA = /prayer|pooja|puja|mandir/i;
+const aspect = (r: Room) => Math.max(r.bounds.w, r.bounds.d) / Math.max(1, Math.min(r.bounds.w, r.bounds.d));
+/** Rooms that share a wall long enough for a doorway. */
+const touching = (a: Room, b: Room) => sharedEdge(a.bounds, b.bounds) >= 90;
+/** The room the front door opens into. */
+function entryRoom(p: Project): Room | null {
+  const door = mainDoor(p);
+  if (!door) return null;
+  const step = door.line - door.out * 40;
+  const [x, z] = door.axis === "x" ? [door.along, step] : [step, door.along];
+  return p.floors.find((f) => f.id === door.floorId)?.rooms.find((r) => inside(r.bounds, x, z)) ?? null;
+}
+
+/**
+ * How far a home's layout is from what a designer would draw (0 is ideal):
+ * the kitchen opens onto the dining or living room, dining sits by living,
+ * bedrooms keep away from the kitchen and the front door, the pooja room never
+ * shares a wall with a bathroom, and no room is a corridor (24 × 9 ft).
+ */
+export function layoutCost(p: Project): number {
+  let cost = 0;
+  for (const floor of p.floors) {
+    const rooms = floor.rooms;
+    const social = rooms.filter((r) => r.kind === "living" || r.kind === "dining");
+    const living = rooms.filter((r) => r.kind === "living");
+    for (const r of rooms) {
+      if (r.kind === "kitchen") {
+        if (social.length && !social.some((o) => touching(r, o))) cost += 1;
+        cost += Math.max(0, aspect(r) - 2) * 0.8;
+      }
+      if (r.kind === "dining" && living.length && !living.some((o) => touching(r, o))) cost += 0.4;
+      if (r.kind === "bedroom") {
+        if (rooms.some((o) => o.kind === "kitchen" && touching(r, o))) cost += 0.3;
+        cost += Math.max(0, aspect(r) - 2) * 0.5;
+      }
+      // A long hall is traditional; a living room past 3 : 1 is a corridor.
+      if (r.kind === "living") cost += Math.max(0, aspect(r) - 3) * 0.5;
+      if (r.kind === "bathroom" && !r.attachedTo) cost += Math.max(0, aspect(r) - 2.2) * 0.3;
+      if (POOJA.test(r.name) && rooms.some((o) => o.kind === "bathroom" && touching(r, o))) cost += 1;
+    }
+  }
+  if (entryRoom(p)?.kind === "bedroom") cost += 1;
+  return cost;
+}
+
+/** What the layout pass weighs: the design cost, and whether a change keeps the zones that are already right. */
+type Judge = { cost: (p: Project) => number; keeps: (before: Project, after: Project) => boolean };
+/** The layout and the zone wishes in one sum (Vastu homes weigh their zones more); a room already in its zone stays. */
+function designJudge(wants: Map<string, Zone>, vastu: boolean): Judge {
+  const weight = vastu ? 2 : 0.6;
+  const zones = (q: Project) => new Map(allRooms(q).map(({ floorId, room }) => [room.name, roomZone(q, floorId, room)] as const));
+  return {
+    cost: (q) =>
+      layoutCost(q) +
+      weight * allRooms(q).reduce((sum, { floorId, room }) => sum + zoneCost(q, floorId, room, wants.get(room.name) ?? "any"), 0),
+    keeps: (before, after) => {
+      const was = zones(before),
+        now = zones(after);
+      return [...wants].every(([name, want]) => was.get(name) !== want || now.get(name) === want);
+    },
+  };
+}
+
+/** Swaps room uses (never shapes) while the design cost falls. */
+function arrangeLayout(project: Project, judge: Judge, fixedId: string | null): Project {
+  let p = project;
+  let now = judge.cost(p);
+  for (let pass = 0; pass < 3; pass++) {
+    let improved = false;
+    for (const floor of p.floors) {
+      const count = floor.rooms.length;
+      for (let i = 0; i < count; i++)
+        for (let j = i + 1; j < count; j++) {
+          const rooms = p.floors.find((f) => f.id === floor.id)!.rooms;
+          const a = rooms[i],
+            b = rooms[j];
+          if (!a || !b || a.unitId !== b.unitId || a.kind === b.kind || !swapFits(a, b)) continue;
+          if (a.id === fixedId || b.id === fixedId) continue;
+          const r = swapRoomUses(p, floor.id, a.id, b.id);
+          if (!r.ok) continue;
+          const next = judge.cost(r.project);
+          if (next >= now - 0.05 || !judge.keeps(p, r.project) || failing(r.project) > failing(p)) continue;
+          p = r.project;
+          now = next;
+          improved = true;
+        }
+    }
+    if (!improved) break;
+  }
+  return p;
+}
+
+/** What the piece cut off a too-long room becomes. */
+const OFFCUT: Partial<Record<RoomKind, string>> = {
+  kitchen: "Store room",
+  bathroom: "Utility",
+  bedroom: "Dressing room",
+  dining: "Store room",
+};
+/** The longest a room may be for its width before it's cut, and the shortest it's cut to. */
+const LONGEST: Partial<Record<RoomKind, number>> = { kitchen: 2, bedroom: 2.2, dining: 2.2, bathroom: 2.2 };
+const KEEP_MIN: Partial<Record<RoomKind, number>> = { kitchen: 300, bedroom: 330, dining: 280, bathroom: 210 };
+/** Bigger than this (about 105 sq ft) a bathroom gives its far end to a utility. */
+const BATH_MAX = 98_000;
+const OFFCUT_MIN = 150;
+/** An offcut is held to the same shape rule, or it would be the next corridor. */
+const OFFCUT_LONGEST = 2.2;
+
+/**
+ * Cuts a room that's too long for its width (or a bathroom that's a hall) in
+ * two across its length: the room keeps a good shape, the rest becomes a store,
+ * utility or dressing room. Tries both ends and keeps the better layout.
+ */
+function splitRoom(p: Project, floorId: string, room: Room, judge: Judge): Project | null {
+  const name = OFFCUT[room.kind];
+  if (!name || room.attachedTo) return null;
+  const b = room.bounds;
+  const along = b.w >= b.d ? "w" : "d";
+  const long = b[along],
+    short = along === "w" ? b.d : b.w;
+  const tooLong = aspect(room) > (LONGEST[room.kind] ?? 9);
+  const hall = room.kind === "bathroom" && b.w * b.d > BATH_MAX;
+  if (!tooLong && !hall) return null;
+  const ideal = room.kind === "bathroom" ? Math.max(240, Math.min(short * 1.5, 70_000 / short)) : short * 1.5;
+  const target = snap(Math.max(KEEP_MIN[room.kind] ?? 0, ideal));
+  const floor = p.floors.find((f) => f.id === floorId)!;
+  const id = allocateId("room-utility", componentIds(p));
+  let best: { project: Project; cost: number } | null = null;
+  // The ideal cut first, then a little either side (a cut can land on a door).
+  const tries = [0, -20, 20, -40, 40].flatMap((d) => [true, false].map((atStart) => ({ keep: target + d, atStart })));
+  for (const { keep, atStart } of tries) {
+    const rest = long - keep;
+    // Each piece must be a real room, not a sliver or another corridor.
+    if (keep < (KEEP_MIN[room.kind] ?? 0) || rest < OFFCUT_MIN || Math.max(rest, short) / Math.min(rest, short) > OFFCUT_LONGEST) continue;
+    const main = { ...b, [along]: keep, ...(atStart ? {} : along === "w" ? { x: b.x + rest } : { z: b.z + rest }) };
+    const cut = { ...b, [along]: rest, ...(atStart ? (along === "w" ? { x: b.x + keep } : { z: b.z + keep }) : {}) };
+    const offcut: Room = {
+      id,
+      name,
+      kind: "utility",
+      bounds: cut,
+      unitId: room.unitId,
+      ...(room.wallColor ? { wallColor: room.wallColor } : {}),
+      ...(room.floorMaterial ? { floorMaterial: room.floorMaterial } : {}),
+    };
+    const rooms = floor.rooms.flatMap((r) => (r.id === room.id ? [{ ...r, bounds: main }, offcut] : [r]));
+    const cut1 = finalizeEdit(p, replaceFloor(p, { ...floor, rooms }));
+    // Each piece keeps a door it inherits, or gets its own like the automatic doors do.
+    const door1 = cut1.ok ? ensureRoomDoor(cut1.project, floorId, id) : cut1;
+    const r = door1.ok ? ensureRoomDoor(door1.project, floorId, room.id) : door1;
+    if (!r.ok || !judge.keeps(p, r.project) || failing(r.project) > failing(p)) continue;
+    // Nearer the ideal cut wins a tie.
+    const cost = judge.cost(r.project);
+    if (!best || cost < best.cost - 0.01) best = { project: r.project, cost };
+  }
+  return best?.project ?? null;
+}
+
+/** Cuts every room that's a corridor into a good room and a useful one. */
+function proportionRooms(project: Project, judge: Judge): Project {
+  let p = project;
+  for (const floor of project.floors)
+    for (const room of floor.rooms) {
+      const now = p.floors.find((f) => f.id === floor.id)?.rooms.find((r) => r.id === room.id);
+      if (!now) continue;
+      p = splitRoom(p, floor.id, now, judge) ?? p;
+    }
+  return p;
+}
+
 /** Swaps room uses (never shapes) while that brings rooms closer to their wished-for zones. */
 function arrangeZones(project: Project, wants: Map<string, Zone>, fixedId: string | null): Project {
   let p = project;
@@ -272,10 +450,12 @@ const NOTE_WORDS: Partial<Record<RoomUse, string>> = {
  * left to us and a wished-for room doesn't fit, it tries one more floor.
  * Returns null only if no home fits the plot at all.
  */
-export function buildHome(brief: HomeBrief, plan: HomePlan): BuiltHome | null {
-  let best = buildOnce(brief, plan);
+/** `arrange: false` skips the designer's layout pass (tests compare with and without it). */
+export type BuildOptions = { arrange?: boolean };
+export function buildHome(brief: HomeBrief, plan: HomePlan, options: BuildOptions = {}): BuiltHome | null {
+  let best = buildOnce(brief, plan, options);
   if (best && best.skipped.length && brief.floors === "auto" && plan.floors < 3) {
-    const taller = buildOnce(brief, { ...plan, floors: plan.floors + 1 });
+    const taller = buildOnce(brief, { ...plan, floors: plan.floors + 1 }, options);
     if (taller && taller.skipped.length < best.skipped.length)
       best = { ...taller, notes: [`We used ${plan.floors + 1} floors so every room fits.`, ...taller.notes] };
   }
@@ -309,7 +489,7 @@ export function bedroomsThatFit(plot: { w: number; d: number }, floors: number |
   return 0;
 }
 
-function buildOnce(brief: HomeBrief, plan: HomePlan): Attempt | null {
+function buildOnce(brief: HomeBrief, plan: HomePlan, options: BuildOptions = {}): Attempt | null {
   const notes: string[] = [];
   const skipped: string[] = [];
   const base = blueprint(brief, plan, notes);
@@ -378,6 +558,14 @@ function buildOnce(brief: HomeBrief, plan: HomePlan): Attempt | null {
   // 4. Vastu and other placement wishes: swap uses toward each room's zone.
   const wants = new Map(plan.rooms.filter((r) => r.zone !== "any").map((r) => [r.name, r.zone] as const));
   if (wants.size) p = arrangeZones(p, wants, mainId);
+  if (options.arrange !== false) {
+    // 4b. Then the layout a designer would draw: the kitchen by the dining room,
+    // bedrooms away from the front door, the pooja room clear of bathrooms…
+    const judge = designJudge(wants, brief.musts.includes("vastu"));
+    p = arrangeLayout(p, judge, mainId);
+    // 4c. …and no corridors: a 24 × 9 ft kitchen keeps 15 ft and gains a store.
+    p = proportionRooms(p, judge);
+  }
 
   // 5. Daylight again after the swaps, unless it would part the main bedroom from its bathroom.
   const polished = polishTemplate(p);

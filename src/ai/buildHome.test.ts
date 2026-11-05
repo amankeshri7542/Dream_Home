@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { homeChecks } from "../domain/advice";
 import { validateProject } from "../domain/model";
-import { ensuiteHost } from "../domain/walls";
+import { ensuiteHost, sharedEdge } from "../domain/walls";
 import { LOOK_BUNDLES } from "../domain/looks";
+import type { Project, Room } from "../domain/types";
+import { vastuReport } from "../insights/vastu";
 import { REGIONAL_VIBES, isRegionalVibe, parseHomeBrief, type HomeBrief } from "./brief";
 import { HOME_SYSTEM } from "./prompt";
-import { applyRoomPlan, buildHome, roomZone } from "./buildHome";
+import { applyRoomPlan, buildHome, layoutCost, roomZone } from "./buildHome";
 import { VIBE_LOOK, plannerHomePlan, plannerRoomPlan } from "./planner";
 import { sanitizeHomePlan } from "./schema";
 
@@ -95,6 +97,60 @@ describe("AI home engine", () => {
       const b = brief({ facing });
       expect(buildHome(b, plannerHomePlan(b))!.project.plot.north).toBe(north);
     }
+  });
+
+  describe("lays rooms out like a designer", () => {
+    const aspect = (r: Room) => Math.max(r.bounds.w, r.bounds.d) / Math.min(r.bounds.w, r.bounds.d);
+    const touching = (a: Room, b: Room) => sharedEdge(a.bounds, b.bounds) >= 90;
+    const builds = cases.flatMap(([label, over]) =>
+      [0, 1].map((variant) => {
+        const b = brief(over);
+        const plan = plannerHomePlan(b, variant);
+        return { label: `${label}, look ${variant + 1}`, b, plain: buildHome(b, plan, { arrange: false })!.project, home: buildHome(b, plan)!.project };
+      }),
+    );
+
+    it("never makes a test brief's layout worse, and keeps its Vastu", () => {
+      for (const { label, b, plain, home } of builds) {
+        expect(layoutCost(home), label).toBeLessThanOrEqual(layoutCost(plain) + 1e-9);
+        if (!b.musts.includes("vastu")) continue;
+        const before = vastuReport(plain)!.score,
+          after = vastuReport(home)!.score;
+        expect(after, label).toBeGreaterThanOrEqual(50);
+        expect(after, label).toBeGreaterThanOrEqual(before - 6);
+      }
+    });
+
+    it("opens the kitchen onto the dining or living room", () => {
+      for (const { label, home } of builds)
+        for (const floor of home.floors) {
+          const social = floor.rooms.filter((r) => r.kind === "living" || r.kind === "dining");
+          for (const kitchen of floor.rooms.filter((r) => r.kind === "kitchen"))
+            if (social.length) expect(social.some((r) => touching(kitchen, r)), label).toBe(true);
+        }
+    });
+
+    it("leaves no corridors: a 24 × 9 ft kitchen keeps a good shape and gains a store", () => {
+      let offcuts = 0;
+      for (const { label, home } of builds) {
+        // The narrow six-bedroom plot falls back to three bedrooms in whole-floor strips (the generator's).
+        if (label.startsWith("six bedrooms")) continue;
+        for (const room of home.floors.flatMap((f) => f.rooms)) {
+          if (room.kind === "kitchen" || room.kind === "dining" || room.kind === "bedroom") expect(aspect(room), `${label}: ${room.name}`).toBeLessThanOrEqual(2.2);
+          if (room.kind === "bathroom") expect(room.bounds.w * room.bounds.d, `${label}: ${room.name}`).toBeLessThanOrEqual(120_000);
+          if (/^(Store room|Utility|Dressing room)$/.test(room.name)) offcuts++;
+        }
+      }
+      expect(offcuts).toBeGreaterThan(0);
+    });
+
+    it("keeps the pooja room off bathroom walls more often than it was", () => {
+      const pooja = (p: Project) =>
+        p.floors.filter((f) => f.rooms.some((r) => r.name === "Pooja room" && f.rooms.some((o) => o.kind === "bathroom" && touching(r, o)))).length;
+      const before = builds.reduce((n, x) => n + pooja(x.plain), 0);
+      const after = builds.reduce((n, x) => n + pooja(x.home), 0);
+      expect(after).toBeLessThan(before);
+    });
   });
 
   it("moves rooms toward their Vastu zones when it can", () => {

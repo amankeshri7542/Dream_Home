@@ -4,7 +4,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { useThree } from "@react-three/fiber";
 import type { CameraControlsImpl } from "@react-three/drei";
-import { Box3, Vector3, type Group, type PerspectiveCamera } from "three";
+import { Box3, Vector3, type Group, type InstancedMesh, type Mesh, type PerspectiveCamera } from "three";
 import type { Project } from "../../domain/types";
 import { FLOOR_SURFACE, floorBase, plotToWorld } from "../coords";
 import { useSceneStore } from "../store";
@@ -38,6 +38,7 @@ export function bridge(): DreamHomeBridge | null {
       quality: "unknown",
       canvasMounts: 0,
       renderer: empty,
+      sceneTriangles: empty,
       camera: empty,
       modelScreenBounds: () => null,
       screenOf: () => null,
@@ -86,6 +87,17 @@ export function DebugBridge({ project, quality, light, building, moving }: Props
       textures: gl.info.memory.textures,
       programs: gl.info.programs?.length ?? 0,
     });
+    // Everything drawable, wherever the camera looks (renderer() counts only the last frame's view).
+    b.sceneTriangles = () => {
+      let n = 0;
+      scene.traverseVisible((o) => {
+        const g = (o as Mesh).isMesh ? (o as Mesh).geometry : null;
+        if (!g) return;
+        const count = g.index ? g.index.count : (g.getAttribute("position")?.count ?? 0);
+        n += (count / 3) * ((o as InstancedMesh).isInstancedMesh ? (o as InstancedMesh).count : 1);
+      });
+      return Math.round(n);
+    };
     b.camera = () => {
       const c = latest.current.controls;
       const target = new Vector3(),

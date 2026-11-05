@@ -61,6 +61,77 @@ test("share a home, open the link elsewhere, and remix it into your own homes", 
   await expect(sheet.getByText("1 remix")).toBeVisible();
 });
 
+test("a link shows its picture at once, starts the 3D before the home arrives, and can show the rooms empty", async ({ page, browser }) => {
+  await page.setViewportSize(mobile);
+  await seed(page, { ...createPreset("compact"), name: "Verma Villa" });
+  await renderedModel(page);
+  const { url } = await makeLink(page);
+  const id = url.split("/h/")[1];
+  await expect.poll(async () => (await (await page.request.get(`/api/share/${id}`)).json()).meta.image).toBe(true);
+
+  // A visitor on a slow line: the home's data takes 2.5 s to arrive.
+  const friend = await browser.newContext({ viewport: { width: 360, height: 780 }, reducedMotion: "reduce" });
+  const visitor = await friend.newPage();
+  let sceneAt = 0,
+    dataAt = 0;
+  visitor.on("request", (r) => {
+    if (!sceneAt && /\/src\/scene\/Scene\.tsx/.test(r.url())) sceneAt = Date.now();
+  });
+  // A real JPEG for the picture (the dev server stores whatever the test made).
+  const jpeg = await page.evaluate(
+    () =>
+      new Promise<number[]>((resolve) => {
+        const canvas = Object.assign(document.createElement("canvas"), { width: 64, height: 40 });
+        canvas.getContext("2d")!.fillRect(0, 0, 64, 40);
+        canvas.toBlob((blob) => void blob!.arrayBuffer().then((b) => resolve([...new Uint8Array(b)])), "image/jpeg");
+      }),
+  );
+  await visitor.route(`**/api/share/${id}/image`, (route) => route.fulfill({ contentType: "image/jpeg", body: Buffer.from(jpeg) }));
+  await visitor.route(`**/api/share/${id}`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    dataAt = Date.now();
+    await route.continue();
+  });
+  await visitor.goto(`/h/${id}`);
+  // The picture comes from its known address while the data is still on its way…
+  const picture = visitor.locator(".dh-viewer-poster img");
+  await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  expect(dataAt).toBe(0);
+  await expect(visitor.getByRole("heading", { name: "Verma Villa", exact: true })).toBeVisible();
+  // …and the 3D had started downloading before the data arrived.
+  expect(sceneAt).toBeGreaterThan(0);
+  expect(sceneAt).toBeLessThan(dataAt);
+  await renderedModel(visitor);
+
+  // Empty and furnished, one tap apart.
+  const triangles = async () => {
+    await visitor.evaluate(() => window.__dreamHome?.waitForIdle());
+    return visitor.evaluate(() => window.__dreamHome!.sceneTriangles());
+  };
+  const empty = visitor.getByRole("button", { name: "Empty rooms" });
+  await expect(empty).toHaveAttribute("aria-pressed", "false");
+  // Models load on their own time: count once the scene stops growing.
+  const settled = async () => {
+    let last = -1;
+    for (let i = 0; i < 20; i++) {
+      const n = await triangles();
+      if (n === last) return n;
+      last = n;
+      await visitor.waitForTimeout(300);
+    }
+    return last;
+  };
+  const furnished = await settled();
+  await empty.click();
+  await expect(empty).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(triangles).toBeLessThan(furnished * 0.9);
+  await empty.click();
+  await expect(empty).toHaveAttribute("aria-pressed", "false");
+  // The header still fits a 360 px phone.
+  expect(await visitor.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  await friend.close();
+});
+
 test("update the link after changes, then stop sharing it", async ({ page }) => {
   await page.setViewportSize(mobile);
   await seed(page, createPreset("compact"));

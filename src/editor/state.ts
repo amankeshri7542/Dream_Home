@@ -83,6 +83,8 @@ export type EditorState = {
   /** A chosen day of the year (1–366) from the day slider; null follows the season. */
   sunDay: number | null;
   explore: ExploreView;
+  /** Explore shows the rooms empty (before and after); never saved, off on leaving. */
+  bare: boolean;
   quality: QualitySetting;
   chromeHidden: boolean;
   notice: Notice | null;
@@ -135,6 +137,7 @@ export function initialEditorState(
     season: "today",
     sunDay: null,
     explore: "orbit",
+    bare: false,
     quality: "auto",
     chromeHidden: false,
     notice: null,
@@ -175,6 +178,7 @@ export type EditorAction =
   | { type: "hour"; hour: number }
   | { type: "season"; season: Season }
   | { type: "sun-day"; day: number | null }
+  | { type: "bare"; on: boolean }
   | { type: "explore"; view: ExploreView }
   | { type: "quality"; quality: QualitySetting }
   | { type: "chrome"; hidden: boolean }
@@ -387,6 +391,7 @@ export function editorReducer(
               : state.view.floor,
         }),
         explore: action.mode === "explore" ? "orbit" : state.explore,
+        bare: false,
         hour:
           action.mode === "explore"
             ? GOLDEN_HOUR
@@ -490,6 +495,8 @@ export function editorReducer(
       return { ...state, sunDay: action.day === null ? null : Math.max(1, Math.min(366, Math.round(action.day))) };
     case "explore":
       return { ...state, explore: action.view };
+    case "bare":
+      return { ...state, bare: action.on };
     case "quality":
       return { ...state, quality: action.quality };
     case "chrome":

@@ -129,6 +129,33 @@
     font-weight: 650;
     text-decoration: none;
   }
+  .dh-viewer-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dh-viewer-top .dh-before-after {
+    background: var(--dh-glass-solid);
+    box-shadow: var(--dh-shadow-1);
+  }
+  .dh-viewer-top .dh-before-after[aria-pressed="true"] {
+    background: var(--dh-sun-400);
+    border-color: var(--dh-sun-400);
+    color: var(--dh-ink);
+  }
+  /* Phones: the brand and two buttons share 320 px, so Empty is an icon there. */
+  @media (max-width: 379px) {
+    .dh-viewer-top .dh-before-after {
+      width: var(--dh-target-secondary, 44px);
+      min-width: 0;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    .dh-viewer-top .dh-before-after span {
+      display: none;
+    }
+  }
   .dh-viewer-top .dh-icon-btn {
     background: var(--dh-glass-solid);
     box-shadow: var(--dh-shadow-1);

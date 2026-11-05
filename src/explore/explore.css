@@ -51,6 +51,17 @@
   .dh-quality {
     position: relative;
   }
+  /* Press and hold peeks: no text selection or callout menu on a long press. */
+  .dh-before-after {
+    -webkit-touch-callout: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .dh-explore .dh-before-after[aria-pressed="true"] {
+    background: var(--dh-sun-400);
+    border-color: var(--dh-sun-400);
+    color: var(--dh-ink);
+  }
   .dh-hud-menu {
     position: absolute;
     right: 0;

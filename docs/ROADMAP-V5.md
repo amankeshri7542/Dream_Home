@@ -5,8 +5,9 @@ work can resume after any interruption. Update it at the end of every phase.
 
 ## Resume here
 - **v6 P1 started, then paused at the owner's word (6 Nov 2026).** Floors (P1.7), the street outside (P1.1) and room light (P1.3) are built and pushed. Where it stands, what was set aside and what comes next are in [`docs/PLAN-P1.md`](PLAN-P1.md).
-  - **The owner's new phases (6 Nov) are mapped onto the code** in `PLAN-P1.md` → "What to add next": Phase 1 interior detailing (1.1 layered materials and ceilings, 1.2 false ceiling with cove light, 1.3 trim, 1.4 flooring), Phase 2 furniture and props, Phase 3 walk polish (3.1–3.7), Phase 4 day and night, Phase 5 product. **Nothing from that list is built: wait for the owner's "continue",** then start with 1.1 and 1.2 (planned in detail there), one phase at a time, with the gate and a report after each.
-  - **Four decisions are the owner's** (D1–D4 in `PLAN-P1.md`): reopening the public gallery (ruled out on 15–17 Oct), what "SEO Bot" is, which Looks and rooms get a false ceiling by default, and where v6 P1.2 and P1.5 go.
+  - **The owner's phases 1 to 5 are built, gated and pushed (6 Nov, overnight, at the owner's word "build everything").** Each phase had its own gate and commit: 1.1 and 1.2 (ceilings, false ceiling with cove light), 3.1–3.3 (walk feel), 3.4 (furniture colliders), 1.3 (trim), 2 (furniture and props), 3.5–3.6 with v6 P1.6 (the quiet walk), 4 (day and night) and 5 (product). Status per phase: `PLAN-P1.md` → "Progress on the owner's phases".
+  - **Waiting on the owner:** D1 (the public gallery, not built) and D2 (what "SEO Bot" is, not built). D3 and D4 were decided by the agent as written in `PLAN-P1.md` and can be changed. v6 P1.2 (model on the plan) and P1.5 (reel inside) weren't reached.
+  - **Next, if the owner agrees:** v6 P1.2 and P1.5; a narrow-plot layout in the blueprint generator (the planner can't fix whole-floor strips on a 25 ft plot); making the three load-sensitive browser tests wait on state.
   - **`COMPETITIVE-V6.md` stays the v6 proposal;** `PLAN-P1.md` is the working plan.
   - **Live since 5 Nov:** sharing, the loop counters and the AI features, because storage is now connected (Decisions, 5 Nov).
   - **The owner must claim the Redis database by 8 Nov 2026,** or it's deleted and sharing goes off. How: `docs/OWNER-P0.md`.
@@ -343,6 +344,14 @@ work can resume after any interruption. Update it at the end of every phase.
     - The scene lab logs a `BatchedMesh.dispose` error when it swaps homes. It's React StrictMode's replayed effect, which the code already comments on, so dev only.
     - Kitchens in the villa template are 24 ft × 9 ft corridors, which the critic noticed. A template matter, not a rendering one.
 
+- **6 Nov 2026 (the owner's Phase 5, decided overnight):**
+  - **No gallery and no "SEO Bot".** D1 and D2 stay with the owner.
+  - **The planner scores itself without `vastuReport`.** The AI designer and its notes are in the app's first chunk, and Vastu is loaded lazily to keep that chunk small. So the layout pass weighs the plan's own Vastu zones (twice as much when the brief asks for Vastu) and never moves a room out of a zone it already sits in. The tests check the result with the real `vastuReport`.
+  - **Long rooms are cut, not reshaped.** The blueprint generator makes the 24 × 9 ft kitchen (bungalow and villa plots) and the 15 × 16 ft bathroom (duplex grids), and its snapshots are tested, so the planner cuts afterwards: the room keeps about 1.5 : 1 and the rest becomes a store, utility or dressing room with its own door. A cut that breaks any essential, or leaves a corridor-shaped offcut, isn't made.
+  - **A pooja room faces north-east even without Vastu,** as a gentle wish, since nearly every Indian home does this.
+  - **"Empty rooms" is a way of looking, never saved.** `state.bare` turns off when you leave Explore. It's in the walk tools because Explore's orbit views show the roof, and in the viewer's header. A tap switches; holding peeks until you let go.
+  - **The share picture is fetched without `?v=`.** The loading poster has to show before the data (and so the version) arrives, and the picture is cached for only 60 s anyway, so a changed picture shows up within a minute.
+
 - **5–6 Nov 2026 (v6 P0.1 switched on; P1 first stage):**
   - **The owner asked for storage to be set up and the secrets put in place** ("do whatever you want, KV or Blob", "put everything in env, I'll rotate it later"). So this once, against the usual rule, the agent changed Vercel itself: a private Blob store `dream-home-blob` in Mumbai (bom1), connected to the project, and production env vars `KV_REST_API_URL`, `KV_REST_API_TOKEN` and `ADMIN_TOKEN` (sensitive). The rule in CLAUDE.md stays for everything else.
   - **Redis is a no-login Upstash database, for now.** The permanent route, Upstash through Vercel's Marketplace, stopped at a terms page only the owner can accept in a browser. The no-login one works today and is deleted on 8 Nov unless the owner claims it. Its address points to US East, the same region as the Vercel function's default, so the two are close.
@@ -662,3 +671,16 @@ work can resume after any interruption. Update it at the end of every phase.
     - `warmth.test.ts` (2).
     - `explore.spec.ts`: the day slider moves the sun at the same hour.
   - **Checked by eye:** the living room at 7:00, 12:30 and 18:30 changes from cool to warm.
+- **2026-11-06, the owner's Phase 5 (product):**
+  - **A share link opens fast** (`src/share/ViewerApp.tsx`). The 3D chunk starts downloading while the home's data is fetched (`loadScene`), not after it. The share picture shows at once from its known address, falling back to the brand mark if there's none. Walking in the viewer now shows the street outside, as the app's own walk does.
+  - **Before and after** (`src/explore/BeforeAfter.tsx`): an "Empty rooms" button in Explore's walk tools and in the viewer. It sets `furnishings: false` and `livedIn: false` on the view (one flag, no second render), and the walker's furniture colliders follow (`Walkthrough`'s `furniture` prop). Press and hold peeks; Enter and Space toggle.
+  - **The no-key planner lays rooms out like a designer** (`src/ai/buildHome.ts`, after the Vastu swaps):
+    - `layoutCost` (exported, pure): the kitchen opens onto dining or living, dining sits by living, bedrooms stay off the kitchen wall and the front door, the pooja room stays off bathroom walls, and corridor shapes are penalised.
+    - `arrangeLayout` swaps room uses while that cost falls; `proportionRooms` cuts long rooms. Both keep every essential, and `buildHome(…, { arrange: false })` skips them for comparison.
+    - **On the ten test briefs (20 homes):** kitchens not touching dining or living went from 2 to 0, bedrooms sharing the kitchen wall from 16 to 10, pooja rooms on a bathroom wall from 6 to 4, and kitchens, dining rooms, bedrooms and bathrooms past 2.2 : 1 from 14 to 8. The 8 left are all on the narrow six-bedroom plot, whose upper floors the generator makes as whole-floor strips. Vastu (where asked for) holds, except the joint family (73 → 68), whose kitchen now opens onto the dining room.
+  - **Tests:**
+    - `buildHome.test.ts` (+4): never worse than without the pass, Vastu at least 50 and within 6 points; the kitchen by dining or living; no corridors, and offcuts made; the pooja room off bathroom walls more often.
+    - `explore.spec.ts`: Empty rooms in the walk, hold to peek, reset on leaving.
+    - `share.spec.ts`: with the data held back 2.5 s, the picture shows and the 3D starts first; Empty rooms in the viewer at 360 px.
+    - The debug bridge gains `sceneTriangles()`, every visible mesh whatever the camera faces.
+  - **Checked by eye:** the walk tools at 320 px in Extra large, and the viewer's header at 320 px.

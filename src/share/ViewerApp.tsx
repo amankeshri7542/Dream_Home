@@ -10,6 +10,7 @@ import { isoDate, today } from "../insights/solar";
 import "../insights/insights.css";
 import { DEFAULT_VIEW, GOLDEN_HOUR } from "../editor/state";
 import { useChromeInsets, useReducedMotion } from "../editor/hooks";
+import { BeforeAfter } from "../explore/BeforeAfter";
 import { Joystick } from "../explore/Joystick";
 import { requestFloor } from "../explore/walkInput";
 import { deviceHomeStore } from "../homes/store";
@@ -24,7 +25,9 @@ import "../shell/shell.css";
 import "../explore/explore.css";
 import "./share.css";
 
-const Scene = lazy(() => import("../scene/Scene"));
+// The 3D downloads while the home's data is on its way, not after it.
+const loadScene = () => import("../scene/Scene");
+const Scene = lazy(loadScene);
 const Walkthrough = lazy(() => import("../explore/Walkthrough"));
 
 
@@ -42,6 +45,7 @@ export default function ViewerApp({ id }: { id: string }) {
   const [walkRoom, setWalkRoom] = useState<{ floorId: string; roomId: string } | null>(null);
   const [place, setPlace] = useState("");
   const [walkFloor, setWalkFloor] = useState<string | null>(null);
+  const [bare, setBare] = useState(false);
   const [sheet, setSheet] = useState<null | "in-app" | "replace" | "problem" | "report" | "reported">(null);
   // Escape closes the open sheet, as everywhere else.
   useEffect(() => {
@@ -57,6 +61,7 @@ export default function ViewerApp({ id }: { id: string }) {
   useEffect(() => {
     if (!/^[A-Za-z0-9]{10}$/.test(id)) return setState({ kind: "missing" });
     let live = true;
+    void loadScene().catch(() => undefined);
     void fetchShare(id).then((res) => {
       if (!live) return;
       if (!res.ok) {
@@ -112,10 +117,13 @@ export default function ViewerApp({ id }: { id: string }) {
         furnishings: true,
         // The floor the visitor is on shows its furniture under the roof.
         walkFloorId: walkFloor ?? firstFloor,
+        // The street outside the windows, as in the app's own walk.
+        world: true,
       }
     : // Opened up, rooms named: the home's insides are what a visitor came for.
       { ...DEFAULT_VIEW, stage: 5, roof: false, cutaway: true, labels: true };
 
+  const shown = bare ? { ...view, furnishings: false, livedIn: false } : view;
   return (
     <div ref={setRoot} className={`dh-app dh-viewer ${desktop ? "is-desktop" : "is-compact"}`}>
       <header className="dh-viewer-top" data-inset="top">
@@ -124,17 +132,20 @@ export default function ViewerApp({ id }: { id: string }) {
           <span>Dream Home</span>
         </a>
         {state.kind === "ready" && (
-          <IconButton icon={Icon.warning} tone="plain" label="Report this home" onClick={() => setSheet("report")} />
+          <div className="dh-viewer-top-actions">
+            <BeforeAfter empty={bare} onChange={setBare} />
+            <IconButton icon={Icon.warning} tone="plain" label="Report this home" onClick={() => setSheet("report")} />
+          </div>
         )}
       </header>
 
       {state.kind === "ready" && (
         <div className="dh-scene-host model-canvas mode-3d">
           <div className="scene-pane">
-            <Suspense fallback={<Poster id={id} meta={state.meta} />}>
+            <Suspense fallback={<Poster id={id} name={state.meta.name} />}>
               <Scene
                 project={state.project}
-                view={view}
+                view={shown}
                 mode="explore"
                 selection={null}
                 onSelect={(target) => {
@@ -158,6 +169,7 @@ export default function ViewerApp({ id }: { id: string }) {
                       startFloorId={walkRoom?.floorId ?? state.project.floors[0].id}
                       startRoomId={walkRoom?.roomId}
                       reducedMotion={reduced}
+                      furniture={!bare}
                       onStatus={({ floorId, roomId }) => {
                         setWalkFloor(floorId);
                         const floor = state.project.floors.find((f) => f.id === floorId);
@@ -172,12 +184,8 @@ export default function ViewerApp({ id }: { id: string }) {
         </div>
       )}
 
-      {state.kind === "loading" && (
-        <div className="dh-viewer-loading" role="status">
-          <BrandMark size={44} />
-          <span>Opening the home…</span>
-        </div>
-      )}
+      {/* The picture from its known address at once, before the home's data arrives. */}
+      {state.kind === "loading" && <Poster id={id} />}
 
       {(state.kind === "missing" || state.kind === "offline") && (
         <div className="dh-viewer-card is-message" data-inset="bottom" role="alert">
@@ -352,12 +360,13 @@ function ViewerScore({ project }: { project: Project }) {
   );
 }
 
-/** The share's picture, shown at once while the 3D home loads. */
-function Poster({ id, meta }: { id: string; meta: SharedMeta }) {
+/** The share's picture, shown at once while the home and its 3D load. */
+function Poster({ id, name }: { id: string; name?: string }) {
+  const [picture, setPicture] = useState(true);
   return (
     <div className="dh-viewer-poster" role="status">
-      {meta.image && <img src={`/api/share/${id}/image?v=${meta.updatedAt}`} alt="" />}
-      <span>Opening {meta.name} in 3D…</span>
+      {picture ? <img src={`/api/share/${id}/image`} alt="" onError={() => setPicture(false)} /> : <BrandMark size={44} />}
+      <span>{name ? `Opening ${name} in 3D…` : "Opening the home…"}</span>
     </div>
   );
 }

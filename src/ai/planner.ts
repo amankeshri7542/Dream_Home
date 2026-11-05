@@ -238,7 +238,8 @@ export function plannerHomePlan(brief: HomeBrief, variant = 0): HomePlan {
     return {
       use,
       name,
-      zone: vastu ? (VASTU[use] ?? "any") : "any",
+      // A pooja room faces east or north-east in almost every home, Vastu or not.
+      zone: vastu ? (VASTU[use] ?? "any") : use === "pooja" ? "northeast" : "any",
       paint,
       floor: wet ? look.floors.wet : bedroom ? look.floors.bedroom : look.floors.living,
       fabric: look.palette.fabric[Math.max(0, bedroomIndex) % look.palette.fabric.length],

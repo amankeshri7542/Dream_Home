@@ -128,6 +128,9 @@ export function SceneHost({
   const realSun = state.sunDay !== null || state.season !== "today";
   // A photo (the share link's picture) wins over the reel studio's preview.
   const filmed = reel && !showcase && !photo ? reel : null;
+  // Before and after: Explore can show the rooms empty; photos and the reel keep their own.
+  const bare = state.mode === "explore" && state.bare && !showcase && !photo && !filmed;
+  const shown = (v: SceneView): SceneView => (bare ? { ...v, furnishings: false, livedIn: false } : v);
   const onSelect = useCallback(
     (target: SelectionTarget | null) => {
       if (target) select(target, "canvas");
@@ -151,7 +154,7 @@ export function SceneHost({
         >
           <Scene
             project={preview ?? project}
-            view={
+            view={shown(
               photo && !showcase && !(walking && photo.framing === "view")
                 ? photoView(photo, sceneView(state), state.view.streetLife)
                 : filmed
@@ -175,8 +178,8 @@ export function SceneHost({
                       livedIn: photo ? photo.livedIn : state.view.livedIn,
                       festive: photo?.festive,
                     }
-                  : sceneView(state)
-            }
+                  : sceneView(state),
+            )}
             mode={showcase || photo || filmed ? "explore" : state.mode}
             selection={showcase || photo || filmed ? null : (selected?.target ?? null)}
             onSelect={onSelect}
@@ -255,6 +258,7 @@ export function SceneHost({
                   startFloorId={activeFloor.id}
                   reducedMotion={reduced}
                   night={state.hour >= 19 || state.hour < 6.5}
+                  furniture={!bare}
                   onStatus={walkStatus}
                 />
               </Suspense>

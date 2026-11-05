@@ -70,6 +70,59 @@ test("explore: walk inside with the keyboard and announce the room", async ({ pa
   await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(orbit.fov);
 });
 
+test("before and after: the walk shows the rooms empty, a hold peeks, and leaving puts it all back", async ({ page }) => {
+  const project = createPreset("compact");
+  await seed(page, project);
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await explore(page).click();
+  await page.getByRole("radio", { name: /Walk inside/ }).click();
+  await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(68);
+  // Into the living room, where the sofa and table are in view.
+  const living = project.floors[0].rooms.find((r) => r.kind === "living")!;
+  await page.getByRole("button", { name: "Plan", exact: true }).click();
+  await page.getByRole("group", { name: /^Plan of / }).getByRole("button", { name: `Go to ${living.name}` }).click();
+  await expect(page.locator(".dh-walk-hint strong")).toHaveText(new RegExp(living.name));
+  const triangles = async () => {
+    await bridge(page, (dh) => dh.waitForIdle());
+    return bridge(page, (dh) => (dh as unknown as { sceneTriangles: () => number }).sceneTriangles());
+  };
+  const empty = page.getByRole("button", { name: "Empty rooms" });
+  await expect(empty).toHaveAttribute("aria-pressed", "false");
+  // Models load on their own time: count once the scene stops growing.
+  const settled = async () => {
+    let last = -1;
+    for (let i = 0; i < 20; i++) {
+      const n = await triangles();
+      if (n === last) return n;
+      last = n;
+      await page.waitForTimeout(300);
+    }
+    return last;
+  };
+  const furnished = await settled();
+  // One tap: the same rooms with nothing in them.
+  await empty.click();
+  await expect(empty).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(triangles).toBeLessThan(furnished * 0.9);
+  await empty.click();
+  await expect(empty).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(triangles).toBeGreaterThan(furnished * 0.98);
+  // Press and hold peeks at the empty rooms until you let go; the click after it changes nothing.
+  const box = (await empty.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(empty).toHaveAttribute("aria-pressed", "true");
+  await page.mouse.up();
+  await expect(empty).toHaveAttribute("aria-pressed", "false");
+  // Empty is a way of looking, never saved: leaving Explore puts the furniture back.
+  await empty.click();
+  await expect(empty).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Back to home" }).click();
+  await explore(page).click();
+  await page.getByRole("radio", { name: /Walk inside/ }).click();
+  await expect(page.getByRole("button", { name: "Empty rooms" })).toHaveAttribute("aria-pressed", "false");
+});
+
 test("explore: you can't walk through the furniture", async ({ page }) => {
   const project = createPreset("compact");
   await seed(page, project);

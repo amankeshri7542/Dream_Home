@@ -11,6 +11,8 @@ export type DreamHomeBridge = {
   /** How many lamps the last room-light solve had on. */
   roomLightLamps?: number;
   renderer(): { calls: number; triangles: number; geometries: number; textures: number; programs: number };
+  /** Triangles in every visible mesh of the scene, whatever the camera sees. */
+  sceneTriangles(): number;
   camera(): {
     position: [number, number, number];
     target: [number, number, number];

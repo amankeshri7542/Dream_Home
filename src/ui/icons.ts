@@ -21,6 +21,7 @@ import {
   ChevronsUp,
   CircleCheck,
   CircleHelp,
+  Columns2,
   Compass,
   CookingPot,
   Copy,
@@ -139,6 +140,7 @@ export const Icon = {
   zoomOut: ZoomOut,
   // Explore
   walk: Footprints,
+  beforeAfter: Columns2,
   orbitView: Rotate3d,
   turntable: Orbit,
   photo: Camera,

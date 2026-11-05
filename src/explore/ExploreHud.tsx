@@ -6,6 +6,7 @@ import { Button } from "../ui/primitives";
 import { Joystick } from "./Joystick";
 import { requestFloor, walkInput } from "./walkInput";
 import { MiniPlan } from "./MiniPlan";
+import { BeforeAfter } from "./BeforeAfter";
 import { dayOfYear, shortDate, sunCalendar } from "../insights/solar";
 import "./explore.css";
 
@@ -145,6 +146,8 @@ export function ExploreHud({
             >
               Plan
             </Button>
+            {/* Before and after: the rooms as built, then as lived in. */}
+            <BeforeAfter empty={state.bare} className="dh-hud-btn" onChange={(on) => dispatch({ type: "bare", on })} />
             {finePointer && (
               <Button variant="secondary" className="dh-hud-btn" icon={Icon.orbitView} onClick={() => walkInput.lockPointer?.()}>
                 Look with the mouse
