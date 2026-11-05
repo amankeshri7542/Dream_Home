@@ -23,6 +23,7 @@ import { ShadowInvalidator } from "./environment/ShadowInvalidator";
 import { SkyDome } from "./environment/SkyDome";
 import { lighting } from "./environment/timeOfDay";
 import { parseIsoDate, today } from "../insights/solar";
+import { CENTRAL_INDIA } from "../insights/score";
 import { useProceduralEnv } from "./environment/useProceduralEnv";
 import { getLibrary } from "./materials/library";
 import { OverlayProjector } from "./overlay/OverlayProjector";
@@ -87,8 +88,9 @@ export function SceneRoot(props: RootProps) {
   const location = project.plot.location;
   const place = useMemo(() => {
     const date = parseIsoDate(props.sunDate) ?? today();
-    return location ? { lat: location.lat, lon: location.lon, date } : null;
-  }, [location, props.sunDate]);
+    if (location) return { lat: location.lat, lon: location.lon, date };
+    return props.realSun ? { ...CENTRAL_INDIA, date } : null;
+  }, [location, props.sunDate, props.realSun]);
   const light = useMemo(() => lighting(hour, project.plot.north, place), [hour, project.plot.north, place]);
   const library = getLibrary({
     textureSize: spec.textureSize,

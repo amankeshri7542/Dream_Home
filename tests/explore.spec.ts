@@ -193,6 +193,23 @@ test("desktop: the mouse can look around, and dragging still works if the browse
   expect(errors).toEqual([]);
 });
 
+test("the day of the year moves the sun as well as the hour does", async ({ page }) => {
+  await seed(page, createPreset("compact"));
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await explore(page).click();
+  const day = page.getByRole("slider", { name: "Day of the year" });
+  await page.getByRole("slider", { name: "Time of day" }).fill("9");
+  await day.fill("172");
+  await expect(page.locator(".dh-time-row output").last()).toHaveText("21 Jun");
+  const sun = () => bridge(page, (dh) => (dh as unknown as { lighting: () => { sun: number[] } }).lighting().sun);
+  const june = await sun();
+  await day.fill("355");
+  await expect(page.locator(".dh-time-row output").last()).toHaveText("21 Dec");
+  const december = await sun();
+  // The same 9 am, half a year apart: the sun stands clearly lower in December.
+  expect(june[1]).toBeGreaterThan(december[1] + 0.1);
+});
+
 test.describe("walking with motion on", () => {
   test.use({ reducedMotion: "no-preference" });
   test("running widens the view, the head bobs, and both settle when you stop", async ({ page }) => {

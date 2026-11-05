@@ -15,7 +15,7 @@ import { Button, IconButton } from "../ui/primitives";
 import { CityPicker } from "./CityPicker";
 import { FacingPicker } from "./FacingPicker";
 import { CENTRAL_INDIA } from "./score";
-import { SEASONS, SEASON_ORDER, clockLabel, seasonDate, sunTimes } from "./solar";
+import { SEASONS, SEASON_ORDER, clockLabel, dayOfYear, shortDate, sunCalendar, sunTimes } from "./solar";
 import { sunHours, sunTips, type SunFix } from "./sun";
 import "../photo/photo.css";
 import "./insights.css";
@@ -29,7 +29,7 @@ export default function SunlightSheet({ onClose }: { onClose: () => void }) {
   const desktop = useDesktop();
   const location = project.plot.location;
   const place = location ?? CENTRAL_INDIA;
-  const date = useMemo(() => seasonDate(state.season), [state.season]);
+  const date = useMemo(() => sunCalendar(state.season, state.sunDay), [state.season, state.sunDay]);
   const [floorId, setFloorId] = useState(state.focus?.floorId ?? activeFloor.id);
   const floor = project.floors.find((f) => f.id === floorId) ?? project.floors[0];
   const rooms = useMemo(() => sunHours(project, floor.id, place, date), [project, floor.id, place, date]);
@@ -85,10 +85,26 @@ export default function SunlightSheet({ onClose }: { onClose: () => void }) {
         )}
         <Chips
           label="Season"
-          value={state.season}
+          value={state.sunDay === null ? state.season : ("" as typeof state.season)}
           options={SEASON_ORDER.map((s) => ({ value: s, label: SEASONS[s].label }))}
           onChange={(season) => dispatch({ type: "season", season })}
         />
+        <div className="dh-sun-time">
+          <div className="dh-sun-time-row">
+            <strong className="dh-num">{shortDate(date)}</strong>
+            <small>Any day of the year</small>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={365}
+            step={1}
+            value={dayOfYear(date)}
+            aria-label="Day of the year"
+            aria-valuetext={shortDate(date)}
+            onChange={(e) => dispatch({ type: "sun-day", day: Number(e.target.value) })}
+          />
+        </div>
         <div className="dh-sun-time">
           <div className="dh-sun-time-row">
             <strong className="dh-num" aria-live="polite">

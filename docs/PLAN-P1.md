@@ -108,6 +108,7 @@ Smaller adjustments, flagged here rather than made silently:
 | 1.4 Flooring | Done with v6 P1.7 and 1.1 (tiles from each room's corner, sheen) |
 | 2 Furniture and props | **Done (6 Nov):** cloth, wood and metal detail in the shader for every kit piece; tailored sofas and armchair; a made bed with a turned-back sheet; rounder lamps, fan and side table; three plant species (rubber plant, snake plant, money plant); an Indian mild-steel gate in place of the picket one; pleated curtains on rods; soft contact shadows under big pieces and rugs. Garden trees still use the old kit (the street's leaf-card trees could replace them later) |
 | 3.5, 3.6 and v6 P1.6 | **Done (6 Nov):** desktop mouse look (pointer lock from a button, Esc frees it, dragging still works); a few millimetres of sideways lead when turning; the walk starts a step inside the front door facing in; the time panel folds to a sun chip; a small plan with a blue dot, where tapping a room goes there |
+| 4 Day and night | **Done (6 Nov):** a "Day of the year" slider in the Explore time panel and the Sunlight sheet (a season chip clears it); a chosen day shows the real sun even before a city is set (central India); interior light follows a colour temperature from about 6500 K in the morning to 2700 K under the lamps, and keeps more of a warm light's colour. AO was already there (N8AO, the strips, and room light darkening corners); no extra fill light, which would shine through walls |
 
 ### Order of work
 

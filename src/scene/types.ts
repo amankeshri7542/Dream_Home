@@ -48,6 +48,8 @@ export type SceneProps = {
   hour: number;
   /** The day the sun is shown for ("YYYY-MM-DD"; default today). Used when the plot has a city. */
   sunDate?: string;
+  /** A day was chosen (a season or the day slider): show the real sun even without a city. */
+  realSun?: boolean;
   quality: QualitySetting;
   onQualityResolved?: (tier: QualityTier) => void;
   explore?: ExploreView;

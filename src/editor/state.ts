@@ -80,6 +80,8 @@ export type EditorState = {
   hour: number;
   /** The day the sun is shown for, when the plot has a city (Sunlight sheet). */
   season: Season;
+  /** A chosen day of the year (1–366) from the day slider; null follows the season. */
+  sunDay: number | null;
   explore: ExploreView;
   quality: QualitySetting;
   chromeHidden: boolean;
@@ -131,6 +133,7 @@ export function initialEditorState(
     cameraSeq: 0,
     hour: BUILD_HOUR,
     season: "today",
+    sunDay: null,
     explore: "orbit",
     quality: "auto",
     chromeHidden: false,
@@ -171,6 +174,7 @@ export type EditorAction =
   | { type: "camera"; command: CameraIntent }
   | { type: "hour"; hour: number }
   | { type: "season"; season: Season }
+  | { type: "sun-day"; day: number | null }
   | { type: "explore"; view: ExploreView }
   | { type: "quality"; quality: QualitySetting }
   | { type: "chrome"; hidden: boolean }
@@ -481,7 +485,9 @@ export function editorReducer(
     case "hour":
       return { ...state, hour: Math.max(0, Math.min(24, action.hour)) };
     case "season":
-      return { ...state, season: action.season };
+      return { ...state, season: action.season, sunDay: null };
+    case "sun-day":
+      return { ...state, sunDay: action.day === null ? null : Math.max(1, Math.min(366, Math.round(action.day))) };
     case "explore":
       return { ...state, explore: action.view };
     case "quality":

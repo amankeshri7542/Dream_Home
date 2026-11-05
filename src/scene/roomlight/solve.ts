@@ -50,6 +50,10 @@ export type LightSky = {
   sun: { dir: V3; irradiance: RGB } | null;
   /** The brightness (irradiance on a wall) a careful photographer exposes a room to. */
   target: number;
+  /** How much of the light's colour to neutralise (0 keeps it, 1 removes it); default WHITE_BALANCE. */
+  balance?: number;
+  /** The light's colour temperature, for the debug bridge and tests. */
+  kelvin?: number;
 };
 
 export type LightGridSpec = { min: V3; max: V3; cell: number; cellY: number };
@@ -458,7 +462,8 @@ export function solveLightGrid(rooms: readonly LightRoom[], sky: LightSky, spec:
     const tint: RGB = [0, 0, 0];
     for (const p of s.patches) if (p.ny !== 0) for (let c = 0; c < 3; c++) tint[c] += p.e[c] * p.area;
     const l = lum(tint) || 1;
-    balance.set(s.room.id, [Math.pow(l / Math.max(tint[0], 1e-5), WHITE_BALANCE), Math.pow(l / Math.max(tint[1], 1e-5), WHITE_BALANCE), Math.pow(l / Math.max(tint[2], 1e-5), WHITE_BALANCE)]);
+    const wbK = sky.balance ?? WHITE_BALANCE;
+    balance.set(s.room.id, [Math.pow(l / Math.max(tint[0], 1e-5), wbK), Math.pow(l / Math.max(tint[1], 1e-5), wbK), Math.pow(l / Math.max(tint[2], 1e-5), wbK)]);
   }
 
   // The grid.

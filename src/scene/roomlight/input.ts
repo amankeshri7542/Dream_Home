@@ -9,6 +9,7 @@ import { rgb } from "../building/geometry/QuadBuilder";
 import { facePaint } from "../building/geometry/walls";
 import { FLOOR_SURFACE, floorBase, plotOffset } from "../coords";
 import type { Lighting } from "../environment/timeOfDay";
+import { kelvinRgb, lightTemperature } from "../../insights/warmth";
 import type { LightGridSpec, LightLamp, LightOpening, LightRoom, LightSky, RGB, V3 } from "./solve";
 
 /** Inner face from a wall's centreline (a wall's half-thickness, near enough). */
@@ -141,7 +142,12 @@ export function lightSky(light: Lighting): LightSky {
   const dayness = 1 - light.night;
   // The sky through a window: much brighter than any wall, as any photographer knows.
   const k = 1.5 + 2.1 * dayness;
-  const sky: RGB = [((p.horizon.r + p.zenith.r) / 2) * k, ((p.horizon.g + p.zenith.g) / 2) * k, ((p.horizon.b + p.zenith.b) / 2) * k];
+  // The light's colour temperature: cool in the morning, warm in the evening and under lamps.
+  const kelvin = lightTemperature(light.hour, light.elevation, p.windowGlow);
+  const t = kelvinRgb(kelvin);
+  const tl = t[0] * 0.2126 + t[1] * 0.7152 + t[2] * 0.0722;
+  const tint = (c: number, i: number) => c * (0.7 + (0.3 * t[i]) / tl);
+  const sky: RGB = [tint(((p.horizon.r + p.zenith.r) / 2) * k, 0), tint(((p.horizon.g + p.zenith.g) / 2) * k, 1), tint(((p.horizon.b + p.zenith.b) / 2) * k, 2)];
   const sun = light.elevation > 1 && dayness > 0.02 ? { dir: light.sunDir as V3, irradiance: [p.sun.r * p.sunIntensity, p.sun.g * p.sunIntensity, p.sun.b * p.sunIntensity] as RGB } : null;
   // Sunlit ground outside bounces up through the window, warm, onto the ceiling.
   const up = sun ? Math.max(0, sun.dir[1]) : 0;
@@ -157,5 +163,8 @@ export function lightSky(light: Lighting): LightSky {
     sun,
     // A white wall reads about 0.75 by day, a touch lower in lamplight.
     target: 2.3 - 0.75 * Math.max(light.night, p.windowGlow),
+    // Keep more of a warm light's colour than a neutral one's, as a photographer would.
+    balance: 0.22 + 0.3 * Math.min(1, Math.max(0, (kelvin - 3000) / 2800)),
+    kelvin,
   };
 }

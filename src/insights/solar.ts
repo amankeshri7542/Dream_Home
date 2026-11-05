@@ -136,6 +136,32 @@ export const SEASONS: Record<Season, { label: string; month?: number; day?: numb
   winter: { label: "Winter", month: 12, day: 21 },
 };
 export const SEASON_ORDER: Season[] = ["today", "summer", "monsoon", "winter"];
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const leap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+/** 1 for 1 January … 365 (366 in a leap year). */
+export function dayOfYear({ year, month, day }: CalendarDate): number {
+  let n = day;
+  for (let m = 1; m < month; m++) n += MONTH_DAYS[m - 1] + (m === 2 && leap(year) ? 1 : 0);
+  return n;
+}
+/** The date of the nth day of a year (clamped to the year). */
+export function dateOfDay(year: number, n: number): CalendarDate {
+  let left = Math.max(1, Math.min(leap(year) ? 366 : 365, Math.round(n)));
+  for (let m = 1; m <= 12; m++) {
+    const days = MONTH_DAYS[m - 1] + (m === 2 && leap(year) ? 1 : 0);
+    if (left <= days) return { year, month: m, day: left };
+    left -= days;
+  }
+  return { year, month: 12, day: 31 };
+}
+/** "21 Jun". */
+export const shortDate = ({ month, day }: CalendarDate) => `${day} ${MONTHS[month - 1]}`;
+/** The day the sun is shown for: a chosen day of the year, else the season's. */
+export function sunCalendar(season: Season, sunDay: number | null, now = new Date()): CalendarDate {
+  return sunDay ? dateOfDay(now.getFullYear(), sunDay) : seasonDate(season, now);
+}
+
 /** The date a season stands for, this year. */
 export function seasonDate(season: Season, now = new Date()): CalendarDate {
   const s = SEASONS[season];

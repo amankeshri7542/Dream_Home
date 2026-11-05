@@ -6,6 +6,7 @@ import { Button } from "../ui/primitives";
 import { Joystick } from "./Joystick";
 import { requestFloor, walkInput } from "./walkInput";
 import { MiniPlan } from "./MiniPlan";
+import { dayOfYear, shortDate, sunCalendar } from "../insights/solar";
 import "./explore.css";
 
 export const HOUR_PRESETS = [
@@ -204,6 +205,20 @@ export function ExploreHud({
             />
             <Icon.night size={18} aria-hidden />
             <output className="dh-num">{hourText(state.hour)}</output>
+          </div>
+          <div className="dh-time-row">
+            <Icon.sunlight size={18} aria-hidden />
+            <input
+              type="range"
+              aria-label="Day of the year"
+              aria-valuetext={shortDate(sunCalendar(state.season, state.sunDay))}
+              min={1}
+              max={365}
+              step={1}
+              value={dayOfYear(sunCalendar(state.season, state.sunDay))}
+              onChange={(e) => dispatch({ type: "sun-day", day: Number(e.target.value) })}
+            />
+            <output className="dh-num">{shortDate(sunCalendar(state.season, state.sunDay))}</output>
           </div>
           <div className="dh-time-presets" role="group" aria-label="Time of day presets">
             {HOUR_PRESETS.map((p) => (

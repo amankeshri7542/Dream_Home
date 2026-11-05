@@ -649,3 +649,16 @@ work can resume after any interruption. Update it at the end of every phase.
     - In Walk the time panel folds to a sun chip (≥ 44 px). Tapping it opens the panel, and Done folds it again.
     - "Plan" opens `MiniPlan`: an SVG of the floor with a blue dot and a viewing beam, moved by direct DOM writes (`walkInput.position` and `onMove`), so walking re-renders nothing and the plan adds no draw calls. Tapping a room (or pressing Enter on it) goes there through `requestRoom`, then the plan closes.
   - **Tests** (`explore.spec.ts`): sun chip and plan, including ≥ 44 px targets and going to a bedroom; 320 px in Extra large with no overlaps and no sideways scroll (it caught the walk tools running 24 px off the edge, now fixed); desktop mouse look with drag still working.
+- **2026-11-06, the owner's Phase 4 (day and night):**
+  - **The day scrubber:** `state.sunDay` (day of the year, null = follow the season; picking a season clears it). Helpers in `solar.ts`, with no new sun maths: `dayOfYear`, `dateOfDay`, `shortDate` and `sunCalendar`. There's a "Day of the year" slider in the Explore time panel and the Sunlight sheet.
+  - **The real sun without a city:** `SceneProps.realSun`. Once a day is chosen (a season or the slider), a home without a city gets central India's real sun, as the Sunlight sheet already assumed. "Today" with no city keeps the stylised sun.
+  - **Interior warmth:**
+    - `src/insights/warmth.ts` (pure): `lightTemperature(hour, elevation, lamps)` gives about 6500 K for a low morning sun, 5800 K at midday, about 3200 K at dusk and 2700 K under the lamps. `kelvinRgb` turns that into a colour.
+    - `lightSky` tints the window light by it, and passes a white balance that keeps more of a warm light's colour (0.22 at the warmest, 0.52 when neutral) to `solveLightGrid`.
+    - No fill light, because a shadowless fill shines through walls.
+  - **AO:** already in place (N8AO on balanced and beautiful and in every photo, the strips on battery, and room light darkening corners on its own), and still covered by the room-light "gets darker into a corner" test.
+  - **Tests:**
+    - `days.test.ts` (5): dates, the reducer, the June and December sun, a room cooler in the morning and warmer in the evening, lamplight warmest.
+    - `warmth.test.ts` (2).
+    - `explore.spec.ts`: the day slider moves the sun at the same hour.
+  - **Checked by eye:** the living room at 7:00, 12:30 and 18:30 changes from cool to warm.
