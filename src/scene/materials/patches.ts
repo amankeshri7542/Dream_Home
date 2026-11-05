@@ -76,7 +76,66 @@ uniform vec4 uPopY;
  * `focus`: "fade" tints everything outside the hero room; "cut" also cuts
  * neighbouring walls down to a stub (see focus.ts).
  */
-export type PatchOptions = { clip?: boolean; poche?: boolean; rise?: boolean; pop?: boolean; focus?: "fade" | "cut"; glass?: boolean; room?: boolean };
+export type PatchOptions = { clip?: boolean; poche?: boolean; rise?: boolean; pop?: boolean; focus?: "fade" | "cut"; glass?: boolean; room?: boolean; surface?: Surface };
+/** Close-up detail for kit pieces, made in the shader (nothing to download). */
+export type Surface = "cloth" | "wood" | "metal";
+
+const SURFACE_NOISE = /* glsl */ `
+float dhHash(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+float dhNoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(dhHash(i), dhHash(i + vec2(1.0, 0.0)), f.x), mix(dhHash(i + vec2(0.0, 1.0)), dhHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+// The world-space plane a face mostly lies in, with "along" the grain direction:
+// horizontal faces run along x, upright faces run up.
+vec2 dhPlane(vec3 p, vec3 n) {
+  vec3 a = abs(n);
+  if (a.y >= a.x && a.y >= a.z) return vec2(p.x, p.z);
+  if (a.x >= a.z) return vec2(p.y, p.z);
+  return vec2(p.y, p.x);
+}
+`;
+const SURFACE_COLOR = /* glsl */ `
+#ifdef DH_SURFACE
+  {
+    vec3 sN = normalize(inverseTransformDirection(vNormal, viewMatrix));
+    vec2 sP = dhPlane(vRoomWorld, sN);
+    float sFade = 1.0 - smoothstep(0.004, 0.02, length(fwidth(vRoomWorld)));
+    #if DH_SURFACE == 1
+      // Cloth: slubs and a faint weave, and a soft sheen where it turns away (velvet, cotton).
+      float slub = dhNoise(sP * 38.0) * 0.6 + dhNoise(sP * 91.0) * 0.4;
+      float weave = sin(sP.x * 2600.0) * sin(sP.y * 2600.0);
+      vec3 sV = normalize(vViewPosition);
+      float rim = pow(1.0 - abs(dot(normalize(vNormal), sV)), 2.5);
+      diffuseColor.rgb *= 0.95 + slub * 0.08 + weave * 0.025 * sFade;
+      diffuseColor.rgb += diffuseColor.rgb * rim * 0.16;
+    #elif DH_SURFACE == 2
+      // Wood: long streaky grain with the odd darker line.
+      float grain = dhNoise(vec2(sP.x * 1.6, sP.y * 34.0)) * 0.55 + dhNoise(vec2(sP.x * 3.1, sP.y * 90.0)) * 0.3 + dhNoise(vec2(sP.x * 9.0, sP.y * 240.0)) * 0.15 * sFade;
+      float line = smoothstep(0.86, 0.97, dhNoise(vec2(sP.x * 0.9, sP.y * 60.0)));
+      diffuseColor.rgb *= 0.88 + grain * 0.2 - line * 0.1;
+    #else
+      // Metal: a fine brushed texture.
+      float brush = dhNoise(vec2(sP.x * 4.0, sP.y * 400.0)) * sFade;
+      diffuseColor.rgb *= 0.97 + brush * 0.06;
+    #endif
+  }
+#endif
+`;
+const SURFACE_ROUGH = /* glsl */ `
+#ifdef DH_SURFACE
+  {
+    vec3 sN = normalize(inverseTransformDirection(vNormal, viewMatrix));
+    vec2 sP = dhPlane(vRoomWorld, sN);
+    #if DH_SURFACE == 2
+      roughnessFactor = clamp(roughnessFactor + (dhNoise(vec2(sP.x * 1.6, sP.y * 34.0)) - 0.5) * 0.16, 0.04, 1.0);
+    #elif DH_SURFACE == 3
+      roughnessFactor = clamp(roughnessFactor + (dhNoise(vec2(sP.x * 4.0, sP.y * 400.0)) - 0.5) * 0.12, 0.04, 1.0);
+    #endif
+  }
+#endif
+`;
 
 function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOptions) {
   const defines: string[] = [];
@@ -105,6 +164,15 @@ function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOpti
         "#include <tonemapping_fragment>",
         "if (!gl_FrontFacing) gl_FragColor = vec4(uPoche, 1.0);\n#include <tonemapping_fragment>",
       );
+  }
+  if (opts.surface) {
+    const code = opts.surface === "cloth" ? 1 : opts.surface === "wood" ? 2 : 3;
+    shader.fragmentShader =
+      `#define DH_SURFACE ${code}\n` +
+      SURFACE_NOISE +
+      shader.fragmentShader
+        .replace("#include <color_fragment>", "#include <color_fragment>\n" + SURFACE_COLOR)
+        .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\n" + SURFACE_ROUGH);
   }
   if (opts.room) {
     // Room light: one permanent path, switched by a uniform (see roomlight/uniforms.ts).
@@ -148,12 +216,14 @@ function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOpti
 
 /** Apply patches to a material (idempotent per material instance). */
 export function patchMaterial<T extends Material>(material: T, opts: PatchOptions): T {
+  // Surface detail reads the world position the room-light path provides.
+  if (opts.surface) opts = { ...opts, room: true };
   if (opts.clip) {
     material.clippingPlanes = CUT_PLANES;
     material.clipShadows = true;
   }
   if (opts.poche) material.side = DoubleSide;
-  const key = `dh:${opts.rise ? "r" : ""}${opts.pop ? "p" : ""}${opts.poche ? "c" : ""}${opts.focus ? opts.focus[0] : ""}${opts.glass ? "g" : ""}${opts.room ? "o" : ""}`;
+  const key = `dh:${opts.rise ? "r" : ""}${opts.pop ? "p" : ""}${opts.poche ? "c" : ""}${opts.focus ? opts.focus[0] : ""}${opts.glass ? "g" : ""}${opts.room ? "o" : ""}${opts.surface ? opts.surface[0] : ""}`;
   if (opts.focus === "cut") material.userData.dhFocusCut = true;
   material.onBeforeCompile = (shader) => patchShader(shader, opts);
   material.customProgramCacheKey = () => key;

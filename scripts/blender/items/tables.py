@@ -30,9 +30,9 @@ def coffee_table(it):
 def side_table(it):
     w, d, h = it.w, it.d, it.h
     r = w / 2
-    it.slab("wood", S.circle(r, 16), h - 4.0, h, b=1.6, seg=2)
+    it.slab("wood", S.circle(r, 32), h - 4.0, h, b=1.2, seg=2)
     prof = [(0.0, 0.0), (r * 0.62, 0.0), (r * 0.62, 1.8), (r * 0.2, 4.5), (3.0, 14.0), (3.4, h - 10.0), (6.5, h - 4.5), (0.0, h - 4.0)]
-    it.lathe("wood", prof, 9, sharp=(1, 2))
+    it.lathe("wood", prof, 20, sharp=(1, 2))
 
 
 @builder("dining-table")

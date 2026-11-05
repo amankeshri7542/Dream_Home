@@ -35,6 +35,8 @@ import { LivedIn } from "./life/LivedIn";
 import { Neighbourhood } from "./world/Neighbourhood";
 import { RoomLight } from "./roomlight/RoomLight";
 import { Ceilings } from "./building/Ceilings";
+import { ContactShadows } from "./life/ContactShadows";
+import { Drapes } from "./life/Drapes";
 import { useIdleTicker, usePageVisible } from "./motion";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
@@ -229,6 +231,8 @@ export function SceneRoot(props: RootProps) {
     <>
       <ShadowInvalidator version={version} />
       <RoomLight project={project} floorId={roomLit ? view.walkFloorId! : null} light={light} />
+      {/* Curtains at the windows of lived-in rooms, while standing inside. */}
+      {view.walkFloorId && view.livedIn !== false && <Drapes project={project} floorId={view.walkFloorId} />}
       <SkyDome light={light} clouds={exploring || !!view.world} />
       <Lights indoors={roomLit} light={light} shadowBox={shadowBox} mapSize={size.width < 768 ? spec.shadowMapSizeMobile : spec.shadowMapSize} entrance={entranceWorld} />
       <InteriorContext.Provider value={interior}>
@@ -263,6 +267,9 @@ export function SceneRoot(props: RootProps) {
         />
         {props.ghost && <Ghost project={project} ghost={props.ghost} offset={offset} />}
         {view.walkFloorId && <Ceilings project={project} floorId={view.walkFloorId} glow={light.palette.windowGlow} />}
+        {exploring && vis.stage >= 4 && vis.furnishedFloorId && view.furnishings !== false && (
+          <ContactShadows project={project} floorId={vis.furnishedFloorId} />
+        )}
         <Night light={light} library={library} floors={nightFloors} indoors={!!view.walkFloorId} roomLit={roomLit} />
         {(everyday || diwali) && vis.stage >= 4 && (
           <LivedIn

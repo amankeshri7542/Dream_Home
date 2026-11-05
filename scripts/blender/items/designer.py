@@ -286,14 +286,14 @@ def ceiling_fan(it):
         blade.rot("X", 9.0, (0.0, 0.0, bz))
         blade.rot("Z", a)
         it.add("wood", blade)
-        iron = S.box(6.0, 19.0, -2.2, 2.2, bz - 1.9, bz - 0.5)
+        iron = S.cbox(6.0, 19.0, -1.7, 1.7, bz - 1.5, bz - 0.5, r=0.45)
         iron.rot("Z", a)
         it.add("metal", iron)
     # motor housing with a rounded bottom cap
-    it.lathe("metal", [(0.0, 0.0), (5.0, 0.4), (9.8, 3.2), (11.4, 8.0), (9.6, 12.6), (4.0, 14.6), (0.0, 14.8)], 16)
+    it.lathe("metal", [(0.0, 0.0), (5.0, 0.4), (9.8, 3.2), (11.4, 8.0), (9.6, 12.6), (4.0, 14.6), (0.0, 14.8)], 28)
     # downrod and ceiling canopy
-    it.cyl("metal", 0.0, 0.0, 14.0, h - 3.2, 1.4, sides=6, b=0.0)
-    it.lathe("metal", [(0.0, h - 4.6), (3.0, h - 4.6), (7.0, h - 2.2), (7.4, h), (0.0, h)], 10, sharp=(1, 3))
+    it.cyl("metal", 0.0, 0.0, 14.0, h - 3.2, 1.4, sides=12, b=0.0)
+    it.lathe("metal", [(0.0, h - 4.6), (3.0, h - 4.6), (7.0, h - 2.2), (7.4, h), (0.0, h)], 20, sharp=(1, 3))
 
 
 # ---------------------------------------------------------------------------
@@ -332,17 +332,17 @@ def table_lamp(it):
     w, d, h = it.w, it.d, it.h
     r = w / 2
     # ginger-jar base
-    it.lathe("accent", [(0.0, 0.0), (5.4, 0.0), (9.0, 3.2), (10.6, 8.4), (10.0, 13.8), (7.4, 18.4), (4.4, 21.4), (0.0, 22.0)], 14, sharp=(1,))
+    it.lathe("accent", [(0.0, 0.0), (5.4, 0.0), (9.0, 3.2), (10.6, 8.4), (10.0, 13.8), (7.4, 18.4), (4.4, 21.4), (0.0, 22.0)], 24, sharp=(1,))
     # brass neck
     it.cyl("metal", 0.0, 0.0, 21.0, 36.0, 1.2, sides=6, b=0.0)
     # linen drum shade with a glowing liner and a lit top
     z0, z1 = 29.0, h
     rt = r * 0.8
-    it.lathe("linen", [(r - 0.9, z0), (r, z0), (rt, z1), (rt - 0.9, z1)], 14, sharp=(1, 2))
-    liner = S.lathe([(r - 0.9, z0 + 0.1), (rt - 0.9, z1 - 0.1)], 14)
+    it.lathe("linen", [(r - 0.9, z0), (r, z0), (rt, z1), (rt - 0.9, z1)], 32, sharp=(1, 2))
+    liner = S.lathe([(r - 0.9, z0 + 0.1), (rt - 0.9, z1 - 0.1)], 32)
     liner.flip()
     it.add("glow", liner)
-    it.add("glow", S.panel(S.circle(rt - 1.0, 14), z1 - 4.0, axis="Z", facing=1.0))
+    it.add("glow", S.panel(S.circle(rt - 1.0, 32), z1 - 4.0, axis="Z", facing=1.0))
 
 
 # ---------------------------------------------------------------------------

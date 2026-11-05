@@ -25,7 +25,7 @@
   ],
   "modules": [
     { "id": "fence-panel", "label": "Fence panel", "size": { "w": 200, "d": 8, "h": 120 }, "slots": ["wood", "metal"], "triBudget": 300 },
-    { "id": "gate", "label": "Garden gate", "size": { "w": 110, "d": 8, "h": 120 }, "slots": ["wood", "metal"], "triBudget": 400 },
+    { "id": "gate", "label": "Garden gate", "size": { "w": 110, "d": 8, "h": 120 }, "slots": ["wood", "metal"], "triBudget": 520 },
     { "id": "pool-ladder", "label": "Pool ladder", "size": { "w": 60, "d": 40, "h": 120 }, "slots": ["metal"], "triBudget": 300 },
     { "id": "cloud", "label": "Cloud", "size": { "w": 600, "d": 300, "h": 160 }, "slots": ["linen"], "triBudget": 300 }
   ],

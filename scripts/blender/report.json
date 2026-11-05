@@ -149,8 +149,8 @@
     {
       "id": "gate",
       "kit": "exterior",
-      "tris": 336,
-      "triBudget": 400,
+      "tris": 452,
+      "triBudget": 520,
       "bounds": {
         "w": 110.0,
         "d": 8.0,
@@ -166,13 +166,15 @@
         "metal"
       ],
       "fitScale": [
-        0.9928,
-        1.0,
+        0.9874,
+        1.25,
         1.0
       ],
       "ao": "cycles",
       "errors": [],
-      "warnings": []
+      "warnings": [
+        "fit scale drift 0.987,1.250,1.000"
+      ]
     },
     {
       "id": "hedge-module",
@@ -635,8 +637,8 @@
     {
       "id": "armchair",
       "kit": "interior",
-      "tris": 816,
-      "triBudget": 900,
+      "tris": 1680,
+      "triBudget": 1800,
       "bounds": {
         "w": 85.0,
         "d": 85.0,
@@ -653,8 +655,8 @@
       ],
       "fitScale": [
         1.0,
-        0.9884,
-        1.0084
+        1.0022,
+        1.0138
       ],
       "ao": "cycles",
       "errors": [],
@@ -720,8 +722,8 @@
     {
       "id": "bed-double",
       "kit": "interior",
-      "tris": 1356,
-      "triBudget": 1800,
+      "tris": 2480,
+      "triBudget": 3400,
       "bounds": {
         "w": 160.0,
         "d": 210.0,
@@ -739,7 +741,7 @@
       ],
       "fitScale": [
         1.0,
-        0.9973,
+        1.001,
         1.0
       ],
       "ao": "cycles",
@@ -777,8 +779,8 @@
     {
       "id": "bed-single",
       "kit": "interior",
-      "tris": 1196,
-      "triBudget": 1400,
+      "tris": 2104,
+      "triBudget": 2800,
       "bounds": {
         "w": 100.0,
         "d": 205.0,
@@ -796,7 +798,7 @@
       ],
       "fitScale": [
         1.0,
-        0.9972,
+        1.001,
         1.0
       ],
       "ao": "cycles",
@@ -863,8 +865,8 @@
     {
       "id": "ceiling-fan",
       "kit": "interior",
-      "tris": 484,
-      "triBudget": 500,
+      "tris": 784,
+      "triBudget": 850,
       "bounds": {
         "w": 120.0,
         "d": 120.0,
@@ -1233,8 +1235,8 @@
     {
       "id": "floor-lamp",
       "kit": "interior",
-      "tris": 376,
-      "triBudget": 400,
+      "tris": 896,
+      "triBudget": 1000,
       "bounds": {
         "w": 40.0,
         "d": 40.0,
@@ -1666,8 +1668,8 @@
     {
       "id": "pendant-light",
       "kit": "interior",
-      "tris": 296,
-      "triBudget": 300,
+      "tris": 440,
+      "triBudget": 500,
       "bounds": {
         "w": 45.0,
         "d": 45.0,
@@ -1695,8 +1697,8 @@
     {
       "id": "plant-floor",
       "kit": "interior",
-      "tris": 738,
-      "triBudget": 800,
+      "tris": 924,
+      "triBudget": 1000,
       "bounds": {
         "w": 45.0,
         "d": 45.0,
@@ -1712,42 +1714,44 @@
         "leaf"
       ],
       "fitScale": [
-        0.9675,
-        1.013,
-        1.0224
-      ],
-      "ao": "cycles",
-      "errors": [],
-      "warnings": []
-    },
-    {
-      "id": "plant-small",
-      "kit": "interior",
-      "tris": 292,
-      "triBudget": 300,
-      "bounds": {
-        "w": 30.0,
-        "d": 30.0,
-        "h": 50.0
-      },
-      "size": {
-        "w": 30.0,
-        "d": 30.0,
-        "h": 50.0
-      },
-      "slots": [
-        "terracotta",
-        "leaf"
-      ],
-      "fitScale": [
-        1.1387,
-        1.2269,
-        1.0962
+        0.6697,
+        0.5999,
+        1.1135
       ],
       "ao": "cycles",
       "errors": [],
       "warnings": [
-        "fit scale drift 1.139,1.227,1.096"
+        "fit scale drift 0.670,0.600,1.114"
+      ]
+    },
+    {
+      "id": "plant-small",
+      "kit": "interior",
+      "tris": 380,
+      "triBudget": 450,
+      "bounds": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 50.0
+      },
+      "size": {
+        "w": 30.0,
+        "d": 30.0,
+        "h": 50.0
+      },
+      "slots": [
+        "terracotta",
+        "leaf"
+      ],
+      "fitScale": [
+        1.2821,
+        1.2821,
+        1.0355
+      ],
+      "ao": "cycles",
+      "errors": [],
+      "warnings": [
+        "fit scale drift 1.282,1.282,1.035"
       ]
     },
     {
@@ -1952,8 +1956,8 @@
     {
       "id": "side-table",
       "kit": "interior",
-      "tris": 296,
-      "triBudget": 300,
+      "tris": 620,
+      "triBudget": 700,
       "bounds": {
         "w": 45.0,
         "d": 45.0,
@@ -2036,8 +2040,8 @@
     {
       "id": "sofa-2",
       "kit": "interior",
-      "tris": 1136,
-      "triBudget": 1200,
+      "tris": 2256,
+      "triBudget": 2400,
       "bounds": {
         "w": 160.0,
         "d": 90.0,
@@ -2054,8 +2058,8 @@
       ],
       "fitScale": [
         1.0,
-        0.9891,
-        1.0084
+        1.002,
+        1.0131
       ],
       "ao": "cycles",
       "errors": [],
@@ -2064,8 +2068,8 @@
     {
       "id": "sofa-3",
       "kit": "interior",
-      "tris": 1456,
-      "triBudget": 1500,
+      "tris": 2832,
+      "triBudget": 3000,
       "bounds": {
         "w": 220.0,
         "d": 90.0,
@@ -2082,8 +2086,8 @@
       ],
       "fitScale": [
         1.0,
-        0.9891,
-        1.0084
+        1.002,
+        1.015
       ],
       "ao": "cycles",
       "errors": [],
@@ -2092,8 +2096,8 @@
     {
       "id": "table-lamp",
       "kit": "interior",
-      "tris": 316,
-      "triBudget": 350,
+      "tris": 598,
+      "triBudget": 650,
       "bounds": {
         "w": 30.0,
         "d": 30.0,
@@ -2112,7 +2116,7 @@
       ],
       "fitScale": [
         1.0,
-        1.0257,
+        1.0,
         1.0
       ],
       "ao": "cycles",
@@ -2357,7 +2361,7 @@
   ],
   "kits": {
     "interior": {
-      "bytes": 1288364,
+      "bytes": 1487656,
       "materials": [
         "fabric",
         "linen",
@@ -2376,7 +2380,7 @@
       ],
       "nodes": 216,
       "errors": [],
-      "tris": 32898,
+      "tris": 40134,
       "items": [
         "bed-double",
         "bed-single",
@@ -2441,7 +2445,7 @@
       ]
     },
     "exterior": {
-      "bytes": 490608,
+      "bytes": 497060,
       "materials": [
         "bark",
         "leaf",
@@ -2458,7 +2462,7 @@
       ],
       "nodes": 66,
       "errors": [],
-      "tris": 13344,
+      "tris": 13460,
       "items": [
         "tree-oak",
         "tree-pine",

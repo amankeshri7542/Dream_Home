@@ -49,6 +49,21 @@ def cushion(it, slot, x0, x1, y0, y1, z0, z1, r=6.0, puff=(0.6, 0.8, 2.0), div=(
     return g
 
 
+def wrinkle(g, amp, seed=0.0, scale=1.0):
+    """Gentle cloth folds: long overlapping waves, so bedding and seat cushions
+    stop looking inflated. Works best on a box with a few divisions."""
+    def fold(p):
+        x, y, z = p.x * scale, p.y * scale, p.z * scale
+        w = (
+            math.sin(x * 0.075 + y * 0.041 + seed) * 0.55
+            + math.sin(y * 0.13 - x * 0.05 + seed * 1.7) * 0.3
+            + math.sin(x * 0.21 + y * 0.17 + seed * 2.3) * 0.15
+        )
+        return (p.x, p.y, p.z + amp * w)
+
+    return g.warp(fold).smooth_normals()
+
+
 def book_row(it, slots, x0, x1, y0, y1, z0, hmin, hmax, rng, tmin=2.2, tmax=4.2, lean_last=True, gap=0.0):
     """A row of chunky books cycling through ``slots``. Returns x where it ended."""
     x = x0

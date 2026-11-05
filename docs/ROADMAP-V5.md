@@ -624,3 +624,20 @@ work can resume after any interruption. Update it at the end of every phase.
     - `walkPhysics.test.ts` (+5): big pieces only; pushed out of a piece; stopped by a sofa and sliding along it; room to stand in every room; every room still reachable on foot, walked on a 20 cm grid.
     - `explore.spec.ts`: three walks forward and turning never end up inside a piece.
 - **2026-11-06, the owner's Phase 1.3 (trim):** door architraves now stand 4.5 cm proud of the wall (window ones 2.5 cm), and inside window sill boards are 3.5 cm thick and reach 10 cm into the room, with 5 cm returns. These were 2 cm and 3.5 cm. The 8 cm skirting, full-depth reveal linings and lintels were already there, and the crown moulding came with the false ceiling (1.2). It's all still in the merged joinery bucket, so draw calls don't change.
+- **2026-11-06, the owner's Phase 2 (furniture and props; v6 P1.4 merged in):**
+  - **Surface detail with nothing to download:** `patchMaterial(…, { surface: "cloth" | "wood" | "metal" })`, made in the shader from world position. `parseKit` assigns it by slot (`surfaceOf`): fabric, linen and accent get cloth; wood gets wood; metal gets metal.
+    - Cloth: slubs, a faint weave and a soft sheen at grazing angles.
+    - Wood: streaky grain with darker lines, and roughness that varies with it.
+    - Metal: a brushed look.
+    - Fine detail fades by screen-space derivative, so it never shimmers.
+  - **The Blender kit** (`scripts/blender/items/`, rebuilt with `npm run assets`; interior.glb 395 KB of its 420 KB budget):
+    - Sofas and armchair are tailored: track arms, box cushions with a crown, each a touch different.
+    - The bed has a duvet over the sides with soft folds, the white sheet turned back, and two layers of pillows.
+    - Lamps, the fan and the side table have twice the sides.
+    - Plants: a rubber plant and a snake plant of real leaves, with the money plant in the life kit as the third species.
+    - The garden gate is an Indian mild-steel gate with spear-topped bars, painted through the tintable slot.
+    - Per-piece triangle budgets in the catalogs were raised to fit.
+  - **Lived-in, derived and never saved:**
+    - `src/scene/life/drapePanels.ts` and `Drapes.tsx`: pleated curtains on a bronze rod at the windows of living, dining, bed, study, kids' and guest rooms while walking. One mesh.
+    - `ContactShadows.tsx`: soft-edged shadows under big standing pieces and rugs in Explore. One mesh.
+  - **Tests:** `drapes.test.ts` (5): curtains only in lived-in rooms, rod to floor, one geometry; contact shadows; surface mapping.

@@ -200,34 +200,35 @@ def fence_panel(it):
 
 @builder("gate")
 def gate(it):
+    """A painted mild-steel gate, as Indian compound walls have: square posts,
+    a tube frame, upright bars with spear tips and a solid kick plate. The
+    paint is the tintable "wood" slot, so it takes the site's gate colour."""
     w, d, h = it.w, it.d, it.h
-    hw, hd = w / 2, d / 2
-    post = 6.0
+    hw = w / 2
+    post = 5.0
     for sx in (-1, 1):
         x0, x1 = sorted((sx * hw, sx * (hw - post)))
-        it.cbox("wood", x0, x1, -hd, hd, 0.0, h - 6.0, r=1.0)
-        it.lathe("metal", [(0.0, h - 6.0), (3.2, h - 6.0), (3.4, h - 3.5), (0.0, h)], 8, sharp=(1,), cx=(x0 + x1) / 2)
-    gx0, gx1 = -hw + post + 1.5, hw - post - 1.5
-    n = 5
-    pw = 11.0
-    span = gx1 - gx0
+        it.cbox("wood", x0, x1, -2.5, 2.5, 0.0, h - 2.5, r=0.6)
+        it.cbox("wood", x0 - 0.7, x1 + 0.7, -3.2, 3.2, h - 2.5, h, r=0.5)
+    gx0, gx1 = -hw + post + 1.0, hw - post - 1.0
+    t = 1.8
+    bottom, top = 6.0, h - 16.0
+    mid = bottom + (top - bottom) * 0.42
+    for z0 in (bottom, mid, top - t * 1.4):
+        it.box("wood", gx0, gx1, -t / 2, t / 2, z0, z0 + t * 1.4)
+    for x in (gx0, gx1 - t):
+        it.box("wood", x, x + t, -t / 2, t / 2, bottom, top)
+    # kick plate between the bottom rails
+    it.box("wood", gx0 + t, gx1 - t, -0.3, 0.3, bottom + t, bottom + 22.0)
+    bar = 1.3
+    inner = gx1 - gx0 - 2 * t
+    n = max(4, int(inner / 10.5))
     for k in range(n):
-        x = gx0 + (k + 0.5) * span / n
-        top = h - 14.0 + (8.0 * math.sin(math.pi * (k + 0.5) / n))
-
-        def picket(inset, x=x, top=top):
-            return [(x - pw / 2, 6.0), (x + pw / 2, 6.0), (x + pw / 2, top - 6.0), (x, top), (x - pw / 2, top - 6.0)]
-
-        it.slab("wood", picket, -hd + 0.5, -hd + 3.0, b=0.0, axis="Y")
-    for z in (16.0, h - 40.0):
-        it.box("wood", gx0, gx1, -hd + 3.0, -hd + 6.0, z, z + 8.0)
-    brace = S.box(-1.6 * 0 - 3.5, 3.5, -hd + 3.0, -hd + 6.0, 0.0, math.hypot(span, h - 66.0) - 4.0)
-    ang = math.degrees(math.atan2(span - 6.0, h - 66.0))
-    brace.rot("Y", ang).move(gx0 + 4.0, 0.0, 22.0)
-    it.add("wood", brace)
-    for z in (22.0, h - 34.0):
-        it.box("metal", gx0 - 4.0, gx0 + 9.0, -hd + 2.4, -hd + 3.2, z - 1.5, z + 3.5)
-    it.cbox("metal", gx1 - 6.0, gx1 + 3.0, -hd, -hd + 3.0, h - 50.0, h - 45.0, r=0.8)
+        x = gx0 + t + (k + 0.5) * inner / n
+        it.box("wood", x - bar / 2, x + bar / 2, -bar / 2, bar / 2, bottom + 22.0, top + 6.0)
+        it.lathe("wood", [(0.0, top + 6.0), (1.7, top + 6.0), (0.0, top + 11.5)], 4, sharp=(1,), cx=x, cy=0.0, phase=math.pi / 4)
+    # the latch
+    it.cbox("metal", gx1 - 7.0, gx1 + 2.0, -2.2, 2.2, mid + 6.0, mid + 12.0, r=0.6)
 
 
 @builder("pool-ladder")

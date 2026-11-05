@@ -1,6 +1,7 @@
 """Rugs, mats, plants, lamps and the prayer shrine."""
 
 import math
+import random
 
 from dh import shapes as S
 
@@ -31,53 +32,63 @@ def prayer_mat(it):
     it.add("fabric", panel)
 
 
+def _leaves(it, rng, centre, spread, count, length, width, droop, lift=0.25):
+    """Single leaves round a crown, pointing out and a little up, as a real plant holds them."""
+    cx, cy, cz = centre
+    for _ in range(count):
+        a = rng.uniform(0.0, 2.0 * math.pi)
+        up = rng.uniform(-0.5, 1.0)
+        ring = math.sqrt(max(0.0, 1.0 - up * up))
+        bx = cx + math.cos(a) * ring * spread[0] * rng.uniform(0.45, 1.0)
+        by = cy + math.sin(a) * ring * spread[0] * rng.uniform(0.45, 1.0)
+        bz = cz + up * spread[1] * rng.uniform(0.55, 1.0)
+        ln = length * rng.uniform(0.75, 1.2)
+        tip = (bx + math.cos(a) * ring * ln, by + math.sin(a) * ring * ln, bz + (up * 0.5 + lift) * ln)
+        it.add("leaf", S.leaf_sheet((bx, by, bz), tip, width * rng.uniform(0.8, 1.2), droop=droop * ln, segs=2))
+
+
 @builder("plant-floor")
 def plant_floor(it):
-    """Potted standard tree (ficus-style): slender stem rising out of a
-    terracotta pot into a lush, rounded leafy crown."""
+    """Potted rubber plant: a slender stem, a crown of broad single leaves."""
     w, d, h = it.w, it.d, it.h
-    pot(it, "terracotta", 0.0, 0.0, 0.0, 12.0, 16.5, 34.0, rim=1.6, sides=11)
-    it.tube("terracotta", [(0.0, 0.0, 30.0), (1.5, 0.5, 55.0), (-0.5, 1.0, 72.0), (0.5, 0.0, 86.0)], [1.9, 1.6, 1.4, 1.2], sides=6)
-    crown = [
-        (0.0, 0.0, h - 21.0, 15.5, 14.0),
-        (-11.0, 5.0, h - 30.0, 12.0, 11.0),
-        (11.0, -4.0, h - 31.0, 12.0, 11.0),
-        (3.0, 11.0, h - 34.0, 11.0, 10.0),
-        (-3.0, -11.0, h - 35.0, 11.0, 10.0),
-        (4.0, 2.0, h - 12.5, 11.0, 9.5),
-    ]
-    for (x, y, z, r, rz) in crown:
-        it.blob("leaf", x, y, z, r, r, rz, subdiv=1, jitter=0.08)
-    # a couple of little sprigs on the stem and at the soil
-    it.blob("leaf", 4.0, -1.0, 62.0, 6.0, 5.5, 5.0, subdiv=0, jitter=0.05)
-    it.blob("leaf", -3.5, 1.5, 50.0, 5.0, 5.0, 4.5, subdiv=0, jitter=0.05)
-    it.blob("leaf", 6.0, 6.0, 33.5, 6.5, 6.0, 4.0, subdiv=0, jitter=0.05)
+    rng = random.Random(7)
+    pot(it, "terracotta", 0.0, 0.0, 0.0, 12.0, 16.5, 34.0, rim=1.6, sides=20)
+    it.tube("terracotta", [(0.0, 0.0, 30.0), (1.5, 0.5, 55.0), (-0.5, 1.0, 72.0), (0.5, 0.0, h - 30.0)], [1.7, 1.4, 1.2, 1.0], sides=8)
+    _leaves(it, rng, (0.0, 0.0, h - 30.0), (11.0, 18.0), 64, 11.0, 3.4, 0.24)
+    _leaves(it, rng, (0.5, 0.5, 62.0), (5.0, 12.0), 9, 10.0, 2.8, 0.2)
 
 
 @builder("plant-small")
 def plant_small(it):
+    """A snake plant: stiff sword leaves straight up out of the pot, each a little different."""
     w, d, h = it.w, it.d, it.h
-    pot(it, "terracotta", 0.0, 0.0, 0.0, 8.5, 11.5, 20.0, rim=1.2, sides=8)
-    it.blob("leaf", -2.5, 1.5, h - 15.0, 11.0, 10.5, 11.0, subdiv=1, jitter=0.07)
-    it.blob("leaf", 5.0, -3.5, h - 24.0, 8.5, 8.5, 7.5, subdiv=1, jitter=0.07)
-    it.blob("leaf", -6.5, -5.0, h - 26.0, 5.5, 5.5, 5.0, subdiv=0, jitter=0.05)
+    rng = random.Random(11)
+    pot(it, "terracotta", 0.0, 0.0, 0.0, 8.5, 11.5, 20.0, rim=1.2, sides=16)
+    for k in range(13):
+        a = k * 2.399963 + rng.uniform(-0.2, 0.2)
+        r = rng.uniform(0.5, 5.5)
+        bx, by = math.cos(a) * r, math.sin(a) * r
+        lean = rng.uniform(0.04, 0.22)
+        top = rng.uniform(h - 18.0, h - 1.0)
+        tip = (bx + math.cos(a) * lean * (top - 18.0), by + math.sin(a) * lean * (top - 18.0), top)
+        it.add("leaf", S.leaf_sheet((bx, by, 17.0), tip, rng.uniform(1.8, 2.8), droop=0.0, segs=3, up=(math.cos(a + 1.57), math.sin(a + 1.57), 0.0)))
 
 
 @builder("floor-lamp")
 def floor_lamp(it):
     w, d, h = it.w, it.d, it.h
     r = w / 2
-    it.cyl("metal", 0.0, 0.0, 0.0, 2.4, 15.0, sides=14, b=0.0)
-    it.cyl("metal", 0.0, 0.0, 2.0, h - 30.0, 1.2, sides=8, b=0.0)
+    it.cyl("metal", 0.0, 0.0, 0.0, 2.4, 15.0, sides=28, b=0.5)
+    it.cyl("metal", 0.0, 0.0, 2.0, h - 30.0, 1.2, sides=12, b=0.0)
     z0, z1 = h - 40.0, h
     # drum shade: shell (accent) with a glowing liner and bulb
-    it.lathe("accent", [(r, z0), (r * 0.7, z1), (r * 0.7 - 1.0, z1), (r - 1.0, z0)], 16, closed=True)
-    liner = S.lathe([(r - 1.2, z0 + 0.4), (r * 0.7 - 1.2, z1 - 0.4)], 16)
+    it.lathe("accent", [(r, z0), (r * 0.7, z1), (r * 0.7 - 1.0, z1), (r - 1.0, z0)], 32, closed=True)
+    liner = S.lathe([(r - 1.2, z0 + 0.4), (r * 0.7 - 1.2, z1 - 0.4)], 32)
     liner.flip()
     it.add("glow", liner)
     it.sphere("glow", 0.0, 0.0, z0 + 12.0, 5.0, sides=8, rings=5)
     # top diffuser disc so the glow reads from above
-    it.cyl("glow", 0.0, 0.0, z1 - 6.0, z1 - 5.4, r * 0.7 - 1.5, sides=16, b=0.0)
+    it.cyl("glow", 0.0, 0.0, z1 - 6.0, z1 - 5.4, r * 0.7 - 1.5, sides=32, b=0.0)
 
 
 @builder("pendant-light")
@@ -90,8 +101,8 @@ def pendant_light(it):
     it.cyl("metal", 0.0, 0.0, shade_h - 1.0, h - 2.0, 0.45, sides=6, b=0.0)
     # dome shade: outer (accent), rim, glowing inside
     outer = [(r, 0.0), (r * 0.9, shade_h * 0.45), (r * 0.55, shade_h * 0.86), (2.6, shade_h), (0.0, shade_h)]
-    it.lathe("accent", outer, 12)
-    it.lathe("accent", [(r - 1.4, 0.0), (r, 0.0)], 12)
+    it.lathe("accent", outer, 28)
+    it.lathe("accent", [(r - 1.4, 0.0), (r, 0.0)], 28)
     inner = S.lathe([(r - 1.4, 0.0), (r * 0.9 - 1.4, shade_h * 0.45 - 0.6), (r * 0.55 - 1.2, shade_h * 0.86 - 1.2), (0.0, shade_h - 1.4)], 12)
     inner.flip()
     it.add("glow", inner)

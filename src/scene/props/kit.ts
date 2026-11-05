@@ -14,7 +14,7 @@ import {
   type Object3D,
 } from "three";
 import { ASSET_MANIFEST, type AssetKit } from "../assets/assetManifest";
-import { patchMaterial } from "../materials/patches";
+import { patchMaterial, type Surface } from "../materials/patches";
 
 export type KitPart = { slot: string; geometry: BufferGeometry };
 export type Kit = {
@@ -96,6 +96,14 @@ export function normalise(src: BufferGeometry): BufferGeometry {
   return g;
 }
 
+/** Which close-up detail a kit slot gets (none for glass, glow, leaves, ceramics…). */
+export function surfaceOf(slot: string): Surface | undefined {
+  if (/^(fabric|linen|accent|cushion|rug|soft|velvet)/.test(slot)) return "cloth";
+  if (/^(wood|teak|oak|walnut|timber)/.test(slot)) return "wood";
+  if (/^(metal|steel|brass|chrome)/.test(slot)) return "metal";
+  return undefined;
+}
+
 /** A loaded kit's scene → per-model parts and one material per slot (exported for tests). */
 export function parseKit(name: AssetKit, root: Object3D): Kit {
   root.updateMatrixWorld(true);
@@ -140,7 +148,7 @@ export function parseKit(name: AssetKit, root: Object3D): Kit {
         }
         // Interior furniture and lived-in details are cut with the section;
         // garden models never are.
-        if (name !== "exterior") patchMaterial(m, { clip: true, poche: true, focus: "fade", room: true });
+        if (name !== "exterior") patchMaterial(m, { clip: true, poche: true, focus: "fade", room: true, surface: surfaceOf(slot) });
         materials.set(slot, m);
       }
     });
