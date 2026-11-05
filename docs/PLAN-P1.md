@@ -102,6 +102,7 @@ Smaller adjustments, flagged here rather than made silently:
 |---|---|
 | 1.1 Layered materials | **Done (6 Nov):** `Room.ceiling` (4 finishes, from the Look by default), floor tiles laid from each room's inner corner, roller-scale paint variation, sheen tuned, and the Colours tab shows the Look's choices |
 | 1.2 False ceiling | **Done (6 Nov):** `Room.falseCeiling` (D3 defaults); band, step, cove lip and glow, downlights, rose and crown moulding, in the room light too. Night walk draw calls fell from 143 to 104, because the old fake pools and lamp pool give way to room light |
+| 3.1–3.3 Walk feel | **Done (6 Nov):** speed eases in and out over 0.25 s, head bob of 2.5 cm per 75 cm walked, a run FOV punch from 68 to 78 that settles back to exactly 68; bob and punch are off with reduced motion and on stairs |
 
 ### Order of work
 

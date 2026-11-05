@@ -127,3 +127,42 @@ export function unstick(
     }
   return p;
 }
+
+// ---------------------------------------------------------------------------
+// How walking feels (pure, so it can be tested): a speed that eases in and out,
+// a gentle head bob tied to distance walked, and a small FOV punch when running.
+// ---------------------------------------------------------------------------
+
+/** Seconds from standing to full speed, and back. */
+export const RAMP_SECONDS = 0.25;
+/** Head bob: one cycle every this many cm walked, this many cm up and down. */
+export const BOB_PERIOD = 75;
+export const BOB_AMPLITUDE = 2.5;
+export const WALK_FOV = 68;
+export const RUN_FOV = 78;
+
+/** A 0–1 throttle: towards 1 while moving is wanted, back to 0 after, linearly over RAMP_SECONDS. */
+export function rampThrottle(current: number, held: boolean, dt: number, seconds = RAMP_SECONDS): number {
+  const step = dt / seconds;
+  return held ? Math.min(1, current + step) : Math.max(0, current - step);
+}
+/** The throttle as a speed factor: smooth at both ends, so starts and stops ease. */
+export const throttleSpeed = (t: number) => t * t * (3 - 2 * t);
+
+/** The head bob's height (cm) after walking `distance` cm, scaled by `weight` (0 standing … 1 walking). */
+export function headBob(distance: number, weight: number, period = BOB_PERIOD, amplitude = BOB_AMPLITUDE): number {
+  return Math.sin((distance / period) * Math.PI * 2) * amplitude * weight;
+}
+
+/**
+ * The FOV a frame later: up to RUN_FOV in about 0.3 s when running, back down in
+ * about 0.5 s, easing out; it settles exactly on the target, so it never creeps.
+ */
+export function nextFov(current: number, running: boolean, dt: number): number {
+  const target = running ? RUN_FOV : WALK_FOV;
+  const seconds = running ? 0.3 : 0.5;
+  // Exponential approach: covers ~95% of the way in `seconds`.
+  const k = 1 - Math.exp((-3 * dt) / seconds);
+  const next = current + (target - current) * k;
+  return Math.abs(next - target) < 0.05 ? target : next;
+}

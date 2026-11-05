@@ -69,6 +69,36 @@ test("explore: walk inside with the keyboard and announce the room", async ({ pa
   await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(orbit.fov);
 });
 
+test.describe("walking with motion on", () => {
+  test.use({ reducedMotion: "no-preference" });
+  test("running widens the view, the head bobs, and both settle when you stop", async ({ page }) => {
+    await seed(page, createPreset("compact"));
+    await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+    await explore(page).click();
+    await page.getByRole("radio", { name: /Walk inside/ }).click();
+    await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(68);
+    await page.locator("canvas").first().focus();
+    await page.keyboard.down("Shift");
+    await page.keyboard.down("w");
+    // While running: a wider view, and the eye height moves with each stride.
+    const heights: number[] = [];
+    let widest = 68;
+    for (let i = 0; i < 10; i++) {
+      await page.waitForTimeout(60);
+      const cam = await bridge(page, (dh) => dh.camera());
+      heights.push(cam.position[1]);
+      widest = Math.max(widest, cam.fov);
+    }
+    await page.keyboard.up("w");
+    await page.keyboard.up("Shift");
+    expect(widest).toBeGreaterThan(71);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(0.004);
+    // Then it settles exactly, and the scene goes idle again.
+    await expect.poll(() => bridge(page, (dh) => dh.camera().fov), { timeout: 5000 }).toBe(68);
+    await bridge(page, (dh) => dh.waitForIdle());
+  });
+});
+
 test("explore: every choice fits a phone and the camera opens the photo studio", async ({ page }) => {
   await page.setViewportSize(mobile);
   await seed(page, createPreset("compact"));

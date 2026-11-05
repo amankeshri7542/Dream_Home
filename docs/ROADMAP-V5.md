@@ -604,3 +604,11 @@ work can resume after any interruption. Update it at the end of every phase.
     - `src/domain/ceiling.test.ts` (4): defaults by Look, set/clear/save, lenient share parsing.
     - `src/scene/building/geometry/ceiling.test.ts` (5): inside the room, clears every opening, narrow rooms, off, buckets.
     - `modes.spec.ts`: ceiling swatch, switch, undo. `interiors.spec.ts`: ceilings while walking.
+- **2026-11-06, the owner's Phase 3.1–3.3 (how walking feels):**
+  - **Pure helpers in `src/explore/walkPhysics.ts`:** `rampThrottle` and `throttleSpeed` (0.25 s, smooth at both ends), `headBob` (2.5 cm every 75 cm walked) and `nextFov` (68 → 78 in about 0.3 s, back in about 0.5 s, snapping to exactly 68). `WALK_FOV` now lives there.
+  - **`Walkthrough.tsx`:**
+    - It moves along the last direction asked for, at the ramped speed, so starts and stops ease. Tap-to-walk slows over the last stride.
+    - The bob goes on the camera only, never the position used for collisions, and stops on stairs.
+    - The scene keeps asking for frames only until the bob and FOV settle, so it goes idle as before.
+    - Reduced motion turns the bob and FOV punch off.
+  - **Tests:** `walkPhysics.test.ts` (+3: ramp, bob, FOV). `explore.spec.ts` adds a motion-on test: running widens the view past 71°, the eye height moves, then it settles to 68 and goes idle. The browser suite runs with reduced motion, so this test opts out.

@@ -7,7 +7,7 @@ import { inside } from "../domain/geometry";
 import { deriveFloorVoids } from "../domain/core";
 import type { Project } from "../domain/types";
 import { floorBaseY, plotToWorld, rayToPlot } from "../editor/spatial";
-import { EYE_HEIGHT, buildColliders, moveVisitor, unstick } from "./walkPhysics";
+import { EYE_HEIGHT, WALK_FOV, buildColliders, headBob, moveVisitor, nextFov, rampThrottle, throttleSpeed, unstick } from "./walkPhysics";
 import { walkInput } from "./walkInput";
 import { roomLightUniforms } from "../scene/roomlight/uniforms";
 
@@ -25,7 +25,6 @@ type Props = {
   onStatus?: (status: { floorId: string; roomId: string | null }) => void;
 };
 
-const WALK_FOV = 68;
 const SPEED = 140; // cm per second
 const TURN = 1.8; // radians per second
 
@@ -181,6 +180,14 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
   }, [gl, camera, invalidate, project]);
 
   const euler = useMemo(() => new Euler(0, 0, 0, "YXZ"), []);
+  // How it feels: the speed ramps in and out along the last direction asked
+  // for, the head bobs with distance walked, and the view widens when running.
+  const throttle = useRef(0);
+  const heading = useRef({ x: 0, z: 0 });
+  const running = useRef(false);
+  const walked = useRef(0);
+  const bob = useRef(0);
+  const fov = useRef(WALK_FOV);
   useFrame((_state, rawDt) => {
     const dt = Math.min(0.05, rawDt);
     const k = keys.current;
@@ -198,28 +205,25 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     let floor = project.floors[floorIndex.current];
     let moving = forward !== 0 || strafe !== 0 || turn !== 0;
     let delta = { x: 0, z: 0 };
-    const speed = SPEED * (run ? 2 : 1) * dt;
+    const speed = SPEED * (running.current ? 2 : 1) * dt;
+    // Where the visitor wants to go this frame: a unit direction and how much (0–1), or nothing.
+    let wish: { x: number; z: number; amount: number } | null = null;
     if (forward || strafe) {
       const sin = Math.sin(yaw.current),
         cos = Math.cos(yaw.current);
       // yaw = π faces −z (north). Forward vector in plot space:
-      delta = {
-        x: (-sin * forward + cos * strafe) * speed,
-        z: (-cos * forward - sin * strafe) * speed,
-      };
-      const len = Math.hypot(delta.x, delta.z);
-      if (len > speed) {
-        delta.x *= speed / len;
-        delta.z *= speed / len;
-      }
+      const x = -sin * forward + cos * strafe,
+        z = -cos * forward - sin * strafe;
+      const len = Math.hypot(x, z);
+      wish = { x: x / len, z: z / len, amount: Math.min(1, len) };
     } else if (target.current) {
       const dx = target.current.x - pos.current.x,
         dz = target.current.z - pos.current.z;
       const dist = Math.hypot(dx, dz);
       if (dist < 8) target.current = null;
       else {
-        const step = Math.min(dist, speed);
-        delta = { x: (dx / dist) * step, z: (dz / dist) * step };
+        // Slow down over the last stride rather than stopping dead.
+        wish = { x: dx / dist, z: dz / dist, amount: Math.min(1, dist / 40) };
         const desired = Math.atan2(-dx, -dz);
         let diff = desired - yaw.current;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -227,6 +231,16 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
         moving = true;
       }
     }
+    if (wish) {
+      heading.current = { x: wish.x * wish.amount, z: wish.z * wish.amount };
+      running.current = run;
+    }
+    throttle.current = rampThrottle(throttle.current, !!wish, dt);
+    if (throttle.current > 0) {
+      const k = speed * throttleSpeed(throttle.current);
+      delta = { x: heading.current.x * k, z: heading.current.z * k };
+      moving = true;
+    } else running.current = false;
     if (delta.x || delta.z) {
       const next = moveVisitor(pos.current, delta, colliders[floorIndex.current]);
       // Blocked: barely moved compared with the step asked for. (Comparing with
@@ -235,6 +249,7 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
         moved = Math.hypot(next.x - pos.current.x, next.z - pos.current.z);
       if (target.current && wanted > 0.5 && moved < wanted * 0.2) target.current = null;
       pos.current = next;
+      walked.current += moved;
     }
     // Floor changes: walking onto stairs, or the HUD's up/down buttons.
     const requested = walkInput.floorRequestId !== lastFloorRequest.current;
@@ -273,8 +288,22 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     const ease = reducedMotion ? 1 : Math.min(1, dt * 6);
     eye.current += (want - eye.current) * ease;
     if (Math.abs(want - eye.current) > 0.002) moving = true;
-    const world = plotToWorld(project.plot, pos.current.x, pos.current.z, eye.current);
+    // Head bob while walking on the level (not on stairs, never with reduced motion).
+    const onStairs = Math.abs(want - eye.current) > 0.01;
+    const stepping = throttle.current > 0.05 && !onStairs && !reducedMotion;
+    bob.current += ((stepping ? 1 : 0) - bob.current) * Math.min(1, dt * 6);
+    if (bob.current < 0.002 && !stepping) bob.current = 0;
+    const world = plotToWorld(project.plot, pos.current.x, pos.current.z, eye.current + headBob(walked.current, bob.current) / 100);
     camera.position.copy(world);
+    // Running widens the view a little, then settles back to exactly the walking FOV.
+    const nextView = reducedMotion ? WALK_FOV : nextFov(fov.current, running.current && throttle.current > 0.5, dt);
+    if (nextView !== fov.current) {
+      fov.current = nextView;
+      (camera as PerspectiveCamera).fov = nextView;
+      (camera as PerspectiveCamera).updateProjectionMatrix();
+      moving = true;
+    }
+    if (bob.current > 0) moving = true;
     if (lamp.current) {
       lamp.current.position.set(world.x, eye.current + 0.9, world.z);
       // The room light has the home's own lamps in it; this is only for when it's off.
