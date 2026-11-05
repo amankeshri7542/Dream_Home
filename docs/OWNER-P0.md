@@ -4,6 +4,14 @@ From [`COMPETITIVE-V6.md`](COMPETITIVE-V6.md). Three jobs, in this order. The ph
 
 ## 1. Switch the loop on (P0.1)
 
+**Done on 5 Nov at your word, except one thing only you can do:**
+
+- **Claim the Redis database by 8 Nov 2026,** or it's deleted and sharing goes off. Open the claim link (it's on the first lines of `.env.production.local` on your Mac, and in the agent's message), sign in to Upstash or create a free account, and press **Claim**. Nothing else changes: same address, same token.
+- **Or, for the long run, use Upstash through Vercel instead:** Vercel → Storage → Upstash for Redis → Free, accept the terms, connect it to dream-home. That replaces `KV_REST_API_URL` and `KV_REST_API_TOKEN` itself; then redeploy. Share records in the old database stay behind, so do it before many links are shared.
+- **Rotate `ADMIN_TOKEN` when convenient,** as you planned: it was pasted into a chat. Make a new one with the command below, then Vercel → Settings → Environment Variables → `ADMIN_TOKEN` → Edit, and redeploy.
+
+The steps below are how it was done, for reference.
+
 In Vercel, on the Dream Home project:
 
 1. **Storage → connect Upstash Redis (KV).** It adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`. Limits, the AI budget and share records live here.

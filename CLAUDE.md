@@ -12,7 +12,7 @@ furniture modelled in Blender.
 
 ## Start here
 - **Current work:** [`docs/PLAN-V5.md`](docs/PLAN-V5.md) is the v5 plan, and [`docs/ROADMAP-V5.md`](docs/ROADMAP-V5.md) has progress, decisions and **Resume here**. Read both before changing anything.
-- **What's next:** [`docs/COMPETITIVE-V6.md`](docs/COMPETITIVE-V6.md) is the proposed v6 plan. Its P0 is under way; [`docs/OWNER-P0.md`](docs/OWNER-P0.md) lists what only the owner can do.
+- **What's next:** [`docs/COMPETITIVE-V6.md`](docs/COMPETITIVE-V6.md) is the proposed v6 plan. Its P0 is under way; [`docs/OWNER-P0.md`](docs/OWNER-P0.md) lists what only the owner can do. P1's working plan, status and the owner's newer phases are in [`docs/PLAN-P1.md`](docs/PLAN-P1.md).
 - **How the app works today:** `README.md`, plus `docs/ROADMAP-V4.md` (Home → Room studio, doors, designer interiors).
 
 ## How we work
@@ -104,6 +104,8 @@ git diff --check
   - Lived-in details are derived, never saved: `livedInDecor` (`src/domain/livedIn.ts`) places them, `src/scene/life/LivedIn.tsx` draws them in Explore and Photo only. Their models come from `public/models/life.glb` (sizes in `src/domain/catalog/life.json`).
   - Idle animation goes through the gate in `SceneRoot` and `useIdleTicker` (`src/scene/motion.ts`) and reads the store's shared clock (`store.time()`).
   - GLTFLoader strips `:` from node names; read kit names with `gltfName()` (`src/scene/props/kit.ts`).
+- **Room light** (`src/scene/roomlight/`): `solve.ts` and `input.ts` are pure: each room's light, worked out exactly for boxes with rectangular openings, into a 3D grid. `uniforms.ts` is the one permanent shader path (`patchMaterial(m, { room: true })`), switched by `uRoomOn`. It's on only while walking (`view.walkFloorId`) and never on battery; then the shadowless fill light, the lamp pool and the walker's lamp step aside. A new interior material needs `room: true`.
+- **The street outside** (`src/scene/world/`): `streetPlan.ts` is pure and seeded by the plot. It shows when a view sets `world: true` (Walk, the bench), or when an Explore camera is low and on the plot or its road; Home, Room and Build keep the plinth.
 - **Feedback:** `feedback.pop() / click() / error() / success()` from `src/ui/feedback.ts` play soft generated sounds and vibration. `run()` already calls them for edits.
 - **Server (`server/`):**
   - Every `/api/*` request goes through `server/router.ts`. Handlers take `(request, env, deps)` so tests inject a fake Claude and store.
@@ -127,7 +129,7 @@ git diff --check
 | `src/domain/` | the home model, validation, rooms/doors/furniture commands, materials and looks, advice/checklist |
 | `src/editor/` | the reducer, provider (undo/redo, `run`), preferences, selection actions |
 | `src/shell/` | app chrome: Home bar, Room Studio (`studio/`), inspectors, dialogs, checklist |
-| `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge; `life/` draws lived-in details |
+| `src/scene/` | the 3D renderer: camera rig, materials and shader patches, building geometry, props, lighting, effects, debug bridge; `life/` draws lived-in details; `roomlight/` lights rooms from inside; `world/` is the street round the plot |
 | `src/photo/` | Photo mode: the studio, the offline renderer, framing, moods |
 | `src/reel/` | the "My dream home" reel: studio, shot list, filming, compositor, music, QR end card |
 | `src/insights/` | cities, the real sun, sunlight per room, Vastu, the Home score and badges; the Sunlight sheet and pickers |

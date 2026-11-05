@@ -143,22 +143,47 @@ const boardConcrete: Gen = (u, v, base, [w, h]) => {
   if (d < 0.013) return { c: mul(base, 0.55), h: 0.1, r: 0.95 };
   return { c, h: hh, r: 0.86 };
 };
+/**
+ * Boards laid in long random-length runs. Each board is its own piece of wood:
+ * slight tone change, long streaky grain, the odd cathedral arch, and a thin
+ * eased edge rather than a dark line drawn around it.
+ */
 const planks: Gen = (u, v, base, [w, h]) => {
   const x = u * w,
     y = v * h;
-  const rows = Math.round(h / 0.18);
-  const row = Math.floor((y / h) * rows);
-  const fy = (y / h) * rows - row;
-  const off = Math.floor(hash2(row, 0, 23) * 4) * 0.3;
-  const xs = frac((x + off) / 1.2);
-  const plank = Math.floor((x + off) / 1.2);
-  const grain = anis(u, v, 2, 64, 4, 29 + row);
-  const fine = anis(u, v, 8, 128, 2, 31);
-  let c = jitter(base, row, plank, 0.22);
-  c = mul(c, 0.85 + (grain - 0.5) * 0.4 + (fine - 0.5) * 0.08);
-  const joint = fy < 0.025 || fy > 0.975 || xs < 0.004 || xs > 0.996;
-  if (joint) return { c: mul(base, 0.5), h: 0.15, r: 0.8 };
-  return { c, h: 0.6 + (grain - 0.5) * 0.15, r: 0.6 + (fine - 0.5) * 0.15 };
+  const rows = Math.round(h / 0.144);
+  const rowF = (y / h) * rows;
+  const row = Math.floor(rowF);
+  const fy = rowF - row;
+  // Lengths come from a whole number of cuts per tile, so the tile still repeats cleanly.
+  const cuts = 2 + Math.floor(hash2(row, 1, 23) * 2);
+  const shift = hash2(row, 0, 23) * w;
+  const along = frac((x + shift) / w) * cuts;
+  const board = Math.floor(along);
+  const fx = along - board;
+  const length = w / cuts;
+  const id = row * 7 + board;
+  const edgeY = Math.min(fy, 1 - fy) * (h / rows);
+  const edgeX = Math.min(fx, 1 - fx) * length;
+  const edge = Math.min(edgeX, edgeY);
+  // Grain runs along the board and is different in each one.
+  const seed = 29 + id * 13;
+  const streak = anis(u, v, 2, 40, 4, seed);
+  const fine = anis(u, v, 6, 160, 2, seed + 3);
+  const lx = fx - 0.5,
+    ly = fy - 0.5 + (hash2(id, 3, 23) - 0.5) * 0.6;
+  const rings = Math.sin((Math.hypot(lx * 0.42, ly * 2.4) * 34 + streak * 7 + hash2(id, 5, 23) * 6) * 1.2);
+  const cathedral = hash2(id, 7, 23) > 0.55 ? rings * 0.5 + 0.5 : 0.5;
+  const tone = 1 + (hash2(id, 11, 23) - 0.5) * 0.11;
+  const warm = (hash2(id, 13, 23) - 0.5) * 0.035;
+  const k = tone * (0.93 + (streak - 0.5) * 0.3 + (fine - 0.5) * 0.11 + (cathedral - 0.5) * 0.09);
+  const c: C3 = [base[0] * k * (1 + warm), base[1] * k, base[2] * k * (1 - warm)];
+  const ease = smooth(0.0006, 0.0028, edge);
+  return {
+    c: mul(c, 0.68 + 0.32 * ease),
+    h: 0.28 + ease * 0.34 + (streak - 0.5) * 0.08,
+    r: 0.6 + (fine - 0.5) * 0.16 + (1 - ease) * 0.2,
+  };
 };
 const herringbone: Gen = (u, v, base) => {
   const colW = 0.25;
@@ -196,43 +221,98 @@ const CHIPS: C3[] = [
   [0.44, 0.42, 0.39],
   [0.6, 0.66, 0.62],
 ];
-const terrazzo: Gen = (u, v, base) => {
-  const N = 48;
+/**
+ * Terrazzo that sits quietly under a room: packed broken stone in cement,
+ * most of it close to the floor's own colour, a little darker and a little
+ * terracotta, with the thin divider strip Indian mosaic floors have.
+ */
+const terrazzo: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const n = fbm(u, v, 4, 3, 57);
+  if (gridEdge(x, y, 1.2) < 0.0022) return { c: mix(base, [0.62, 0.52, 0.38], 0.55), h: 0.62, r: 0.28 };
+  // Nearest two stones (a Worley pattern): the gap between them is the cement.
+  const N = 190;
   const cx = u * N,
     cy = v * N;
   const ix = Math.floor(cx),
     iy = Math.floor(cy);
-  let chip: C3 | null = null;
-  for (let dy = -1; dy <= 1 && !chip; dy++)
-    for (let dx = -1; dx <= 1 && !chip; dx++) {
+  let d1 = 9,
+    d2 = 9,
+    idx = 0,
+    idy = 0;
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
       const gx = (((ix + dx) % N) + N) % N,
         gy = (((iy + dy) % N) + N) % N;
-      if (hash2(gx, gy, 51) < 0.42) continue;
-      const px = ix + dx + 0.2 + hash2(gx, gy, 52) * 0.6,
-        py = iy + dy + 0.2 + hash2(gx, gy, 53) * 0.6;
-      const r = 0.22 + hash2(gx, gy, 54) * 0.35;
-      const ddx = cx - px,
-        ddy = cy - py;
-      const ang = hash2(gx, gy, 55) * Math.PI;
-      const rx = ddx * Math.cos(ang) + ddy * Math.sin(ang),
-        ry = -ddx * Math.sin(ang) + ddy * Math.cos(ang);
-      if (Math.abs(rx) + Math.abs(ry) * 1.3 < r) chip = CHIPS[Math.floor(hash2(gx, gy, 56) * CHIPS.length)];
+      const px = ix + dx + hash2(gx, gy, 52),
+        py = iy + dy + hash2(gx, gy, 53);
+      const d = Math.hypot(cx - px, cy - py);
+      if (d < d1) {
+        d2 = d1;
+        d1 = d;
+        idx = gx;
+        idy = gy;
+      } else if (d < d2) d2 = d;
     }
-  const n = fbm(u, v, 16, 2, 57);
-  if (chip) return { c: mul(chip, 0.95 + (n - 0.5) * 0.1), h: 0.55, r: 0.3 };
-  return { c: mul(base, 0.97 + (n - 0.5) * 0.06), h: 0.5, r: 0.34 };
+  const pick = hash2(idx, idy, 56);
+  const stone: C3 =
+    pick < 0.7 ? mul(base, 0.97 + hash2(idx, idy, 57) * 0.07) : pick < 0.87 ? mul(base, 0.87) : pick < 0.94 ? mix(base, CHIPS[0], 0.4) : pick < 0.98 ? mix(base, CHIPS[3], 0.16) : mul(base, 0.72);
+  const gap = smooth(0.05, 0.13, d2 - d1);
+  const cement = mul(base, 0.93);
+  const c = mix(cement, stone, gap);
+  return { c: mul(c, 0.99 + (n - 0.5) * 0.05), h: 0.48 + gap * 0.06, r: 0.34 - gap * 0.05 };
 };
-const marble: Gen = (u, v, base) => {
-  const w = fbm(u, v, 3, 5, 61);
-  const val = Math.abs(Math.sin((2 * u + 2 * v + w * 2.4) * Math.PI * 2));
-  const vein = Math.pow(1 - val, 10) * 0.8 + Math.pow(1 - Math.abs(Math.sin((u * 4 - v * 2 + w * 3) * Math.PI)), 30) * 0.4;
-  const veinColor: C3 = [0.6, 0.58, 0.56];
-  const x = u * 2,
-    y = v * 2;
-  const seam = Math.min(frac(x), 1 - frac(x), frac(y), 1 - frac(y)) < 0.004;
-  let c = mix(mul(base, 0.97 + (w - 0.5) * 0.06), veinColor, sat(vein));
-  if (seam) c = mul(c, 0.86);
-  return { c, h: seam ? 0.3 : 0.6, r: 0.18 + vein * 0.1 };
+/**
+ * Polished marble, slab by slab. Veins drift across a slab in one direction
+ * and fade in and out, so they read as stone and don't close up into the
+ * contour lines plain noise makes. A soft cloud sits underneath.
+ */
+const SLAB = 0.6;
+const marble: Gen = (u, v, base, [w, h]) => {
+  const x = u * w,
+    y = v * h;
+  const col = Math.floor(x / SLAB),
+    row = Math.floor(y / SLAB);
+  const seam = gridEdge(x, y, SLAB);
+  const seed = col * 19 + row * 41;
+  // Each slab is its own cut of the block: its own offset, and a direction close to its neighbours'.
+  const ox = hash2(col, row, 61) * 37,
+    oy = hash2(col, row, 62) * 37;
+  const angle = 0.72 + (hash2(col, row, 63) - 0.5) * 0.7;
+  const px = x / SLAB + ox,
+    py = y / SLAB + oy;
+  const n = (fx: number, fy: number, oct: number, s: number) => {
+    let sum = 0,
+      amp = 1,
+      norm = 0;
+    for (let i = 0; i < oct; i++) {
+      sum += amp * periodicNoise(fx, fy, 4096, 4096, s + i * 17);
+      norm += amp;
+      amp *= 0.5;
+      fx *= 2.03;
+      fy *= 2.03;
+    }
+    return sum / norm;
+  };
+  const cloud = n(px * 1.4, py * 1.4, 4, 64);
+  const warp = n(px * 0.9, py * 0.9, 3, 65) - 0.5;
+  const warpFine = n(px * 3.2, py * 3.2, 3, 66) - 0.5;
+  const along = px * Math.cos(angle) + py * Math.sin(angle);
+  // One soft main vein family, and thin lines that branch off it.
+  const main = Math.abs(Math.sin((along * 1.35 + warp * 1.25 + warpFine * 0.22) * Math.PI));
+  const hair = Math.abs(Math.sin((along * 3.1 - py * 0.8 + warp * 1.9 + warpFine * 0.55) * Math.PI));
+  const fade = smooth(0.42, 0.68, n(px * 0.7 + 9, py * 0.7 + 3, 2, 67));
+  const fadeHair = smooth(0.48, 0.72, n(px * 1.3 + 2, py * 1.3 + 7, 2, 68));
+  const soft = Math.pow(1 - main, 7) * 0.52 * (0.25 + 0.75 * fade);
+  const thin = Math.pow(1 - hair, 30) * 0.3 * fadeHair;
+  const vein = sat(soft + thin);
+  const grey: C3 = [base[0] * 0.66, base[1] * 0.65, base[2] * 0.67];
+  const tone = 1 + (hash2(seed, 1, 69) - 0.5) * 0.028;
+  const body = mul(base, tone * (0.975 + (cloud - 0.5) * 0.085));
+  const c = mix(body, grey, vein);
+  const edge = smooth(0.0007, 0.0024, seam);
+  return { c: mul(c, 0.84 + 0.16 * edge), h: 0.32 + edge * 0.3, r: 0.17 + vein * 0.1 + (1 - edge) * 0.4 };
 };
 const limestone: Gen = (u, v, base, [w, h]) => {
   const b = blocks(u * w, v * h, 0.6, 0.4, 2, 3);
@@ -562,18 +642,22 @@ const fairFaced: Gen = (u, v, base, [w, h]) => {
   if (Math.hypot((tx > 0.5 ? tx - 1 : tx) * 0.6, (ty > 0.5 ? ty - 1 : ty) * 0.6) < 0.012) return { c: mul(base, 0.5), h: 0.1, r: 0.95 };
   return { c, h: hh, r: 0.8 };
 };
-/** Vitrified tiles: large (80 cm) glossy porcelain with faint veining. */
+/** Vitrified tiles: large (80 cm) glossy porcelain, each printed slightly differently. */
 const vitrified: Gen = (u, v, base, [w, h]) => {
   const x = u * w,
     y = v * h;
   const s = 0.8;
-  if (gridEdge(x, y, s) < 0.0016) return { c: mul(base, 0.8), h: 0.25, r: 0.6 };
+  const seam = gridEdge(x, y, s);
   const col = Math.floor(x / s),
     row = Math.floor(y / s);
-  const warp = fbm(u, v, 2, 4, 321);
-  const vein = Math.pow(1 - Math.abs(Math.sin((u * 2 + v + warp * 1.6) * Math.PI * 2)), 14) * 0.25;
-  const c = mix(mul(jitter(base, row, col, 0.03), 0.98 + (warp - 0.5) * 0.04), mul(base, 0.82), vein);
-  return { c, h: 0.55, r: 0.14 + vein * 0.1 };
+  const px = x / s + hash2(col, row, 321) * 29,
+    py = y / s + hash2(col, row, 322) * 29;
+  const warp = periodicNoise(px * 1.1, py * 1.1, 4096, 4096, 323) * 0.7 + periodicNoise(px * 2.9, py * 2.9, 4096, 4096, 324) * 0.3;
+  const cloud = periodicNoise(px * 1.6, py * 1.6, 4096, 4096, 325);
+  const vein = Math.pow(1 - Math.abs(Math.sin((px * 0.8 + py * 0.55 + warp * 1.2) * Math.PI)), 12) * 0.16;
+  const c = mix(mul(jitter(base, row, col, 0.022), 0.985 + (cloud - 0.5) * 0.035), mul(base, 0.84), vein);
+  const edge = smooth(0.0006, 0.002, seam);
+  return { c: mul(c, 0.82 + 0.18 * edge), h: 0.3 + edge * 0.28, r: 0.14 + vein * 0.08 + (1 - edge) * 0.45 };
 };
 
 const GENERATORS: Record<TextureKind, Gen> = {
@@ -630,42 +714,48 @@ export function sampleTexture(kind: TextureKind, baseHex: string, tile: [number,
   return GENERATORS[kind](u, v, hexToSrgb(baseHex), tile);
 }
 
-/** Generate (uncached) colour + detail textures for a kind. */
-export function generateTextures(
-  kind: TextureKind,
-  baseHex: string,
-  tile: [number, number],
-  size: number,
-  anisotropy: number,
-): TexturePair {
-  const gen = GENERATORS[kind];
-  const base = hexToSrgb(baseHex);
-  let roughness = 0;
+type Canvases = {
+  cctx: CanvasRenderingContext2D;
+  dctx: CanvasRenderingContext2D;
+  cimg: ImageData;
+  dimg: ImageData;
+  colorCanvas: HTMLCanvasElement;
+  detailCanvas: HTMLCanvasElement;
+};
+function canvases(size: number): Canvases {
   const colorCanvas = document.createElement("canvas"),
     detailCanvas = document.createElement("canvas");
   colorCanvas.width = colorCanvas.height = detailCanvas.width = detailCanvas.height = size;
   const cctx = colorCanvas.getContext("2d")!,
     dctx = detailCanvas.getContext("2d")!;
-  const cimg = cctx.createImageData(size, size),
-    dimg = dctx.createImageData(size, size);
-  for (let py = 0; py < size; py++) {
+  return { cctx, dctx, cimg: cctx.createImageData(size, size), dimg: dctx.createImageData(size, size), colorCanvas, detailCanvas };
+}
+/** Fills rows [from, to) and returns their summed roughness. */
+function fillRows(kind: TextureKind, base: C3, tile: [number, number], size: number, c: Canvases, from: number, to: number) {
+  const gen = GENERATORS[kind];
+  let roughness = 0;
+  for (let py = from; py < to; py++) {
     // Canvas row 0 is the top; textures flip Y, so v = 1 − row.
     const v = 1 - (py + 0.5) / size;
     for (let px = 0; px < size; px++) {
       const u = (px + 0.5) / size;
       const s = gen(u, v, base, tile);
       const i = (py * size + px) * 4;
-      cimg.data[i] = sat(s.c[0]) * 255;
-      cimg.data[i + 1] = sat(s.c[1]) * 255;
-      cimg.data[i + 2] = sat(s.c[2]) * 255;
-      cimg.data[i + 3] = 255;
-      dimg.data[i] = sat(s.h) * 255;
-      dimg.data[i + 1] = sat(s.r) * 255;
+      c.cimg.data[i] = sat(s.c[0]) * 255;
+      c.cimg.data[i + 1] = sat(s.c[1]) * 255;
+      c.cimg.data[i + 2] = sat(s.c[2]) * 255;
+      c.cimg.data[i + 3] = 255;
+      c.dimg.data[i] = sat(s.h) * 255;
+      c.dimg.data[i + 1] = sat(s.r) * 255;
       roughness += sat(s.r);
-      dimg.data[i + 2] = 0;
-      dimg.data[i + 3] = 255;
+      c.dimg.data[i + 2] = 0;
+      c.dimg.data[i + 3] = 255;
     }
   }
+  return roughness;
+}
+function finishPair(c: Canvases, tile: [number, number], size: number, anisotropy: number, roughness: number): TexturePair {
+  const { cctx, dctx, cimg, dimg, colorCanvas, detailCanvas } = c;
   cctx.putImageData(cimg, 0, 0);
   dctx.putImageData(dimg, 0, 0);
   const map = new CanvasTexture(colorCanvas),
@@ -678,6 +768,48 @@ export function generateTextures(
     t.repeat.set(1 / tile[0], 1 / tile[1]);
   }
   return { map, detail, meanRoughness: roughness / (size * size) };
+}
+
+
+/** Generate (uncached) colour + detail textures for a kind. */
+export function generateTextures(
+  kind: TextureKind,
+  baseHex: string,
+  tile: [number, number],
+  size: number,
+  anisotropy: number,
+): TexturePair {
+  const c = canvases(size);
+  const roughness = fillRows(kind, hexToSrgb(baseHex), tile, size, c, 0, size);
+  return finishPair(c, tile, size, anisotropy, roughness);
+}
+
+/**
+ * The same textures, made a few rows at a time between frames, so a big floor
+ * texture never freezes the page (a 1024 px floor takes about 300 ms on a Mac).
+ */
+export async function generateTexturesSliced(
+  kind: TextureKind,
+  baseHex: string,
+  tile: [number, number],
+  size: number,
+  anisotropy: number,
+  budgetMs = 6,
+): Promise<TexturePair> {
+  const c = canvases(size);
+  const base = hexToSrgb(baseHex);
+  let roughness = 0;
+  let row = 0;
+  while (row < size) {
+    const started = performance.now();
+    while (row < size && performance.now() - started < budgetMs) {
+      const next = Math.min(size, row + 8);
+      roughness += fillRows(kind, base, tile, size, c, row, next);
+      row = next;
+    }
+    if (row < size) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+  return finishPair(c, tile, size, anisotropy, roughness);
 }
 
 /** A 1D falloff used as alphaMap for fake-AO strips and blob shadows. */

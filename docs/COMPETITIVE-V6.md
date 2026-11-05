@@ -209,7 +209,7 @@ Why this order: being switched off and looking like a toy both hurt most and are
 
 | Item | State |
 |---|---|
-| P0.1 Turn the loop on | Waiting on the owner |
+| P0.1 Turn the loop on | Live since 5 Nov (KV, Blob, admin token). The owner must claim the Redis database by 8 Nov |
 | P0.2 Real-phone numbers | Meter and steps ready; waiting on the owner and a deploy |
 | P0.3 Plan accuracy baseline | Scorer built and tested. Free ceiling in [`eval/reports/`](../eval/reports/ceiling-2026-11-03.md). **The real baseline needs plans and approval to spend** |
 | P0.4 Real-look bench | Done: [`baseline`](screenshots/bench/baseline/) and its [ranked gaps](screenshots/bench/baseline/GAPS.md) |
@@ -252,6 +252,8 @@ Why this order: being switched off and looking like a toy both hurt most and are
 - **Done when:** remixes per share can be read daily.
 
 ### P1: Real at eye level
+
+**Status (6 Nov 2026):** P1.7, P1.1 and P1.3 are built. P1 is paused while the owner's new phases are merged in. See [`PLAN-P1.md`](PLAN-P1.md).
 
 **P1.1 The world doesn't end at the wall** · S–M · Low risk
 - **You see:** in Walk, street-level Photo and Reel, windows look out on neighbouring homes, trees and sky instead of fog. Home and Room keep the clean plinth.

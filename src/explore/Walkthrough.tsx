@@ -19,6 +19,8 @@ import type { Floor, Project } from "../domain/types";
 import { floorBaseY, plotToWorld, rayToPlot } from "../editor/spatial";
 import { EYE_HEIGHT, buildColliders, moveVisitor, unstick } from "./walkPhysics";
 import { walkInput } from "./walkInput";
+import { patchMaterial } from "../scene/materials/patches";
+import { roomLightUniforms } from "../scene/roomlight/uniforms";
 
 type Props = {
   project: Project;
@@ -286,7 +288,11 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     if (Math.abs(want - eye.current) > 0.002) moving = true;
     const world = plotToWorld(project.plot, pos.current.x, pos.current.z, eye.current);
     camera.position.copy(world);
-    lamp.current?.position.set(world.x, eye.current + 0.9, world.z);
+    if (lamp.current) {
+      lamp.current.position.set(world.x, eye.current + 0.9, world.z);
+      // The room light has the home's own lamps in it; this is only for when it's off.
+      lamp.current.intensity = night && roomLightUniforms.uRoomOn.value < 0.5 ? 7 : 0;
+    }
     euler.set(pitch.current, yaw.current, 0);
     camera.quaternion.setFromEuler(euler);
     // Room announcements.
@@ -305,7 +311,7 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
       <WalkCeiling project={project} floor={floor} />
       {/* A warm ceiling light that follows the visitor; dark by day so the
           light count (and every shader) stays the same as the hour changes. */}
-      <pointLight ref={lamp} color="#ffd29a" intensity={night ? 7 : 0} distance={8} decay={1.4} />
+      <pointLight ref={lamp} color="#ffd29a" intensity={0} distance={8} decay={1.4} />
     </>
   );
 }
@@ -339,7 +345,7 @@ function WalkCeiling({ project, floor }: { project: Project; floor: Floor }) {
     return g;
   }, [project, floor]);
   const material = useMemo(
-    () => new MeshStandardMaterial({ color: "#f4ede3", roughness: 0.95, metalness: 0 }),
+    () => patchMaterial(new MeshStandardMaterial({ color: "#f4ede3", roughness: 0.95, metalness: 0 }), { room: true }),
     [],
   );
   useEffect(() => () => geometry.dispose(), [geometry]);

@@ -44,6 +44,7 @@ const WINDOW_BACK = 140;
 
 const inside = (view: Partial<SceneView> & { walkFloorId: string }): SceneView => ({
   ...DEFAULT_VIEW,
+  world: true,
   floor: "all",
   stage: 5,
   roof: true,
@@ -55,7 +56,7 @@ const inside = (view: Partial<SceneView> & { walkFloorId: string }): SceneView =
   livedIn: true,
   ...view,
 });
-const outside: SceneView = { ...DEFAULT_VIEW, floor: "all", stage: 5, roof: true, cutaway: false, labels: false, walls: true, streetLife: false, livedIn: true };
+const outside: SceneView = { ...DEFAULT_VIEW, world: true, floor: "all", stage: 5, roof: true, cutaway: false, labels: false, walls: true, streetLife: false, livedIn: true };
 
 const yawTo = (from: { x: number; z: number }, to: { x: number; z: number }) => Math.atan2(-(to.x - from.x), -(to.z - from.z));
 

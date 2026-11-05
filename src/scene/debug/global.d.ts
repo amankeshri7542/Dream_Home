@@ -6,6 +6,10 @@ export type DreamHomeBridge = {
   kit?: string;
   /** Incremented on every Canvas mount — the shell asserts it stays 1. */
   canvasMounts: number;
+  /** How long the last room-light solve took, ms. */
+  roomLightMs?: number;
+  /** How many lamps the last room-light solve had on. */
+  roomLightLamps?: number;
   renderer(): { calls: number; triangles: number; geometries: number; textures: number; programs: number };
   camera(): {
     position: [number, number, number];

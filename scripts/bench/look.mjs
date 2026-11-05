@@ -50,6 +50,8 @@ try {
     const url = await page.evaluate((id) => window.__lab.benchPhoto(id), shot.id);
     writeFileSync(join(OUT, `${shot.id}.jpg`), Buffer.from(url.slice(url.indexOf(",") + 1), "base64"));
     const seconds = (Date.now() - t0) / 1000;
+    const solve = await page.evaluate(() => window.__dreamHome?.roomLightMs);
+    if (solve) console.log(`[bench] room light solve: ${solve.toFixed(0)} ms`);
     done.push({ ...shot, seconds });
     console.log(`[bench] ${shot.id} (${seconds.toFixed(1)} s)`);
   }

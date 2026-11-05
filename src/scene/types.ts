@@ -24,6 +24,8 @@ export type SceneView = ViewSettings & {
    * glow at the cut. `soft` keeps neighbours visible (moving or resizing).
    */
   focus?: { floorId: string; roomId: string; soft?: boolean };
+  /** The real street round the home is on (eye and street level); the plinth model otherwise. */
+  world?: boolean;
   /** Diwali: diyas, string lights and rangoli (the Diwali photo mood, the reel). */
   festive?: boolean;
 };

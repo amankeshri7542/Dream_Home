@@ -24,6 +24,7 @@ import {
   focusUniforms,
 } from "./focus";
 import { UI_COLORS } from "./palette";
+import { ROOM_FRAGMENT, ROOM_FRAGMENT_DECL, ROOM_VERTEX, ROOM_VERTEX_DECL, roomLightUniforms } from "../roomlight/uniforms";
 
 export const RISE_SLOTS = 4;
 export const riseUniforms = {
@@ -75,7 +76,7 @@ uniform vec4 uPopY;
  * `focus`: "fade" tints everything outside the hero room; "cut" also cuts
  * neighbouring walls down to a stub (see focus.ts).
  */
-export type PatchOptions = { clip?: boolean; poche?: boolean; rise?: boolean; pop?: boolean; focus?: "fade" | "cut" };
+export type PatchOptions = { clip?: boolean; poche?: boolean; rise?: boolean; pop?: boolean; focus?: "fade" | "cut"; glass?: boolean; room?: boolean };
 
 function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOptions) {
   const defines: string[] = [];
@@ -105,6 +106,30 @@ function patchShader(shader: WebGLProgramParametersWithUniforms, opts: PatchOpti
         "if (!gl_FrontFacing) gl_FragColor = vec4(uPoche, 1.0);\n#include <tonemapping_fragment>",
       );
   }
+  if (opts.room) {
+    // Room light: one permanent path, switched by a uniform (see roomlight/uniforms.ts).
+    Object.assign(shader.uniforms, roomLightUniforms);
+    shader.vertexShader =
+      "#define DH_ROOM\n" +
+      ROOM_VERTEX_DECL +
+      shader.vertexShader.replace("#include <project_vertex>", "#include <project_vertex>\n" + ROOM_VERTEX);
+    shader.fragmentShader =
+      "#define DH_ROOM\n" +
+      ROOM_FRAGMENT_DECL +
+      shader.fragmentShader.replace("#include <lights_fragment_end>", ROOM_FRAGMENT + "\n#include <lights_fragment_end>");
+  }
+  if (opts.glass) {
+    // Real window glass: clear head-on, a mirror at a glancing angle (Schlick).
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <opaque_fragment>",
+      `#include <opaque_fragment>
+      {
+        float facing = abs(dot(normalize(vViewPosition), normal));
+        float schlick = 0.04 + 0.96 * pow(1.0 - facing, 5.0);
+        gl_FragColor.a = clamp(diffuseColor.a * 0.28 + schlick * 0.85 + length(totalEmissiveRadiance) * 0.2, 0.0, 1.0);
+      }`,
+    );
+  }
   if (opts.focus) {
     const define = opts.focus === "cut" ? "#define DH_FOCUS\n#define DH_FOCUS_CUT\n" : "#define DH_FOCUS\n";
     Object.assign(shader.uniforms, focusUniforms);
@@ -128,7 +153,7 @@ export function patchMaterial<T extends Material>(material: T, opts: PatchOption
     material.clipShadows = true;
   }
   if (opts.poche) material.side = DoubleSide;
-  const key = `dh:${opts.rise ? "r" : ""}${opts.pop ? "p" : ""}${opts.poche ? "c" : ""}${opts.focus ? opts.focus[0] : ""}`;
+  const key = `dh:${opts.rise ? "r" : ""}${opts.pop ? "p" : ""}${opts.poche ? "c" : ""}${opts.focus ? opts.focus[0] : ""}${opts.glass ? "g" : ""}${opts.room ? "o" : ""}`;
   if (opts.focus === "cut") material.userData.dhFocusCut = true;
   material.onBeforeCompile = (shader) => patchShader(shader, opts);
   material.customProgramCacheKey = () => key;

@@ -20,3 +20,4 @@ eval/look-refs/
 eval/reports/latest.md
 docs/screenshots/bench/*
 !docs/screenshots/bench/baseline/
+.vercel

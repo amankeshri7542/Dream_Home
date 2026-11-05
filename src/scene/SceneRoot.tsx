@@ -32,6 +32,8 @@ import { Plot } from "./props/Plot";
 import { SiteExtras } from "./props/SiteExtras";
 import { StreetLife } from "./street/StreetLife";
 import { LivedIn } from "./life/LivedIn";
+import { Neighbourhood } from "./world/Neighbourhood";
+import { RoomLight } from "./roomlight/RoomLight";
 import { useIdleTicker, usePageVisible } from "./motion";
 import { siteLayout } from "./props/site";
 import { PhotoCapture } from "./PhotoCapture";
@@ -87,6 +89,7 @@ export function SceneRoot(props: RootProps) {
   const light = useMemo(() => lighting(hour, project.plot.north, place), [hour, project.plot.north, place]);
   const library = getLibrary({
     textureSize: spec.textureSize,
+    floorSize: spec.floorTextureSize,
     anisotropy: Math.min(spec.anisotropy, gl.capabilities.getMaxAnisotropy()),
   });
   library.ao().opacity = 0.34 * spec.aoStrips;
@@ -202,18 +205,38 @@ export function SceneRoot(props: RootProps) {
     (mode === "explore" || explore === "showcase") && tier !== "battery" && (filming || !reducedMotion) && view.streetLife !== false;
   // One ticker for all idle animation: two out-of-step timers would double the frame rate.
   useIdleTicker(!filming && (streetLife || motion) && pageVisible);
+  // Standing inside: the rooms are lit by their own light (never on battery).
+  const roomLit = !!view.walkFloorId && tier !== "battery";
+  // Standing on a floor, it's worth sharper floors: made between frames, then swapped in.
+  useEffect(() => {
+    if (!roomLit) return;
+    const done = store.hold();
+    let live = true;
+    library
+      .sharpenFloors()
+      .then((changed) => {
+        if (changed && live) store.invalidate();
+      })
+      .finally(done);
+    return () => {
+      live = false;
+      done();
+    };
+  }, [roomLit, view.walkFloorId, library, store]);
   const pickLandscape = (id: string) => props.onSelect({ kind: "landscape", id });
   return (
     <>
       <ShadowInvalidator version={version} />
-      <SkyDome light={light} />
-      <Lights light={light} shadowBox={shadowBox} mapSize={size.width < 768 ? spec.shadowMapSizeMobile : spec.shadowMapSize} entrance={entranceWorld} />
+      <RoomLight project={project} floorId={roomLit ? view.walkFloorId! : null} light={light} />
+      <SkyDome light={light} clouds={exploring || !!view.world} />
+      <Lights indoors={roomLit} light={light} shadowBox={shadowBox} mapSize={size.width < 768 ? spec.shadowMapSizeMobile : spec.shadowMapSize} entrance={entranceWorld} />
       <InteriorContext.Provider value={interior}>
       <group position={offset}>
         <Ground project={project} ground={ground} library={library} light={light} />
         <Plot project={project} layout={layout} landscape={view.landscape} library={library} />
         <SiteExtras project={project} layout={layout} library={library} landscape={view.landscape} />
         <StreetLife project={project} layout={layout} enabled={streetLife} />
+        {(exploring || view.world) && tier !== "battery" && <Neighbourhood project={project} library={library} light={light} forced={!!view.world} />}
         {view.landscape && (
           <Landscape project={project} layout={layout} library={library} pickable={mode === "outside"} onPick={pickLandscape} />
         )}
@@ -238,7 +261,7 @@ export function SceneRoot(props: RootProps) {
           reducedMotion={reducedMotion}
         />
         {props.ghost && <Ghost project={project} ghost={props.ghost} offset={offset} />}
-        <Night light={light} library={library} floors={nightFloors} />
+        <Night light={light} library={library} floors={nightFloors} indoors={!!view.walkFloorId} roomLit={roomLit} />
         {(everyday || diwali) && vis.stage >= 4 && (
           <LivedIn
             project={project}

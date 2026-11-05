@@ -73,7 +73,9 @@ test("designer interiors stay within the draw-call budget, idle in Build, and li
   await page.waitForTimeout(1500);
   await bridge(page, (dh) => dh.waitForIdle());
   await page.waitForTimeout(500);
-  const lamps = await bridge(page, (dh) => dh.scene().getObjectByName("interior-lamps")?.userData.lamps ?? 0);
+  // Walking, the room light has every lamp in it, in place of the point-light pool.
+  const lamps = await bridge(page, (dh) => dh.roomLightLamps ?? 0);
+  expect(await bridge(page, (dh) => dh.scene().getObjectByName("interior-lamps") ?? null)).toBeNull();
   const night = await bridge(page, (dh) => dh.renderer().calls);
   console.log(`draw calls: build ${build}, explore walk at night ${night}, lamps ${lamps}`);
   expect(build).toBeLessThanOrEqual(90);

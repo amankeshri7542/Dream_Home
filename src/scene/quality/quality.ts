@@ -13,6 +13,8 @@ export type TierSpec = {
   /** Fake-AO strip opacity multiplier at wall bases (0 = off). */
   aoStrips: number;
   textureSize: number;
+  /** Floors fill the frame at eye level, so they get more. */
+  floorTextureSize: number;
   anisotropy: number;
 };
 
@@ -26,6 +28,7 @@ export const TIERS: Record<QualityTier, TierSpec> = {
     post: "none",
     aoStrips: 1,
     textureSize: 256,
+    floorTextureSize: 256,
     anisotropy: 2,
   },
   balanced: {
@@ -37,7 +40,8 @@ export const TIERS: Record<QualityTier, TierSpec> = {
     post: "balanced",
     aoStrips: 0.5,
     textureSize: 256,
-    anisotropy: 4,
+    floorTextureSize: 512,
+    anisotropy: 8,
   },
   beautiful: {
     tier: "beautiful",
@@ -48,6 +52,7 @@ export const TIERS: Record<QualityTier, TierSpec> = {
     post: "beautiful",
     aoStrips: 0,
     textureSize: 512,
+    floorTextureSize: 1024,
     anisotropy: 8,
   },
 };

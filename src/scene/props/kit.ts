@@ -140,7 +140,7 @@ export function parseKit(name: AssetKit, root: Object3D): Kit {
         }
         // Interior furniture and lived-in details are cut with the section;
         // garden models never are.
-        if (name !== "exterior") patchMaterial(m, { clip: true, poche: true, focus: "fade" });
+        if (name !== "exterior") patchMaterial(m, { clip: true, poche: true, focus: "fade", room: true });
         materials.set(slot, m);
       }
     });

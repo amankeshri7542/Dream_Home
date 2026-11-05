@@ -4,6 +4,12 @@ The full plan is [`docs/PLAN-V5.md`](PLAN-V5.md). This file tracks progress so
 work can resume after any interruption. Update it at the end of every phase.
 
 ## Resume here
+- **v6 P1 started, then paused at the owner's word (6 Nov 2026).** Floors (P1.7), the street outside (P1.1) and room light (P1.3) are built and pushed. Where it stands, what was set aside and what comes next are in [`docs/PLAN-P1.md`](PLAN-P1.md).
+  - **The owner's new phases (6 Nov) are mapped onto the code** in `PLAN-P1.md` → "What to add next": Phase 1 interior detailing (1.1 layered materials and ceilings, 1.2 false ceiling with cove light, 1.3 trim, 1.4 flooring), Phase 2 furniture and props, Phase 3 walk polish (3.1–3.7), Phase 4 day and night, Phase 5 product. **Nothing from that list is built: wait for the owner's "continue",** then start with 1.1 and 1.2 (planned in detail there), one phase at a time, with the gate and a report after each.
+  - **Four decisions are the owner's** (D1–D4 in `PLAN-P1.md`): reopening the public gallery (ruled out on 15–17 Oct), what "SEO Bot" is, which Looks and rooms get a false ceiling by default, and where v6 P1.2 and P1.5 go.
+  - **`COMPETITIVE-V6.md` stays the v6 proposal;** `PLAN-P1.md` is the working plan.
+  - **Live since 5 Nov:** sharing, the loop counters and the AI features, because storage is now connected (Decisions, 5 Nov).
+  - **The owner must claim the Redis database by 8 Nov 2026,** or it's deleted and sharing goes off. How: `docs/OWNER-P0.md`.
 - **v6 P0 is under way (3 Nov 2026).** The plan is [`docs/COMPETITIVE-V6.md`](COMPETITIVE-V6.md), proposed and started at the owner's word; only P0 is approved so far. The tools are built and tested: the plan scorer (`npm run planeval`), the real-look bench (`npm run bench:look`), private loop counters and a phone meter.
   - **Waiting on the owner,** step by step in [`docs/OWNER-P0.md`](OWNER-P0.md): connect KV, Blob, `ADMIN_TOKEN` and the domain; real-phone numbers; real plans with permission and a yes to spend (at most $4.13 per Sonnet run, $8.25 for one Opus comparison).
   - **No paid AI has run.** The real accuracy baseline doesn't exist yet: what's in `eval/reports/` is the free ceiling, on our own homes.
@@ -337,6 +343,25 @@ work can resume after any interruption. Update it at the end of every phase.
     - The scene lab logs a `BatchedMesh.dispose` error when it swaps homes. It's React StrictMode's replayed effect, which the code already comments on, so dev only.
     - Kitchens in the villa template are 24 ft × 9 ft corridors, which the critic noticed. A template matter, not a rendering one.
 
+- **5–6 Nov 2026 (v6 P0.1 switched on; P1 first stage):**
+  - **The owner asked for storage to be set up and the secrets put in place** ("do whatever you want, KV or Blob", "put everything in env, I'll rotate it later"). So this once, against the usual rule, the agent changed Vercel itself: a private Blob store `dream-home-blob` in Mumbai (bom1), connected to the project, and production env vars `KV_REST_API_URL`, `KV_REST_API_TOKEN` and `ADMIN_TOKEN` (sensitive). The rule in CLAUDE.md stays for everything else.
+  - **Redis is a no-login Upstash database, for now.** The permanent route, Upstash through Vercel's Marketplace, stopped at a terms page only the owner can accept in a browser. The no-login one works today and is deleted on 8 Nov unless the owner claims it. Its address points to US East, the same region as the Vercel function's default, so the two are close.
+  - **No `@upstash/redis` package or `lib/redis.ts`,** though the setup prompt asked for them: `server/context.ts` already talks to Upstash over REST with the names Vercel uses (`KV_REST_API_*`). A second client would be dead code.
+  - **Local copies of the secrets are in `.env.production.local`, not `.env`.** `npm run dev` and the browser tests read `.env` and `.env.local`, and tests must never touch live data. The file is git-ignored.
+  - **The AI features are live.** `ANTHROPIC_API_KEY` was already set, and the limiter only lets paid work run once KV is there. Spending is capped by `AI_DAILY_BUDGET_USD` (default $10 a day) and the per-device limits. The checks made no paid calls.
+  - **Checked live:** `/api/design` answers `live: true`. A home shared from a headless phone made a link, its WhatsApp preview had a picture and the home's name, it opened on a second device, Remix put a copy in that device's My homes, `/api/loop` counted 1 shared, 1 opened and 1 remixed, and the admin token deleted the test home.
+  - **Room light stays (P1.3's kill rule passed).** Side by side it clearly beat the baseline on the first try, and a floor solves in 20–59 ms on the owner's Mac. Phone timing is still unmeasured (P0.2).
+  - **The street shows only from on the plot or its road,** below 6.5 m, or when a view asks for it (Walk, the bench). A "Front" photo stands across the road, which would put its camera inside a neighbour's house, so it keeps the plinth.
+  - **The first full gate run had two failures, and both are understood.** The night-lamps test looked for the point-light pool, which room light replaces when you walk, so it now checks the room light's lamps. "Build stays idle" saw 2 frames under the full suite's load, then passed 6 times alone and twice in a parallel run of the four heavy scene specs (34 passed).
+  - **Sharper floors are made only while walking, between frames.** The second full gate run turned up a real regression: `editor.spec.ts` "mobile plan taps never move rooms…" failed 2 runs in 10, against 10 of 10 on the last commit, and was 50% slower. The cause was the bigger floor textures, made on the main thread when the scene loaded: about 300 ms per floor at 1024 px (beautiful tier), so a second or more for a home. Floors now start at the tier's texture size, and `sharpenFloors` remakes them at `floorTextureSize` a few rows per slice once you walk inside, then swaps the maps (no recompile). The scene holds as "loading" until it's done, so photos and `waitForIdle` wait for it. After the fix: 10 of 10 in 29.1 s, the same as the last commit.
+  - **Gate (6 Nov):**
+    - Passed: typecheck, lint, 1037 unit tests, build, `check:api`, 7 preview tests and `diff --check`. Browser: 156 passed and 36 skipped.
+    - Failed in the full browser runs: "Build stays idle" (`indian.spec.ts:109`), "mobile plan taps never move rooms" (`editor.spec.ts:297`) and "the home's whole name fits the top bar" (`usability.spec.ts:141`). Each passes when run alone.
+    - **They aren't regressions.** That night the Mac was busy: iCloud was taking files away and giving them back (49–103 a run). Run under the same load, three specs twice each, **the last pushed commit failed 4 times on the same tests**, and this change failed 3.
+    - **To do:** make these tests wait on state rather than wall-clock time. Until then, a full run on a busy machine needs a re-run of any timing failure.
+  - **Clouds only where the sky is looked at** (Explore, Walk, street views), so editing views draw the cheaper sky they had before.
+  - **The owner paused P1 after this stage** to add features. Drafts of curtains, the small walking plan and remodelled furniture are set aside in a git stash (see `PLAN-P1.md`), unrun and untested.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
@@ -348,7 +373,8 @@ work can resume after any interruption. Update it at the end of every phase.
 - [x] **M6** Builder's plan → 3D
 - [x] **M7** Talk to your home (voice + chat, Haiku 5.5)
 - [x] **M8** PWA, usability and security review, docs
-- [ ] **v6 P0** Switch on and measure ([`COMPETITIVE-V6.md`](COMPETITIVE-V6.md)): bench and counters done; scorer done, real baseline waiting on plans and spend; loop and phone checks waiting on the owner
+- [ ] **v6 P0** Switch on and measure ([`COMPETITIVE-V6.md`](COMPETITIVE-V6.md)): bench and counters done; the loop is live (5 Nov); scorer done, real baseline waiting on plans and spend; phone checks waiting on the owner
+- [ ] **v6 P1** Real at eye level ([`PLAN-P1.md`](PLAN-P1.md)): floors, the street outside and room light done; paused for the owner's new phases
 
 ## Log
 - **2026-10-17, M0a:**
@@ -544,3 +570,21 @@ work can resume after any interruption. Update it at the end of every phase.
     - Unit: `src/planread/eval.test.ts` (14), `src/scene/lab/benchShots.test.ts` (4), `server/share.test.ts` (5 more, for the counters).
     - Browser: `tests/explore.spec.ts` (the meter shows only when asked for, and an idle scene stays idle).
   - **Gate:** typecheck, lint, 1016 unit tests (twice, with nothing else running), build, 158 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green. `check:api` compares with what's committed, so it passes only after committing; the bundle rebuilds to the same bytes.
+- **2026-11-05/06, P0.1 live, and v6 P1's first stage (floors, the street, room light):**
+  - **Live setup** (Decisions, 5–6 Nov): Blob `dream-home-blob` (Mumbai, private), Upstash Redis (no-login database, to be claimed), `KV_REST_API_URL`, `KV_REST_API_TOKEN` and `ADMIN_TOKEN` in Vercel production. Local copies are in the git-ignored `.env.production.local`; `.vercel/` is ignored.
+  - **New:**
+    - `src/scene/roomlight/`: `solve.ts`, `input.ts`, `uniforms.ts`, `RoomLight.tsx`, `solve.test.ts` (13).
+    - `src/scene/world/`: `streetPlan.ts`, `Neighbourhood.tsx`, `streetPlan.test.ts` (8).
+    - `docs/PLAN-P1.md`.
+  - **Changed:**
+    - `materials/textures.ts`: marble, terrazzo, wood and vitrified rewritten.
+    - `materials/palette.ts`: longer tiles.
+    - `materials/library.ts`: floors sharpen while walking (`sharpenFloors`); world ground; window glass that's clear head-on. `materials/textures.ts` gains `generateTexturesSliced`.
+    - `materials/patches.ts`: `room` and `glass` options.
+    - `quality/quality.ts`: `floorTextureSize`.
+    - `environment/SkyDome.tsx`: clouds.
+    - `environment/Lights.tsx` and `Night.tsx`: indoors, the fill, entrance and pool lights step aside, and glass glows only from outside.
+    - `SceneRoot.tsx`, `types.ts` (`world`), `props/kit.ts` (`room`), `explore/Walkthrough.tsx` (the ceiling takes room light; the walker's lamp only without it), `shell/SceneHost.tsx` (Walk sets `world`), `lab/benchShots.ts`, `scripts/bench/look.mjs` (prints the solve time), `debug/global.d.ts`.
+    - `tests/interiors.spec.ts`: night lamps come from room light while walking.
+  - **Measured:** a floor's light solve takes 20–59 ms on the owner's Mac. Draw calls: Build 76, Explore with street 76, night walk 143.
+  - **Bench:** `npm run bench:look -- --label p1-checkpoint` (not committed) against `baseline`. Judged by eye; the fresh critic waits until after the furniture work.

@@ -168,6 +168,7 @@ export function SceneHost({
                       walls: true,
                       furnishings: true,
                       walkFloorId: walkFloor ?? activeFloor.id,
+                      world: true,
                       streetLife: state.view.streetLife,
                       // A photo "through your eyes" keeps the studio's details.
                       livedIn: photo ? photo.livedIn : state.view.livedIn,

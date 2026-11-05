@@ -13,9 +13,11 @@ type Props = {
   shadowBox: { min: V3; max: V3 };
   mapSize: number;
   entrance: V3 | null;
+  /** The room light is on: the shadowless fill would shine through walls. */
+  indoors?: boolean;
 };
 
-export function Lights({ light, shadowBox, mapSize, entrance }: Props) {
+export function Lights({ light, shadowBox, mapSize, entrance, indoors = false }: Props) {
   const key = useRef<DirectionalLight>(null);
   const fill = useRef<DirectionalLight>(null);
   const hemi = useRef<HemisphereLight>(null);
@@ -81,7 +83,7 @@ export function Lights({ light, shadowBox, mapSize, entrance }: Props) {
     }
     if (fill.current) {
       fill.current.color.copy(p.fill);
-      fill.current.intensity = p.fillIntensity;
+      fill.current.intensity = indoors ? 0 : p.fillIntensity;
     }
     if (hemi.current) {
       hemi.current.color.copy(p.hemiSky);
@@ -89,11 +91,11 @@ export function Lights({ light, shadowBox, mapSize, entrance }: Props) {
       hemi.current.intensity = p.hemiIntensity;
     }
     if (point.current) {
-      point.current.intensity = p.windowGlow * 9;
+      point.current.intensity = indoors ? 0 : p.windowGlow * 9;
       if (entrance) point.current.position.set(...entrance);
     }
     invalidate();
-  }, [p, entrance, invalidate]);
+  }, [p, entrance, indoors, invalidate]);
 
   return (
     <>

@@ -17,25 +17,42 @@ import { glowMaterials } from "../props/kit";
 import { interiorLamps, type Lamp } from "../props/lamps";
 import type { Lighting } from "./timeOfDay";
 
-type Props = { light: Lighting; library: MaterialLibrary; floors: { floor: GeometryFloor; base: number }[] };
+type Props = {
+  light: Lighting;
+  library: MaterialLibrary;
+  floors: { floor: GeometryFloor; base: number }[];
+  /** Standing inside: windows are dark at night, not lit from every side. */
+  indoors?: boolean;
+  /** The room light already has every lamp in it. */
+  roomLit?: boolean;
+};
 
 /** Point lights in the pool (a fixed count, so shaders never recompile per room). */
 export const LAMP_POOL = 8;
 /** Glow above which interiors switch their lamps on. */
 const LAMPS_ON = 0.3;
 
-export function Night({ light, library, floors }: Props) {
+export function Night({ light, library, floors, indoors = false, roomLit = false }: Props) {
   const invalidate = useThree((s) => s.invalidate);
   const interior = useInterior();
   const glow = light.palette.windowGlow;
   useLayoutEffect(() => {
     const glass = library.glass();
-    glass.emissiveIntensity = glow * 2.4;
-    glass.opacity = 0.5 + glow * 0.35;
+    // From inside by day a window is brighter than any wall: exposing for the
+    // room lifts what's beyond the glass. At night it's simply dark.
+    const dayness = 1 - light.night;
+    if (indoors) {
+      glass.emissive.copy(light.palette.horizon).lerp(light.palette.zenith, 0.35);
+      glass.emissiveIntensity = roomLit ? 0.85 * dayness : 0;
+    } else {
+      glass.emissive.set("#ffcf8a");
+      glass.emissiveIntensity = glow * 2.4;
+    }
+    glass.opacity = indoors ? 0.5 : 0.5 + glow * 0.35;
     library.lamp().emissiveIntensity = 0.25 + glow * 5;
     for (const m of glowMaterials) m.emissiveIntensity = 0.3 + glow * 3.5;
     invalidate();
-  }, [glow, library, invalidate]);
+  }, [glow, indoors, roomLit, light.night, light.palette, library, invalidate]);
   const lamps = useMemo(() => {
     const { project, furnishedFloorId, explore, tier } = interior;
     if (!explore || tier === "battery" || !project || !furnishedFloorId) return null;
@@ -78,8 +95,8 @@ export function Night({ light, library, floors }: Props) {
   if (glow < 0.05) return null;
   return (
     <>
-      {floors.length > 0 && <mesh geometry={geometry} material={material} renderOrder={3} raycast={() => null} />}
-      {lit && <LampPool lamps={lamps!} glow={glow} />}
+      {floors.length > 0 && !roomLit && <mesh geometry={geometry} material={material} renderOrder={3} raycast={() => null} />}
+      {lit && !roomLit && <LampPool lamps={lamps!} glow={glow} />}
     </>
   );
 }
