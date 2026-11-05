@@ -147,3 +147,24 @@ test("explore: tapping the floor ahead walks there", async ({ page }) => {
     }, { timeout: 8000 })
     .toBeGreaterThan(0.3);
 });
+
+test("the phone meter shows only when asked for, and never wakes an idle scene", async ({ page }) => {
+  await seed(page, createPreset("compact"));
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await expect(page.getByRole("status", { name: "Phone meter" })).toHaveCount(0);
+  await page.goto("/?debug=meter");
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  const meter = page.getByRole("status", { name: "Phone meter" });
+  await expect(meter).toContainText("draw calls");
+  await expect(meter).toContainText("quality");
+  // Reading twice a second must not ask for frames.
+  await bridge(page, (dh) => dh.waitForIdle());
+  await page.waitForTimeout(800);
+  const frames = () => page.evaluate(() => (window as unknown as { __dreamHome: { frame: number } }).__dreamHome.frame);
+  const before = await frames();
+  await page.waitForTimeout(1600);
+  expect((await frames()) - before).toBe(0);
+  await expect(meter).toContainText("idle");
+  // It doesn't catch taps meant for the app.
+  expect(await meter.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+});

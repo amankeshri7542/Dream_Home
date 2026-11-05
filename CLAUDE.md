@@ -12,6 +12,7 @@ furniture modelled in Blender.
 
 ## Start here
 - **Current work:** [`docs/PLAN-V5.md`](docs/PLAN-V5.md) is the v5 plan, and [`docs/ROADMAP-V5.md`](docs/ROADMAP-V5.md) has progress, decisions and **Resume here**. Read both before changing anything.
+- **What's next:** [`docs/COMPETITIVE-V6.md`](docs/COMPETITIVE-V6.md) is the proposed v6 plan. Its P0 is under way; [`docs/OWNER-P0.md`](docs/OWNER-P0.md) lists what only the owner can do.
 - **How the app works today:** `README.md`, plus `docs/ROADMAP-V4.md` (Home → Room studio, doors, designer interiors).
 
 ## How we work
@@ -141,3 +142,4 @@ git diff --check
 | `scripts/blender/`, `scripts/assets/` | the Blender furniture kit and asset build (`npm run assets`, needs Blender) |
 | `tests/` | Playwright specs (`tests/preview/` runs against the production build) |
 | `docs/` | plans, roadmaps, verification notes, screenshots |
+| `eval/`, `scripts/planeval/`, `scripts/bench/` | measuring: plan reading scores (`npm run planeval`; paid reads need `--max-usd`, so ask first) and the real-look bench (`npm run bench:look`). Real plans and photos in `eval/` are never committed |

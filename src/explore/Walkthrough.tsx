@@ -26,6 +26,8 @@ type Props = {
   /** Start in this room (the viewer's room labels), not the floor's biggest. */
   startRoomId?: string;
   start?: { x: number; z: number };
+  /** Which way to face at `start` (the lab's fixed shots). */
+  startYaw?: number;
   reducedMotion: boolean;
   /** After dark the rooms light up around the visitor. */
   night?: boolean;
@@ -51,7 +53,7 @@ export function walkSpawn(project: Project, floorId: string, roomId?: string) {
   return { x: r.x + r.w / 2, z: r.z + r.d - Math.min(70, r.d * 0.2), yaw: 0 };
 }
 
-export default function Walkthrough({ project, startFloorId, startRoomId, start, reducedMotion, night = false, onStatus }: Props) {
+export default function Walkthrough({ project, startFloorId, startRoomId, start, startYaw, reducedMotion, night = false, onStatus }: Props) {
   const { camera, gl, invalidate } = useThree();
   const controls = useThree((state) => state.controls) as unknown as {
     enabled: boolean;
@@ -60,7 +62,7 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
   const spawn = walkSpawn(project, startFloorId, startRoomId);
   const pos = useRef(start ?? { x: spawn.x, z: spawn.z });
   const eye = useRef(0);
-  const yaw = useRef(start ? 0 : spawn.yaw); // yaw 0 looks north (−z)
+  const yaw = useRef(startYaw ?? (start ? 0 : spawn.yaw)); // yaw 0 looks north (−z)
   const pitch = useRef(-0.14); // a little downward: more room, less ceiling
   const target = useRef<{ x: number; z: number } | null>(null);
   const keys = useRef(new Set<string>());

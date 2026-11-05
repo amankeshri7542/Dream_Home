@@ -26,6 +26,9 @@ window.addEventListener("vite:preloadError", (event) => {
 // Installable and offline (the service worker registers in production builds).
 startPwa();
 
+// Real-phone checks (docs/OWNER-P0.md): a small readout, only when asked for.
+if (window.location.search.includes("debug=meter")) void import("./scene/debug/meter").then((m) => m.startMeter());
+
 // A share link (/h/:id) opens the light viewer; everything else, the editor.
 // Both load on demand, so someone opening a link never downloads the editor.
 const shared = window.location.pathname.match(/^\/h\/([^/]+)\/?$/);

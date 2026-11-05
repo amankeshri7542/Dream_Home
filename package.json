@@ -18,7 +18,9 @@
     "assets:pack": "node scripts/assets/build.mjs --step pack",
     "looks:thumbs": "node scripts/looks/thumbs.mjs",
     "icons": "node scripts/pwa/icons.mjs",
-    "test:preview": "playwright test -c playwright.preview.config.ts"
+    "test:preview": "playwright test -c playwright.preview.config.ts",
+    "planeval": "node scripts/planeval/run.mjs",
+    "bench:look": "node scripts/bench/look.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

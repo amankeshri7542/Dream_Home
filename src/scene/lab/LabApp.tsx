@@ -17,8 +17,10 @@ import type { PhotoJobRequest, PhotoOutcome } from "../../photo/PhotoRenderer";
 import { LOOK_ORDER } from "../../domain/looks";
 import type { StylePreset } from "../../domain/types";
 import { lookSample, toWebp } from "./lookThumbs";
+import { BENCH_PHOTO, benchShots, type BenchShot } from "./benchShots";
 
 const Scene = lazy(() => import("../Scene"));
+const Walkthrough = lazy(() => import("../../explore/Walkthrough"));
 
 const blueprint = (patch: Partial<BlueprintRequest>): Project | null => {
   const r = createBlueprint({
@@ -89,6 +91,8 @@ export function LabApp() {
   // Render-quality photos for scripts (look cards).
   const [photoJob, setPhotoJob] = useState<PhotoJobRequest | null>(null);
   const photoDone = useRef<((outcome: PhotoOutcome) => void) | null>(null);
+  // The bench's eye-level shots stand here (see benchShots.ts).
+  const [walk, setWalk] = useState<(NonNullable<BenchShot["walk"]> & { key: string; night: boolean }) | null>(null);
   const photo = (job: Omit<PhotoJobRequest, "id">) =>
     new Promise<PhotoOutcome>((resolve) => {
       photoDone.current = resolve;
@@ -163,6 +167,51 @@ export function LabApp() {
         if (!("blob" in outcome)) throw new Error(`Look photo failed: ${outcome.error}`);
         return toWebp(outcome.blob, width);
       },
+      /** The real-look bench: the fixed home's shots, with what the script needs to know. */
+      benchList: () => {
+        const home = lookSample("indian-modern");
+        setCustom(home);
+        return benchShots(home).map(({ id, label, group }) => ({ id, label, group }));
+      },
+      /** Sets a shot's scene on screen (so the live view can be captured too). */
+      benchPrepare: async (id: string, tryOut?: Partial<BenchShot>) => {
+        const home = lookSample("indian-modern");
+        const found = benchShots(home).find((s) => s.id === id);
+        if (!found) throw new Error(`No bench shot ${id}`);
+        const shot = { ...found, ...tryOut };
+        setCustom(home);
+        setMode("explore");
+        setExplore(shot.walk ? "walk" : "orbit");
+        setHour(shot.hour);
+        setView(shot.view);
+        // The walker reads its start once, so a new spot needs a new one.
+        setWalk(shot.walk ? { ...shot.walk, key: `${id}:${shot.walk.start.x},${shot.walk.start.z}`, night: shot.hour >= 19 || shot.hour < 6.5 } : null);
+        await new Promise((r) => setTimeout(r, 1500));
+        return window.__dreamHome?.waitForIdle();
+      },
+      /** The shot's photo at phone settings, as a JPEG data URL. */
+      benchPhoto: async (id: string, tryOut?: Partial<BenchShot>) => {
+        const found = benchShots(lookSample("indian-modern")).find((s) => s.id === id);
+        if (!found) throw new Error(`No bench shot ${id}`);
+        const shot = { ...found, ...tryOut };
+        const outcome = await photo({
+          framing: shot.framing,
+          mood: shot.mood,
+          aspect: shot.aspect,
+          longEdge: BENCH_PHOTO.longEdge,
+          samples: shot.samples,
+          shadowSize: BENCH_PHOTO.shadowSize,
+          watermark: false,
+          camera: shot.camera,
+        });
+        if (!("blob" in outcome)) throw new Error(`Bench photo failed: ${outcome.error}`);
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(outcome.blob);
+        });
+      },
     };
   }, [project]);
   const cmd = (c: Cmd) => setCommand({ ...(c as CameraCommand), id: Date.now() });
@@ -190,7 +239,13 @@ export function LabApp() {
             photoDone.current?.(outcome);
             photoDone.current = null;
           }}
-        />
+        >
+          {walk && (
+            <Suspense fallback={null}>
+              <Walkthrough key={walk.key} project={project} startFloorId={walk.floorId} start={walk.start} startYaw={walk.yaw} reducedMotion night={walk.night} />
+            </Suspense>
+          )}
+        </Scene>
       </Suspense>
       {panel && (
         <div style={panelStyle}>

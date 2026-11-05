@@ -12,3 +12,11 @@ public/models/*.raw.glb
 # Local secrets (ANTHROPIC_API_KEY)
 .env
 .env*.local
+
+# Measuring (eval/README.md): real plans and photos stay on this machine.
+eval/plans/
+eval/synthetic/
+eval/look-refs/
+eval/reports/latest.md
+docs/screenshots/bench/*
+!docs/screenshots/bench/baseline/

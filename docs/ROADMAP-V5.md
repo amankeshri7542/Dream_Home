@@ -4,6 +4,10 @@ The full plan is [`docs/PLAN-V5.md`](PLAN-V5.md). This file tracks progress so
 work can resume after any interruption. Update it at the end of every phase.
 
 ## Resume here
+- **v6 P0 is under way (3 Nov 2026).** The plan is [`docs/COMPETITIVE-V6.md`](COMPETITIVE-V6.md), proposed and started at the owner's word; only P0 is approved so far. The tools are built and tested: the plan scorer (`npm run planeval`), the real-look bench (`npm run bench:look`), private loop counters and a phone meter.
+  - **Waiting on the owner,** step by step in [`docs/OWNER-P0.md`](OWNER-P0.md): connect KV, Blob, `ADMIN_TOKEN` and the domain; real-phone numbers; real plans with permission and a yes to spend (at most $4.13 per Sonnet run, $8.25 for one Opus comparison).
+  - **No paid AI has run.** The real accuracy baseline doesn't exist yet: what's in `eval/reports/` is the free ceiling, on our own homes.
+  - **Next after P0:** P1 in the plan's build order, starting with floors, the world outside, the model on the plan and the quiet walk. Room light gets a 3-day spike with a kill rule.
 - **Done and shipped (17–18 Oct 2026):**
   - M0a: server router, limiter, Claude pricing, security headers.
   - M0b: My homes, first screen, text size, sounds, "Keep for later", move-by-link.
@@ -316,6 +320,23 @@ work can resume after any interruption. Update it at the end of every phase.
   - **A stale test name:** the balcony checklist test was written before M5 renamed the checklist's dialog "Home score", so it looked for "Home checklist". It now uses the current name.
   - **Dependencies:** this Mac's `node_modules` had no `mediabunny` or `qrcode-generator` (both pinned since M4), so it was reinstalled with `npm ci` and the symlink restored.
 
+- **3 Nov 2026 (v6 P0):**
+  - **Plan scoring is pure and lives in the app's source** (`src/planread/eval.ts`), so it's typed and unit-tested, but nothing imports it into the app. `scripts/planeval/run.mjs` bundles it with the real server code. Rooms match at 50% overlap, measured from each footprint's corner, so where a house sits on its plot doesn't count. A "fix" is a room to add, remove, relabel or adjust by over 30 cm; doors and windows are scored apart from fixes.
+  - **The ceiling comes first because it's free:** a flawless reading of our own homes through today's `planFromReading`. No real reading can beat it. On 7 homes: rooms 100%, edges 0 cm, doors 79%, windows 86%, open areas 29%, and 3 homes lose an upper floor. Doors, windows and parking pass partly by luck, because the truth's are automatic too. With edges up to 3% off (an assumption, not a measurement of any model): done in ≤ 3 fixes 76%, doors 64%, windows 52%.
+  - **Spending can't happen by accident.** A paid run needs `--read`, `--max-usd` and `ANTHROPIC_API_KEY`, and refuses if its worst case is over the cap (all three refusals tried). Readings are cached per plan and model. `planReadCall` is now the one way a reading is asked for, so the app and the scorer can't drift. A `--fake` reader tests the flow and keeps its readings apart, so one can never stand in for a real one.
+  - **Real plans and photos never enter git:** `eval/plans/`, `eval/synthetic/` and `eval/look-refs/` are ignored. Reports hold numbers only. Truth for a real plan is drawn with *Draw it yourself*, which already saves a home.
+  - **Synthetic sheets** (`--sheets`) draw our own homes as builder-style plans (clean, photographed-looking, Hindi-labelled), with the home as exact truth. Clean inputs flatter any reader, so they're a smoke test and never the baseline. They replace the M6 sample plan and one-reading script, which never reached the repo.
+  - **The bench shoots one fixed home at phone settings** (`lookSample("indian-modern")`, 1600 px, 16 samples, 4:5), through the real `Walkthrough` and photo pipeline. Eye-level shots also keep the live phone screen, which is the everyday view. Each room's corner was chosen by eye from a sheet of all four: an automatic "furthest from the door" rule put furniture in the lens and missed a bathroom, which was the bench's fault and not the app's. Changing a shot makes earlier runs incomparable.
+  - **The critic is a fresh-context subagent,** given images and references without our opinion. The first baseline has no photos of real Indian homes to compare with, and says where that limits it. Its top gaps: rooms aren't lit by daylight, everything looks like a toy, the floors give it away. What it says must stay: sun on outside walls, lived-in Indian detail, and the model on its plinth.
+  - **Floors moved up in the plan (P1.7):** the critic rates them high, and they can be fixed in the procedural textures with nothing to download.
+  - **Loop counters** are per day and hold nothing about who: homes shared, links opened, remixes, reusing the once-per-connection check for opens and remixes. `GET /api/loop` is admin only. A counter that can't be written is missed; sharing never waits on it. `isAdmin` moved to `server/http.ts`, to avoid an import cycle.
+  - **The phone meter** (`?debug=meter`) is plain DOM in its own lazy chunk (0.9 KB gzip), loaded only with that address. It reads the debug bridge twice a second and never asks for a frame, so an idle scene stays idle (tested).
+  - **Test timeout raised to 20 s for the whole unit suite** (`vitest.config.ts`). `furniture.test.ts` timed out at 5 s when the whole suite ran together. It fails the same way on a clean copy of `main`, so this wasn't from this work; those tests walk every room of every sample home.
+  - **Found, not fixed:**
+    - `kindFromLabel` reads "Living / dining" as Dining, because dining comes first in `LABELS`, so such a home has no living room. First item of P2.1; left alone so the real baseline measures today's behaviour.
+    - The scene lab logs a `BatchedMesh.dispose` error when it swaps homes. It's React StrictMode's replayed effect, which the code already comments on, so dev only.
+    - Kitchens in the villa template are 24 ft × 9 ft corridors, which the critic noticed. A template matter, not a rendering one.
+
 ## Milestones
 - [x] **M0a** Server router, limiter, security headers
 - [x] **M0b** My homes, settings, copy, first launch, domain hand-off
@@ -327,6 +348,7 @@ work can resume after any interruption. Update it at the end of every phase.
 - [x] **M6** Builder's plan → 3D
 - [x] **M7** Talk to your home (voice + chat, Haiku 5.5)
 - [x] **M8** PWA, usability and security review, docs
+- [ ] **v6 P0** Switch on and measure ([`COMPETITIVE-V6.md`](COMPETITIVE-V6.md)): bench and counters done; scorer done, real baseline waiting on plans and spend; loop and phone checks waiting on the owner
 
 ## Log
 - **2026-10-17, M0a:**
@@ -508,3 +530,17 @@ work can resume after any interruption. Update it at the end of every phase.
 - **2026-10-22, merge of the M8 follow-ups and the balcony fixes:**
   - **Commits on `main`:** `c776c4b` (M8 follow-ups), then the AI builder's, Add balcony's and the checklist's balcony fixes, then this one (the hint's wording, the test's dialog name, ESLint's ignores, this roadmap).
   - **Gate:** typecheck, lint, 993 unit tests, build, `check:api`, 157 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green.
+- **2026-11-03, v6 P0 tools (no paid AI, nothing deployed yet):**
+  - **New:**
+    - Plan scoring: `src/planread/eval.ts`, `evalSheet.ts`, `scripts/planeval/`, `eval/README.md`, `eval/reports/ceiling-2026-11-03.md`.
+    - Real-look bench: `src/scene/lab/benchShots.ts`, `scripts/bench/look.mjs`, `eval/look/README.md`, `docs/screenshots/bench/baseline/` with `GAPS.md`.
+    - Counters and meter: `server/loop.ts`, `src/scene/debug/meter.ts`.
+    - For the owner: `docs/OWNER-P0.md`.
+  - **Changed:**
+    - `server/planRead.ts` (`planReadCall`, `planReadWorstCase`), `server/share.ts` and `router.ts` (counters, the `/api/loop` route), `server/http.ts` (`isAdmin`), `api/index.js`.
+    - `src/explore/Walkthrough.tsx` (`startYaw`), `src/photo/PhotoRenderer.tsx` (an exact camera for the lab), `src/scene/lab/LabApp.tsx`, `src/main.tsx` (the meter's lazy import).
+    - `docs/SECURITY.md`, `CLAUDE.md`, `.gitignore`, `package.json`, `vitest.config.ts`.
+  - **Tests:**
+    - Unit: `src/planread/eval.test.ts` (14), `src/scene/lab/benchShots.test.ts` (4), `server/share.test.ts` (5 more, for the counters).
+    - Browser: `tests/explore.spec.ts` (the meter shows only when asked for, and an idle scene stays idle).
+  - **Gate:** typecheck, lint, 1016 unit tests (twice, with nothing else running), build, 158 browser tests (36 screenshot- and timing-only skipped), 7 preview tests, `diff --check`: all green. `check:api` compares with what's committed, so it passes only after committing; the bundle rebuilds to the same bytes.

@@ -4,7 +4,7 @@
 // never stored or logged; only the call's usage and cost are. The app always
 // offers "Draw it yourself" on the photo when reading isn't possible.
 import { IMAGE, READING_SCHEMA, READING_SYSTEM, readingUserText, sanitizeReading } from "../src/planread/reading";
-import { billOf, callClaude as realCallClaude, worstCaseUsd } from "./claude";
+import { billOf, callClaude as realCallClaude, worstCaseUsd, type DesignCall } from "./claude";
 import { aiConfigured, limiterFor, type Deps } from "./context";
 import { BodyTooLarge, clientIp, deviceOf, fail, json, readBytes, type Env } from "./http";
 import { jpegSize } from "./share";
@@ -18,6 +18,23 @@ const base64 = (bytes: Uint8Array) => {
   for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(text);
 };
+
+/** The picture and instructions, and the answer's cap: what a reading can cost at most. */
+export const planReadWorstCase = (model: string) => worstCaseUsd(model, 7_000, 12_000);
+
+/** The one way a reading is asked for: the app's route and `npm run planeval` must agree. */
+export const planReadCall = (apiKey: string, model: string, bytes: Uint8Array, hint: { plot?: string; road?: string }): DesignCall => ({
+  apiKey,
+  model,
+  system: READING_SYSTEM,
+  user: readingUserText(hint),
+  image: { mediaType: "image/jpeg", data: base64(bytes) },
+  schema: READING_SCHEMA,
+  effort: "medium",
+  maxTokens: 12_000,
+  label: "plan-read",
+  timeoutMs: 55_000,
+});
 
 export async function handlePlanRead(request: Request, env: Env, deps: Deps = {}): Promise<Response> {
   const device = deviceOf(request);
@@ -49,8 +66,7 @@ export async function handlePlanRead(request: Request, env: Env, deps: Deps = {}
 
   const ip = clientIp(request);
   const model = env.PLAN_MODEL || PLAN_MODEL;
-  // The picture (up to ~4.8k tokens) and the instructions, and the answer's cap.
-  const estimate = worstCaseUsd(model, 7_000, 12_000);
+  const estimate = planReadWorstCase(model);
   let verdict;
   try {
     verdict = await limiter.reserve("plan", device, ip, estimate);
@@ -68,18 +84,12 @@ export async function handlePlanRead(request: Request, env: Env, deps: Deps = {}
   const road = url.searchParams.get("road") ?? "";
   const call = deps.callClaude ?? realCallClaude;
   try {
-    const answer = await call({
-      apiKey: env.ANTHROPIC_API_KEY!,
-      model,
-      system: READING_SYSTEM,
-      user: readingUserText({ plot: plot ? `${plot[1]} × ${plot[2]} ${plot[3]}` : undefined, road: ROAD.has(road) ? road : undefined }),
-      image: { mediaType: "image/jpeg", data: base64(bytes) },
-      schema: READING_SCHEMA,
-      effort: "medium",
-      maxTokens: 12_000,
-      label: "plan-read",
-      timeoutMs: 55_000,
-    });
+    const answer = await call(
+      planReadCall(env.ANTHROPIC_API_KEY!, model, bytes, {
+        plot: plot ? `${plot[1]} × ${plot[2]} ${plot[3]}` : undefined,
+        road: ROAD.has(road) ? road : undefined,
+      }),
+    );
     await limiter.settle(estimate, answer.costUsd).catch(() => undefined);
     return json({ ok: true, reading: sanitizeReading(answer.json), left: verdict.left });
   } catch (error) {

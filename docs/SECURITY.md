@@ -70,6 +70,9 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://home.amankeshri.com
 
 # Delete it for good (the home and its picture)
 curl -X DELETE -H "Authorization: Bearer $ADMIN_TOKEN" https://home.amankeshri.com/api/share/ID
+
+# Daily totals for the last 14 days: homes shared, links opened, remixes (no personal data)
+curl -H "Authorization: Bearer $ADMIN_TOKEN" "https://home.amankeshri.com/api/loop?days=14"
 ```
 
 Until the new domain is connected, use `https://dream-home-liard-nine.vercel.app` instead.

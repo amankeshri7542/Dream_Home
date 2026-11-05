@@ -20,8 +20,9 @@ import type { Project } from "../src/domain/types";
 import type { BlobStore } from "./blob";
 import { gunzip, gzip, randomId, randomToken, sameSecret, sha256 } from "./bytes";
 import { blobsFor, kvFor, limiterFor, type Deps } from "./context";
-import { BodyTooLarge, clientIp, deviceOf, fail, json, readBody, readBytes, type Env } from "./http";
+import { BodyTooLarge, bearerToken, clientIp, deviceOf, fail, isAdmin, json, readBody, readBytes, type Env } from "./http";
 import type { KeyValue } from "./kv";
+import { countLoop } from "./loop";
 import { HIDDEN_NAME, publicName } from "../src/share/names";
 
 export const LIMITS = {
@@ -133,11 +134,8 @@ async function updateMeta(kv: KeyValue, id: string, patch: Partial<ShareMeta>): 
   return kv.set(keys(id).meta, JSON.stringify({ ...fresh, ...patch, hidden: fresh.hidden, hiddenReason: fresh.hiddenReason }), { onlyIfExists: true });
 }
 
-const bearer = (request: Request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
-const isAdmin = (request: Request, env: Env) =>
-  !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 32 && sameSecret(bearer(request), env.ADMIN_TOKEN);
 async function isOwner(request: Request, meta: ShareMeta) {
-  const token = bearer(request);
+  const token = bearerToken(request);
   return token.length >= 32 && sameSecret(await sha256(token), meta.tokenHash);
 }
 
@@ -217,7 +215,10 @@ export async function handleShare(request: Request, env: Env, deps: Deps, params
       const first = await kv
         .set(keys(id).seen(action, clientIp(request, 48)), "1", { ttl: action === "view" ? 6 * 3600 : DAY, onlyIfNew: true })
         .catch(() => false);
-      if (first) await kv.incr(action === "view" ? keys(id).views : keys(id).remixes).catch(() => undefined);
+      if (first) {
+        await kv.incr(action === "view" ? keys(id).views : keys(id).remixes).catch(() => undefined);
+        await countLoop(kv, action === "view" ? "opened" : "remixed", new Date(now));
+      }
       return json({ ok: true });
     }
     case "report":
@@ -277,6 +278,7 @@ async function create(request: Request, env: Env, deps: Deps, kv: KeyValue, blob
     ...(prepared.project.remixOf ? { remixOf: { id: prepared.project.remixOf.id, name: publicName(prepared.project.remixOf.name) } } : {}),
   };
   await writeMeta(kv, id, meta);
+  await countLoop(kv, "shared", new Date(now));
   return json({ ok: true, id, editToken: token, updatedAt: now }, 201);
 }
 

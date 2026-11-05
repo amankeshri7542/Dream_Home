@@ -907,11 +907,11 @@ function gridKey(floor) {
   ]);
 }
 function floorGrid(floor) {
-  const key = gridKey(floor);
+  const key2 = gridKey(floor);
   const hit = cache.get(floor.rooms);
-  if (hit && hit.key === key) return hit.grid;
+  if (hit && hit.key === key2) return hit.grid;
   const grid = buildGrid(floor);
-  cache.set(floor.rooms, { key, grid });
+  cache.set(floor.rooms, { key: key2, grid });
   return grid;
 }
 function buildGrid(floor) {
@@ -1114,8 +1114,8 @@ function deriveWallSegments(floor) {
   ];
   const groups = /* @__PURE__ */ new Map();
   for (const e of all) {
-    const key = `${e.axis}:${e.fixed}`;
-    groups.set(key, [...groups.get(key) ?? [], e]);
+    const key2 = `${e.axis}:${e.fixed}`;
+    groups.set(key2, [...groups.get(key2) ?? [], e]);
   }
   const walls = [];
   for (const group of groups.values()) {
@@ -2133,9 +2133,9 @@ function designer(W, D, ctx, room2 = { name: "" }) {
       if (!entry) return null;
       const turned = rotation % 180 !== 0;
       const w = Math.round(opts.w ?? (turned ? rect2.d : rect2.w)), d = Math.round(opts.d ?? (turned ? rect2.w : rect2.d));
-      const ok = (key, v) => {
-        const range = entry.stretch?.[key];
-        return range ? v >= range[0] && v <= range[1] : v === entry.size[key];
+      const ok = (key2, v) => {
+        const range = entry.stretch?.[key2];
+        return range ? v >= range[0] && v <= range[1] : v === entry.size[key2];
       };
       if (!ok("w", w) || !ok("d", d)) return null;
       const fw = turned ? d : w, fd = turned ? w : d;
@@ -2785,14 +2785,14 @@ function furnitureShapeProblems(item) {
       code: "furniture-shape",
       message: "Furniture snaps to a 5 cm grid."
     });
-  for (const key of ["w", "d"]) {
-    const value = item[key];
+  for (const key2 of ["w", "d"]) {
+    const value = item[key2];
     if (value === void 0) continue;
-    const range = entry.stretch?.[key];
-    if (!Number.isInteger(value) || (range ? value < range[0] || value > range[1] : value !== entry.size[key]))
+    const range = entry.stretch?.[key2];
+    if (!Number.isInteger(value) || (range ? value < range[0] || value > range[1] : value !== entry.size[key2]))
       problems.push({
         code: "furniture-shape",
-        message: range ? `${entry.label} can stretch from ${range[0]} to ${range[1]} cm ${key === "w" ? "wide" : "deep"}.` : `${entry.label} has a fixed size.`
+        message: range ? `${entry.label} can stretch from ${range[0]} to ${range[1]} cm ${key2 === "w" ? "wide" : "deep"}.` : `${entry.label} has a fixed size.`
       });
   }
   if (item.finish !== void 0 && !(entry.finishes ?? []).includes(item.finish))
@@ -3119,14 +3119,14 @@ function landscapeShapeProblems(item) {
     out.push({ code: "landscape-shape", message: "Garden items snap to a 10 cm grid." });
   if (![0, 90, 180, 270].includes(item.rotation) || !entry.rotatable && item.rotation !== 0)
     out.push({ code: "landscape-shape", message: `${entry.label} can't be turned.` });
-  for (const key of ["w", "d"]) {
-    const value = item[key];
+  for (const key2 of ["w", "d"]) {
+    const value = item[key2];
     if (value === void 0) continue;
-    const range = entry.resizable?.[key];
+    const range = entry.resizable?.[key2];
     if (!range || !Number.isInteger(value) || value % LANDSCAPE_GRID || value < range[0] || value > range[1])
       out.push({
         code: "landscape-shape",
-        message: range ? `${entry.label} can be ${range[0]}\u2013${range[1]} cm ${key === "w" ? "wide" : "long"}, in 10 cm steps.` : `${entry.label} has a fixed size.`
+        message: range ? `${entry.label} can be ${range[0]}\u2013${range[1]} cm ${key2 === "w" ? "wide" : "long"}, in 10 cm steps.` : `${entry.label} has a fixed size.`
       });
   }
   if (item.variant !== void 0 && !(entry.variants ?? []).includes(item.variant))
@@ -3194,13 +3194,13 @@ var SPIRAL2 = (() => {
 })();
 function reconcileLandscape(before, after, notices) {
   if (before === after || !after.landscape) return after;
-  const key = (p) => JSON.stringify([
+  const key2 = (p) => JSON.stringify([
     p.plot.width,
     p.plot.depth,
     p.floors.map((f) => [f.footprint, f.balconies]),
     p.verticalSpaces.filter((v) => v.kind === "courtyard").map((v) => [v.bounds, v.floorIds])
   ]);
-  if (before.floors[0] && sameRect(before.floors[0].footprint, after.floors[0].footprint) && key(before) === key(after))
+  if (before.floors[0] && sameRect(before.floors[0].footprint, after.floors[0].footprint) && key2(before) === key2(after))
     return after;
   const ex = landscapeExclusions(after);
   const kept = after.landscape.filter((item) => {
@@ -3630,26 +3630,26 @@ function cleanAction(call, refs) {
   const input = call.input && typeof call.input === "object" && !Array.isArray(call.input) ? call.input : null;
   if (!input) return null;
   const out = {};
-  for (const [key, value] of Object.entries(input)) {
-    if (!Object.hasOwn(def.properties, key)) return null;
-    const prop = def.properties[key];
+  for (const [key2, value] of Object.entries(input)) {
+    if (!Object.hasOwn(def.properties, key2)) return null;
+    const prop = def.properties[key2];
     if (prop.type === "number") {
-      const [lo, hi] = RANGES[key] ?? [0, 1e3];
+      const [lo, hi] = RANGES[key2] ?? [0, 1e3];
       if (typeof value !== "number" || !Number.isFinite(value) || value < lo || value > hi) return null;
-      out[key] = value;
+      out[key2] = value;
       continue;
     }
     if (typeof value !== "string") return null;
     if (prop.enum && !prop.enum.includes(value)) return null;
-    if (ROOM_REF_KEYS.has(key) && !refs.rooms.has(value)) return null;
-    if (key === "floor" && !refs.floors.has(value)) return null;
-    if (key === "name") {
+    if (ROOM_REF_KEYS.has(key2) && !refs.rooms.has(value)) return null;
+    if (key2 === "floor" && !refs.floors.has(value)) return null;
+    if (key2 === "name") {
       const name2 = cleanName(value);
       if (!name2) return null;
-      out[key] = name2;
-    } else out[key] = value;
+      out[key2] = name2;
+    } else out[key2] = value;
   }
-  if (def.required.some((key) => !(key in out))) return null;
+  if (def.required.some((key2) => !(key2 in out))) return null;
   if (name === "swap_rooms" && out.a === out.b) return null;
   return { tool: name, input: out };
 }
@@ -3841,6 +3841,59 @@ function vercelBlobs(token) {
   };
 }
 
+// server/bytes.ts
+async function pipe(bytes, stream, limit) {
+  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader();
+  const chunks = [];
+  let total = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel().catch(() => void 0);
+      throw new RangeError("Too big.");
+    }
+    chunks.push(value);
+  }
+  return concat(chunks, total);
+}
+function concat(chunks, total = chunks.reduce((n, c) => n + c.byteLength, 0)) {
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    out.set(c, at);
+    at += c.byteLength;
+  }
+  return out;
+}
+var gzip = (text3) => pipe(new TextEncoder().encode(text3), new CompressionStream("gzip"), Infinity);
+var gunzip = async (bytes, limit) => new TextDecoder().decode(await pipe(bytes, new DecompressionStream("gzip"), limit));
+async function sha256(text3) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text3));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+var BASE62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+function randomId(length = 10) {
+  const out = [];
+  while (out.length < length) {
+    for (const b of crypto.getRandomValues(new Uint8Array(length * 2)))
+      if (b < 248 && out.length < length) out.push(BASE62[b % 62]);
+  }
+  return out.join("");
+}
+function randomToken() {
+  let binary = "";
+  for (const b of crypto.getRandomValues(new Uint8Array(32))) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function sameSecret(a, b) {
+  const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
 // server/http.ts
 var DEVICE = /^[a-z0-9-]{16,64}$/;
 var onVercel = (env) => env.VERCEL === "1";
@@ -3935,40 +3988,42 @@ function sameSite(request, env) {
   const allowed = [env.PUBLIC_ORIGIN, ...(env.ALLOWED_ORIGINS ?? "").split(",")].map((o) => o?.trim()).filter(Boolean);
   return allowed.includes(origin);
 }
+var bearerToken = (request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
+var isAdmin = (request, env) => !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 32 && sameSecret(bearerToken(request), env.ADMIN_TOKEN);
 
 // server/kv.ts
 function memoryKv() {
   const values = /* @__PURE__ */ new Map();
-  const live = (key) => {
-    const e = values.get(key);
-    if (e && e.until < Date.now()) values.delete(key);
-    return values.get(key);
+  const live = (key2) => {
+    const e = values.get(key2);
+    if (e && e.until < Date.now()) values.delete(key2);
+    return values.get(key2);
   };
   return {
-    async get(key) {
-      const e = live(key);
+    async get(key2) {
+      const e = live(key2);
       return typeof e?.v === "string" ? e.v : null;
     },
-    async set(key, value, opts = {}) {
-      if (opts.onlyIfNew && live(key)) return false;
-      if (opts.onlyIfExists && !live(key)) return false;
-      values.set(key, { v: value, until: opts.ttl ? Date.now() + opts.ttl * 1e3 : Infinity });
+    async set(key2, value, opts = {}) {
+      if (opts.onlyIfNew && live(key2)) return false;
+      if (opts.onlyIfExists && !live(key2)) return false;
+      values.set(key2, { v: value, until: opts.ttl ? Date.now() + opts.ttl * 1e3 : Infinity });
       return true;
     },
     async del(...keys3) {
       for (const k of keys3) values.delete(k);
     },
-    async incr(key) {
-      const e = live(key);
+    async incr(key2) {
+      const e = live(key2);
       const n = (typeof e?.v === "string" ? Number(e.v) : 0) + 1;
-      values.set(key, { v: String(n), until: e?.until ?? Infinity });
+      values.set(key2, { v: String(n), until: e?.until ?? Infinity });
       return n;
     },
-    async addToSet(key, member) {
-      const e = live(key);
+    async addToSet(key2, member) {
+      const e = live(key2);
       const set = e?.v instanceof Set ? e.v : /* @__PURE__ */ new Set();
       set.add(member);
-      values.set(key, { v: set, until: e?.until ?? Infinity });
+      values.set(key2, { v: set, until: e?.until ?? Infinity });
       return set.size;
     },
     async counts(...keys3) {
@@ -3993,12 +4048,12 @@ function restKv(url, token, fetcher = fetch) {
     return results.map((r2) => r2.result);
   };
   return {
-    async get(key) {
-      const [v] = await run([["GET", key]]);
+    async get(key2) {
+      const [v] = await run([["GET", key2]]);
       return typeof v === "string" ? v : null;
     },
-    async set(key, value, opts = {}) {
-      const command = ["SET", key, value];
+    async set(key2, value, opts = {}) {
+      const command = ["SET", key2, value];
       if (opts.ttl) command.push("EX", opts.ttl);
       if (opts.onlyIfNew) command.push("NX");
       if (opts.onlyIfExists) command.push("XX");
@@ -4008,14 +4063,14 @@ function restKv(url, token, fetcher = fetch) {
     async del(...keys3) {
       if (keys3.length) await run([["DEL", ...keys3]]);
     },
-    async incr(key) {
-      const [v] = await run([["INCR", key]]);
+    async incr(key2) {
+      const [v] = await run([["INCR", key2]]);
       return Number(v);
     },
-    async addToSet(key, member) {
+    async addToSet(key2, member) {
       const [, size] = await run([
-        ["SADD", key, member],
-        ["SCARD", key]
+        ["SADD", key2, member],
+        ["SCARD", key2]
       ]);
       return Number(size);
     },
@@ -4052,23 +4107,23 @@ function rulesFrom(env) {
 }
 function memoryStore() {
   const values = /* @__PURE__ */ new Map();
-  const live = (key) => {
-    const v = values.get(key);
-    if (v && v.until < Date.now()) values.delete(key);
-    return values.get(key);
+  const live = (key2) => {
+    const v = values.get(key2);
+    if (v && v.until < Date.now()) values.delete(key2);
+    return values.get(key2);
   };
-  const addNow = (key, by, ttl) => {
-    const v = live(key) ?? { n: 0, until: Date.now() + ttl * 1e3 };
+  const addNow = (key2, by, ttl) => {
+    const v = live(key2) ?? { n: 0, until: Date.now() + ttl * 1e3 };
     v.n += by;
-    values.set(key, v);
+    values.set(key2, v);
     return v.n;
   };
   return {
-    async add(key, by, ttl) {
-      return addNow(key, by, ttl);
+    async add(key2, by, ttl) {
+      return addNow(key2, by, ttl);
     },
-    async get(key) {
-      return live(key)?.n ?? 0;
+    async get(key2) {
+      return live(key2)?.n ?? 0;
     },
     // No await between the checks and the writes, so this is atomic in JS.
     async reserve(budget, counters) {
@@ -4121,15 +4176,15 @@ function restStore(url, token, fetcher = fetch) {
     return results;
   };
   return {
-    async add(key, by, ttl) {
+    async add(key2, by, ttl) {
       const [incr] = await run([
-        ["INCRBY", key, by],
-        ["EXPIRE", key, ttl, "NX"]
+        ["INCRBY", key2, by],
+        ["EXPIRE", key2, ttl, "NX"]
       ]);
       return Number(incr.result);
     },
-    async get(key) {
-      const [got] = await run([["GET", key]]);
+    async get(key2) {
+      const [got] = await run([["GET", key2]]);
       return Number(got.result ?? 0) || 0;
     },
     async reserve(budget, counters) {
@@ -4465,9 +4520,9 @@ function sanitizeHomePlan(raw) {
   const ex = p.exterior ?? {};
   let rooms = (Array.isArray(p.rooms) ? p.rooms : []).map((r2) => sanitizeRoom(r2)).filter((r2) => !!r2);
   const counts = /* @__PURE__ */ new Map();
-  const bump = (key) => {
-    const n = (counts.get(key) ?? 0) + 1;
-    counts.set(key, n);
+  const bump = (key2) => {
+    const n = (counts.get(key2) ?? 0) + 1;
+    counts.set(key2, n);
     return n;
   };
   rooms = rooms.filter((r2) => {
@@ -4682,6 +4737,42 @@ async function handleDesign(request, env, deps = {}) {
     await limiter.failed(kind, device, ip, estimate, billOf(error)).catch(() => void 0);
     return error instanceof DesignRefused ? fail("busy", "The AI designer couldn\u2019t work with that note. Try changing it.", verdict.left + 1) : fail("busy", "The AI designer didn\u2019t answer in time.", verdict.left + 1);
   }
+}
+
+// server/loop.ts
+var EVENTS = ["shared", "opened", "remixed"];
+var key = (day, event) => `dh:v1:loop:${day}:${event}`;
+var dayOf = (date) => date.toISOString().slice(0, 10);
+var MAX_DAYS = 90;
+async function countLoop(kv, event, now = /* @__PURE__ */ new Date()) {
+  await kv.incr(key(dayOf(now), event)).catch(() => void 0);
+}
+async function handleLoop(request, env, deps) {
+  if (request.method !== "GET") return fail("invalid", "Use GET.", void 0, 405);
+  if (!isAdmin(request, env)) return fail("forbidden", "Admins only.", void 0, 403);
+  const kv = kvFor(env, deps);
+  if (!kv) return fail("offline", "Sharing isn\u2019t switched on yet.", void 0, 503);
+  const asked = Number(new URL(request.url).searchParams.get("days"));
+  const span = Number.isInteger(asked) && asked > 0 ? Math.min(asked, MAX_DAYS) : 14;
+  const today2 = (deps.now ?? (() => /* @__PURE__ */ new Date()))().getTime();
+  const days = Array.from({ length: span }, (_, i) => dayOf(new Date(today2 - i * 864e5)));
+  const counts = await kv.counts(...days.flatMap((day) => EVENTS.map((event) => key(day, event))));
+  const rows = days.map((day, i) => ({
+    day,
+    shared: counts[i * 3],
+    opened: counts[i * 3 + 1],
+    remixed: counts[i * 3 + 2]
+  }));
+  const total = (field) => rows.reduce((n, r2) => n + r2[field], 0);
+  const shared = total("shared"), opened = total("opened"), remixed = total("remixed");
+  return json({
+    ok: true,
+    days: rows,
+    totals: { shared, opened, remixed },
+    // What matters most: does each shared home bring in another?
+    remixesPerShare: shared ? Math.round(remixed / shared * 100) / 100 : null,
+    opensPerShare: shared ? Math.round(opened / shared * 100) / 100 : null
+  });
 }
 
 // src/domain/openings.ts
@@ -5395,59 +5486,6 @@ function parseProject(text3) {
   return project;
 }
 
-// server/bytes.ts
-async function pipe(bytes, stream, limit) {
-  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader();
-  const chunks = [];
-  let total = 0;
-  for (; ; ) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > limit) {
-      await reader.cancel().catch(() => void 0);
-      throw new RangeError("Too big.");
-    }
-    chunks.push(value);
-  }
-  return concat(chunks, total);
-}
-function concat(chunks, total = chunks.reduce((n, c) => n + c.byteLength, 0)) {
-  const out = new Uint8Array(total);
-  let at = 0;
-  for (const c of chunks) {
-    out.set(c, at);
-    at += c.byteLength;
-  }
-  return out;
-}
-var gzip = (text3) => pipe(new TextEncoder().encode(text3), new CompressionStream("gzip"), Infinity);
-var gunzip = async (bytes, limit) => new TextDecoder().decode(await pipe(bytes, new DecompressionStream("gzip"), limit));
-async function sha256(text3) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text3));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-var BASE62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-function randomId(length = 10) {
-  const out = [];
-  while (out.length < length) {
-    for (const b of crypto.getRandomValues(new Uint8Array(length * 2)))
-      if (b < 248 && out.length < length) out.push(BASE62[b % 62]);
-  }
-  return out.join("");
-}
-function randomToken() {
-  let binary = "";
-  for (const b of crypto.getRandomValues(new Uint8Array(32))) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function sameSecret(a, b) {
-  const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b);
-  let diff = x.length ^ y.length;
-  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
-  return diff === 0;
-}
-
 // src/share/names.ts
 var HIDDEN_NAME = "A Dream Home";
 function publicName(name, fallback = HIDDEN_NAME) {
@@ -5534,10 +5572,8 @@ async function updateMeta(kv, id, patch) {
   if (!fresh) return false;
   return kv.set(keys2(id).meta, JSON.stringify({ ...fresh, ...patch, hidden: fresh.hidden, hiddenReason: fresh.hiddenReason }), { onlyIfExists: true });
 }
-var bearer = (request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
-var isAdmin = (request, env) => !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 32 && sameSecret(bearer(request), env.ADMIN_TOKEN);
 async function isOwner(request, meta) {
-  const token = bearer(request);
+  const token = bearerToken(request);
   return token.length >= 32 && sameSecret(await sha256(token), meta.tokenHash);
 }
 var publicMeta = (id, m) => ({
@@ -5607,7 +5643,10 @@ async function handleShare(request, env, deps, params = []) {
       const meta = await readMeta(kv, id).catch(() => null);
       if (!meta || meta.hidden) return missing();
       const first = await kv.set(keys2(id).seen(action, clientIp(request, 48)), "1", { ttl: action === "view" ? 6 * 3600 : DAY2, onlyIfNew: true }).catch(() => false);
-      if (first) await kv.incr(action === "view" ? keys2(id).views : keys2(id).remixes).catch(() => void 0);
+      if (first) {
+        await kv.incr(action === "view" ? keys2(id).views : keys2(id).remixes).catch(() => void 0);
+        await countLoop(kv, action === "view" ? "opened" : "remixed", new Date(now));
+      }
       return json({ ok: true });
     }
     case "report":
@@ -5663,6 +5702,7 @@ async function create(request, env, deps, kv, blobs) {
     ...prepared.project.remixOf ? { remixOf: { id: prepared.project.remixOf.id, name: publicName(prepared.project.remixOf.name) } } : {}
   };
   await writeMeta(kv, id, meta);
+  await countLoop(kv, "shared", new Date(now));
   return json({ ok: true, id, editToken: token, updatedAt: now }, 201);
 }
 async function read(request, env, deps, kv, blobs, id) {
@@ -5927,6 +5967,19 @@ var base64 = (bytes) => {
   for (let i = 0; i < bytes.length; i += 32768) text3 += String.fromCharCode(...bytes.subarray(i, i + 32768));
   return btoa(text3);
 };
+var planReadWorstCase = (model) => worstCaseUsd(model, 7e3, 12e3);
+var planReadCall = (apiKey, model, bytes, hint) => ({
+  apiKey,
+  model,
+  system: READING_SYSTEM,
+  user: readingUserText(hint),
+  image: { mediaType: "image/jpeg", data: base64(bytes) },
+  schema: READING_SCHEMA,
+  effort: "medium",
+  maxTokens: 12e3,
+  label: "plan-read",
+  timeoutMs: 55e3
+});
 async function handlePlanRead(request, env, deps = {}) {
   const device = deviceOf(request);
   if (!device) return fail("invalid", "Missing device id.", void 0, 400);
@@ -5956,7 +6009,7 @@ async function handlePlanRead(request, env, deps = {}) {
   if (!live || !limiter) return fail("offline", "Plan reading isn\u2019t switched on yet.");
   const ip = clientIp(request);
   const model = env.PLAN_MODEL || PLAN_MODEL;
-  const estimate = worstCaseUsd(model, 7e3, 12e3);
+  const estimate = planReadWorstCase(model);
   let verdict;
   try {
     verdict = await limiter.reserve("plan", device, ip, estimate);
@@ -5971,18 +6024,12 @@ async function handlePlanRead(request, env, deps = {}) {
   const road = url.searchParams.get("road") ?? "";
   const call = deps.callClaude ?? callClaude;
   try {
-    const answer = await call({
-      apiKey: env.ANTHROPIC_API_KEY,
-      model,
-      system: READING_SYSTEM,
-      user: readingUserText({ plot: plot ? `${plot[1]} \xD7 ${plot[2]} ${plot[3]}` : void 0, road: ROAD.has(road) ? road : void 0 }),
-      image: { mediaType: "image/jpeg", data: base64(bytes) },
-      schema: READING_SCHEMA,
-      effort: "medium",
-      maxTokens: 12e3,
-      label: "plan-read",
-      timeoutMs: 55e3
-    });
+    const answer = await call(
+      planReadCall(env.ANTHROPIC_API_KEY, model, bytes, {
+        plot: plot ? `${plot[1]} \xD7 ${plot[2]} ${plot[3]}` : void 0,
+        road: ROAD.has(road) ? road : void 0
+      })
+    );
     await limiter.settle(estimate, answer.costUsd).catch(() => void 0);
     return json({ ok: true, reading: sanitizeReading(answer.json), left: verdict.left });
   } catch (error) {
@@ -5998,7 +6045,8 @@ var ROUTES = {
   share: handleShare,
   og: handleOg,
   "plan-read": handlePlanRead,
-  command: handleCommand
+  command: handleCommand,
+  loop: handleLoop
 };
 function routeName(url) {
   const fromQuery = url.searchParams.get("__route");

@@ -1,0 +1,68 @@
+{
+  "label": "baseline",
+  "date": "2026-11-03",
+  "commit": "f337296",
+  "home": "lookSample(indian-modern)",
+  "shots": [
+    {
+      "id": "01-eye-living",
+      "label": "Eye level, across the living room, golden hour.",
+      "group": "eye",
+      "seconds": 6.377
+    },
+    {
+      "id": "02-eye-bedroom",
+      "label": "Eye level, across the main bedroom, morning.",
+      "group": "eye",
+      "seconds": 3.244
+    },
+    {
+      "id": "03-eye-kitchen",
+      "label": "Eye level, across the kitchen, noon.",
+      "group": "eye",
+      "seconds": 3.116
+    },
+    {
+      "id": "04-eye-bathroom",
+      "label": "Eye level, across the bathroom, morning.",
+      "group": "eye",
+      "seconds": 3.351
+    },
+    {
+      "id": "05-eye-window",
+      "label": "Eye level, looking out of the living room window, morning. Judge what's outside.",
+      "group": "eye",
+      "seconds": 3.032
+    },
+    {
+      "id": "06-street-front",
+      "label": "From across the road at eye height, golden hour. Judge the home in its street.",
+      "group": "street",
+      "seconds": 2.71
+    },
+    {
+      "id": "07-street-gate",
+      "label": "From just inside the gate at eye height, morning. Judge the arrival.",
+      "group": "street",
+      "seconds": 2.319
+    },
+    {
+      "id": "08-aerial",
+      "label": "The whole home from above, opened up, golden hour. Judge it as an architect's model.",
+      "group": "aerial",
+      "seconds": 3.697
+    },
+    {
+      "id": "09-night-living",
+      "label": "Eye level, across the living room, at night. Judge the lamps.",
+      "group": "night",
+      "seconds": 4.592
+    },
+    {
+      "id": "10-reel-room",
+      "label": "A frame of the reel's first room, as filmed: 9:16, few samples.",
+      "group": "reel",
+      "seconds": 3.695
+    }
+  ]
+}

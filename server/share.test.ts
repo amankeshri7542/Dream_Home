@@ -268,3 +268,56 @@ describe("share links", () => {
     expect(jpegSize(new Uint8Array([1, 2, 3]))).toBeNull();
   });
 });
+
+describe("loop counters", () => {
+  const admin = env.ADMIN_TOKEN;
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  it("counts homes shared, links opened and remixes per day, once per connection", async () => {
+    const deps = fresh();
+    const { id } = await share(deps);
+    await share(deps);
+    await call(deps, `/api/share/${id}/view`, { method: "POST" });
+    await call(deps, `/api/share/${id}/view`, { method: "POST" }); // a reload doesn't count
+    await call(deps, `/api/share/${id}/view`, { method: "POST", ip: "5.6.7.8" });
+    await call(deps, `/api/share/${id}/remix`, { method: "POST", ip: "5.6.7.8" });
+    const loop = await (await call(deps, "/api/loop?days=7", { token: admin })).json();
+    expect(loop.days).toHaveLength(7);
+    expect(loop.days[0]).toEqual({ day: today(), shared: 2, opened: 2, remixed: 1 });
+    expect(loop.totals).toEqual({ shared: 2, opened: 2, remixed: 1 });
+    expect(loop.remixesPerShare).toBe(0.5);
+    expect(loop.opensPerShare).toBe(1);
+  });
+
+  it("holds nothing about who: only counts per day", async () => {
+    const deps = fresh();
+    await share(deps);
+    const loop = await (await call(deps, "/api/loop", { token: admin })).json();
+    expect(JSON.stringify(loop)).not.toMatch(/1\.2\.3\.4|device-|editToken/);
+    expect(Object.keys(loop.days[0]).sort()).toEqual(["day", "opened", "remixed", "shared"]);
+  });
+
+  it("is for the owner only", async () => {
+    const deps = fresh();
+    expect((await call(deps, "/api/loop")).status).toBe(403);
+    expect((await call(deps, "/api/loop", { token: "x".repeat(40) })).status).toBe(403);
+    expect((await call(deps, "/api/loop", { method: "POST", token: admin, body: {} })).status).toBe(405);
+  });
+
+  it("caps how far back it reads, and reports nothing to divide by as null", async () => {
+    const deps = fresh();
+    const loop = await (await call(deps, "/api/loop?days=9999", { token: admin })).json();
+    expect(loop.days).toHaveLength(90);
+    expect(loop.remixesPerShare).toBeNull();
+    expect((await (await call(deps, "/api/loop?days=abc", { token: admin })).json()).days).toHaveLength(14);
+  });
+
+  it("never lets a counter failure stop sharing", async () => {
+    const deps = fresh();
+    const kv = deps.kv!;
+    const real = kv.incr.bind(kv);
+    kv.incr = (key) => (key.includes(":loop:") ? Promise.reject(new Error("store down")) : real(key));
+    // share() itself expects a 201.
+    expect((await share(deps)).id).toBeTruthy();
+  });
+});

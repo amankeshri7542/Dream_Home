@@ -2,6 +2,7 @@
 // stops early when a request is too big, the caller's IP and device id, and a
 // same-site check for requests that change things.
 
+import { sameSecret } from "./bytes";
 /** Every environment variable the server reads. All optional. */
 export type Env = Partial<
   Record<
@@ -162,3 +163,8 @@ export function sameSite(request: Request, env: Env): boolean {
     .filter(Boolean);
   return allowed.includes(origin);
 }
+
+/** The site owner's requests: `Authorization: Bearer $ADMIN_TOKEN`. */
+export const bearerToken = (request: Request) => request.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/)?.[1] ?? "";
+export const isAdmin = (request: Request, env: Env) =>
+  !!env.ADMIN_TOKEN && env.ADMIN_TOKEN.length >= 32 && sameSecret(bearerToken(request), env.ADMIN_TOKEN);

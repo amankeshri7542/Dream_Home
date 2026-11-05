@@ -20,6 +20,8 @@ export type PhotoJobRequest = {
   samples: number;
   shadowSize: number;
   watermark: boolean;
+  /** An exact camera in world metres, instead of the framing's (the lab's fixed shots). */
+  camera?: { position: [number, number, number]; target: [number, number, number]; fov: number };
 };
 export type PhotoOutcome = { id: number } & ({ blob: Blob } | { error: "cancelled" | "failed" });
 
@@ -92,8 +94,11 @@ export function PhotoRenderer({
           width,
           height,
         });
-        const camera = new PerspectiveCamera(live.fov, width / height, live.near, live.far);
-        if (job.framing === "view" && c && !c.enabled) {
+        const camera = new PerspectiveCamera(job.camera?.fov ?? live.fov, width / height, live.near, live.far);
+        if (job.camera) {
+          camera.position.set(...job.camera.position);
+          camera.lookAt(...job.camera.target);
+        } else if (job.framing === "view" && c && !c.enabled) {
           // Walking inside: the visitor's own eyes.
           camera.position.copy(live.position);
           camera.quaternion.copy(live.quaternion);
