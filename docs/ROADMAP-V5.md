@@ -612,3 +612,14 @@ work can resume after any interruption. Update it at the end of every phase.
     - The scene keeps asking for frames only until the bob and FOV settle, so it goes idle as before.
     - Reduced motion turns the bob and FOV punch off.
   - **Tests:** `walkPhysics.test.ts` (+3: ramp, bob, FOV). `explore.spec.ts` adds a motion-on test: running widens the view past 71°, the eye height moves, then it settles to 68 and goes idle. The browser suite runs with reduced motion, so this test opts out.
+  - **Gate (3.1–3.3):**
+    - typecheck, lint, 1049 unit tests, build, `check:api`, 158 browser tests and 7 preview tests.
+    - "The home's whole name fits the top bar" failed on the gate's separate checkout, where Vite refused to serve the app's fonts from outside it (368 blocked requests), so the text ran wider. In the main folder it passed 3 of 3. Gates now run in the main folder only.
+- **2026-11-06, the owner's Phase 3.4 (furniture you can't walk through):**
+  - `furnitureBlockers` (`src/explore/walkPhysics.ts`) turns every standing `blocksWalk` piece of at least 2500 cm² into one solid capsule (`rectCapsule`), inset 4 cm so paths between pieces stay open. Quarter turns only, so rectangles are exact.
+  - **Solid, not an outline:** a visitor inside a piece is pushed out, never held in.
+  - `buildColliders(…, { furniture: true })` adds them; only the walker asks, so other callers and older tests are unchanged.
+  - **The lab's fixed bench shots keep their exact spot** (no unsticking when `start` is given). Anywhere else, the spawn steps clear of furniture.
+  - **Tests:**
+    - `walkPhysics.test.ts` (+5): big pieces only; pushed out of a piece; stopped by a sofa and sliding along it; room to stand in every room; every room still reachable on foot, walked on a 20 cm grid.
+    - `explore.spec.ts`: three walks forward and turning never end up inside a piece.

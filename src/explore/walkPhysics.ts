@@ -2,6 +2,7 @@
 // along walls, passes through doorways and archways, and bumps into furniture.
 import { deriveWalls, isPassable, wallStart } from "../domain/walls";
 import { floorForGeometry } from "../domain/core";
+import { furnitureCatalogItem, furnitureFootprint, resolveFurniture } from "../domain/furniture";
 import type { Project, Wall } from "../domain/types";
 
 export type Segment = { ax: number; az: number; bx: number; bz: number; half: number };
@@ -39,6 +40,41 @@ export function rectSegments(r: { x: number; z: number; w: number; d: number }, 
   ];
 }
 
+/** Only pieces at least this big (cm²) stop a visitor: sofas, beds, tables, wardrobes, counters. */
+export const LARGE_PIECE = 2500;
+/** Pieces block a little inside their outline, so paths between them stay walkable. */
+const PIECE_INSET = 4;
+
+/**
+ * A rectangle as one solid capsule: a segment down its long middle, as thick as
+ * it is wide. Unlike an outline, a visitor inside it is pushed out, never held in.
+ */
+export function rectCapsule(r: { x: number; z: number; w: number; d: number }, inset = PIECE_INSET): Segment {
+  const w = Math.max(2, r.w - inset * 2),
+    d = Math.max(2, r.d - inset * 2);
+  const cx = r.x + r.w / 2,
+    cz = r.z + r.d / 2;
+  return w >= d
+    ? { ax: cx - (w - d) / 2, az: cz, bx: cx + (w - d) / 2, bz: cz, half: d / 2 }
+    : { ax: cx, az: cz - (d - w) / 2, bx: cx, bz: cz + (d - w) / 2, half: w / 2 };
+}
+
+/** The large standing pieces of a floor that a visitor can't walk through, in plot cm. */
+export function furnitureBlockers(project: Project, floorId: string): Segment[] {
+  const floor = floorForGeometry(project, floorId);
+  const walls = deriveWalls(floor, project.plot.road);
+  const out: Segment[] = [];
+  for (const room of floor.rooms)
+    for (const item of resolveFurniture(room, walls)) {
+      const entry = furnitureCatalogItem(item.catalogId);
+      if (!entry?.blocksWalk || entry.layer !== "standard") continue;
+      const fp = furnitureFootprint(item);
+      if (fp.w * fp.d < LARGE_PIECE) continue;
+      out.push(rectCapsule({ x: room.bounds.x + fp.x, z: room.bounds.z + fp.z, w: fp.w, d: fp.d }));
+    }
+  return out;
+}
+
 export type Colliders = { segments: Segment[] };
 /**
  * Colliders for one floor: walls minus doorways, plus blocking furniture and
@@ -48,12 +84,14 @@ export function buildColliders(
   project: Project,
   floorId: string,
   blockers: { x: number; z: number; w: number; d: number }[] = [],
+  options: { furniture?: boolean } = {},
 ): Colliders {
   const floor = floorForGeometry(project, floorId);
   return {
     segments: [
       ...deriveWalls(floor, project.plot.road).flatMap(wallSegments),
       ...blockers.flatMap((b) => rectSegments(b)),
+      ...(options.furniture ? furnitureBlockers(project, floorId) : []),
     ],
   };
 }

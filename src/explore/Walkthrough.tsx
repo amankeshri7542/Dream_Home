@@ -65,7 +65,8 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
         const holes = deriveFloorVoids(project, floor.id)
           .filter((v) => v.kind === "courtyard")
           .map((v) => v.bounds);
-        return buildColliders(project, floor.id, holes);
+        // Sofas, beds, tables and wardrobes are solid too.
+        return buildColliders(project, floor.id, holes, { furniture: true });
       }),
     [project],
   );
@@ -84,7 +85,8 @@ export default function Walkthrough({ project, startFloorId, startRoomId, start,
     cam.fov = WALK_FOV;
     cam.near = 0.05;
     cam.updateProjectionMatrix();
-    pos.current = unstick(pos.current, colliders[floorIndex.current]);
+    // A chosen spot (the lab's fixed shots) is kept exactly; anywhere else steps clear of walls and furniture.
+    if (!start) pos.current = unstick(pos.current, colliders[floorIndex.current]);
     eye.current = floorBaseY(project.floors[floorIndex.current]) + EYE_HEIGHT / 100;
     invalidate();
     return () => {

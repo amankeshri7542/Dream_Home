@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createPreset } from "../src/domain/model";
 import { mobile, seed } from "./support/dreamHome";
+import { VISITOR_RADIUS, furnitureBlockers } from "../src/explore/walkPhysics";
 
 type Bridge = {
   ready: boolean;
@@ -67,6 +68,41 @@ test("explore: walk inside with the keyboard and announce the room", async ({ pa
   // Leaving the walk restores the orbit camera exactly.
   await page.getByRole("radio", { name: /Look around/ }).click();
   await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(orbit.fov);
+});
+
+test("explore: you can't walk through the furniture", async ({ page }) => {
+  const project = createPreset("compact");
+  await seed(page, project);
+  await expect.poll(() => bridge(page, (dh) => dh?.ready ?? false)).toBe(true);
+  await explore(page).click();
+  await page.getByRole("radio", { name: /Walk inside/ }).click();
+  await expect.poll(() => bridge(page, (dh) => dh.camera().fov)).toBe(68);
+  const pieces = furnitureBlockers(project, project.floors[0].id);
+  expect(pieces.length).toBeGreaterThan(0);
+  // Plot centimetres from world metres (the plot is centred on the origin).
+  const toPlot = (p: [number, number, number]) => ({ x: (p[0] + project.plot.width / 200) * 100, z: (p[2] + project.plot.depth / 200) * 100 });
+  const insideAny = (q: { x: number; z: number }) =>
+    pieces.some((s) => {
+      const dx = s.bx - s.ax,
+        dz = s.bz - s.az;
+      const t = Math.max(0, Math.min(1, ((q.x - s.ax) * dx + (q.z - s.az) * dz) / (dx * dx + dz * dz || 1)));
+      return Math.hypot(q.x - (s.ax + dx * t), q.z - (s.az + dz * t)) < s.half + VISITOR_RADIUS - 6;
+    });
+  await page.locator("canvas").first().focus();
+  // Walk forward, then turn a little and keep going, sampling where the visitor is.
+  for (const turn of ["", "q", "e"]) {
+    if (turn) {
+      await page.keyboard.down(turn);
+      await page.waitForTimeout(350);
+      await page.keyboard.up(turn);
+    }
+    await page.keyboard.down("w");
+    for (let i = 0; i < 8; i++) {
+      await page.waitForTimeout(120);
+      expect(insideAny(toPlot(await bridge(page, (dh) => dh.camera().position)))).toBe(false);
+    }
+    await page.keyboard.up("w");
+  }
 });
 
 test.describe("walking with motion on", () => {
